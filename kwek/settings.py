@@ -25,7 +25,7 @@ SECRET_KEY = 'yx6&m47urn&p8)1=p0d(!0edgy1$dx!pb%u5v5%i5r3*7h)qn-'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com']
 
 
 # Application definition
@@ -98,23 +98,23 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'kwekdb',
-        'USER': 'admin',
-        'PASSWORD': 'AbioDune22@A',
-        'HOST': 'localhost',
-        'PORT': '',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-    }
+}
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'kwekdb',
+#         'USER': 'admin',
+#         'PASSWORD': 'AbioDune22@A',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#     }
+#     }
 
 
 # Password validation
@@ -177,14 +177,25 @@ GRAPHQL_JWT = {
     "JWT_ALLOW_ANY_CLASSES": [
         "graphql_auth.mutations.Register",
     ],
-    "JWT_VERIFY_EXPIRATION": True,
-    "JWT_LONG_RUNNING_REFRESH_TOKEN" : True,
+    # "JWT_VERIFY_EXPIRATION": True,
+    # "JWT_LONG_RUNNING_REFRESH_TOKEN" : True,
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 REGISTER_MUTATION_FIELDS = {
     "email": "String",
     "username": "String",
     "full_name": "String",
 }
+
+
+SECRET_KEY = "iuufsbuh94829e7d9chu"
+DOMAIN = "www.kwekmarket.com"
+KWEK_EMAIL = 'gregoflash01@gmail.com'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'gregoflash01@gmail.com' # this is exactly the value 'apikey'
+EMAIL_HOST_PASSWORD = 'greg1998'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
