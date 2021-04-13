@@ -99,23 +99,23 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'kwekdb',
-        'USER': 'admin',
-        'PASSWORD': 'AbioDune22@A',
-        'HOST': 'localhost',
-        'PORT': '',
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'kwekdb1',
+#         'USER': 'admin',
+#         'PASSWORD': 'AbioDune22@A',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#         }
+#     }
 
 # DATABASES = {
 #     'default': {
