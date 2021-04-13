@@ -191,7 +191,6 @@ REGISTER_MUTATION_FIELDS = {
 }
 
 
-SECRET_KEY = "iuufsbuh94829e7d9chu"
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = 'gregoflash01@gmail.com'
 

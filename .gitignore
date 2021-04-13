@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#docker files
+nginx/
+docker-compose.yml
+Dockerfile
+entrypoint.sh
+
 # C extensions
 *.so
 
