@@ -108,14 +108,25 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'kwekdb',
         'USER': 'admin',
         'PASSWORD': 'AbioDune22@A',
         'HOST': 'localhost',
         'PORT': '',
+        }
     }
-    }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'kwekdb',
+#         'USER': 'admin',
+#         'PASSWORD': 'AbioDune22@A',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#         }
+#     }
 
 
 # Password validation
