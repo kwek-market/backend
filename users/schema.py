@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from graphql import GraphQLError
 from .validate import validate_email, validate_passwords
-from .sendmail import send_confirmation_email, user_loggedIN, expire_token, send_password_reset_email
+from .sendmail import send_confirmation_email, user_loggedIN, expire_token, send_password_reset_email, refresh_user_token
 from .models import ExtendUser
 from graphql_jwt.utils import jwt_encode, jwt_payload
 from django.contrib.auth import authenticate
@@ -185,14 +185,19 @@ class RefreshToken(graphene.Mutation):
 
     class Arguments:
         token = graphene.String()
+        email = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, token):
-        result = expire_token(token)
-        if result['status']:
-            return RevokeToken(status=True, message=result['message'], token = result['token'], payload = result['payload'])
-        else:
-            return RevokeToken(status=True, message=result['message'], token = result['token'])
+    def mutate(self, info, token, email):
+        result = refresh_user_token(email)
+        try:
+            if result['status']:
+                return RefreshToken(status=True, message=result['message'], token = result['token'])
+            else:
+                return RefreshToken(status=False)
+        except:
+            return RefreshToken(status=False)
+        
 
 
 class SendPasswordResetEmail(graphene.Mutation):
@@ -257,6 +262,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     revoke_token = RevokeToken.Field()
     send_password_reset_email = SendPasswordResetEmail.Field()
     change_password = ChangePassword.Field()
+    refresh_token = RefreshToken.Field()
 
 
 

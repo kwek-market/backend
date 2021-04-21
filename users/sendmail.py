@@ -18,6 +18,13 @@ def user_loggedIN(token):
     except Exception as e:
         return False
 
+def refresh_user_token(email):
+    ct = int(('{}'.format(time.time())).split('.')[0])
+    payload = { user.USERNAME_FIELD: email,'exp': ct + 151200,'origIat': ct}
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
+    return {"status": False, "token" : token, "message" : "New Token"}
+
+
 def expire_token(token):
     try:
         dt = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
