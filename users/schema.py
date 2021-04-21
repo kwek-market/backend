@@ -176,6 +176,25 @@ class RevokeToken(graphene.Mutation):
             return RevokeToken(status=True, message=result['message'], token = result['token'])
 
 
+class RefreshToken(graphene.Mutation):
+    user = graphene.Field(UserType)
+    message = graphene.String()
+    token = graphene.String()
+    payload = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, token):
+        result = expire_token(token)
+        if result['status']:
+            return RevokeToken(status=True, message=result['message'], token = result['token'], payload = result['payload'])
+        else:
+            return RevokeToken(status=True, message=result['message'], token = result['token'])
+
+
 class SendPasswordResetEmail(graphene.Mutation):
     user = graphene.Field(UserType)
     sender = settings.EMAIL_HOST_USER
