@@ -25,7 +25,7 @@ SECRET_KEY = 'yx6&m47urn&p8)1=p0d(!0edgy1$dx!pb%u5v5%i5r3*7h)qn-'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com']
+
 
 
 # Application definition
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "graphql_jwt.refresh_token.apps.RefreshTokenConfig",
     "graphql_auth",
     'graphql_playground',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'kwek.urls'
@@ -210,3 +212,14 @@ EMAIL_HOST_USER = 'gregoflash01@gmail.com' # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = 'greg1998'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com', 'http://localhost:3000', 'https://localhost:3000', 'https://kwek.vercel.app','http://kwek.vercel.app']
+CORS_ORIGIN_ALLOW_ALL = False
+4
+CORS_ORIGIN_WHITELIST = (
+5
+       'http://localhost:3000',
+       'https://localhost:3000',
+       'https://kwek.vercel.app',
+       'http://kwek.vercel.app',
+6
+)
