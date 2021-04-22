@@ -214,12 +214,12 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com', 'http://localhost:3000', 'https://localhost:3000', 'https://kwek.vercel.app','http://kwek.vercel.app']
 CORS_ORIGIN_ALLOW_ALL = False
-4
+
 CORS_ORIGIN_WHITELIST = (
-5
+
        'http://localhost:3000',
        'https://localhost:3000',
        'https://kwek.vercel.app',
        'http://kwek.vercel.app',
-6
+
 )
