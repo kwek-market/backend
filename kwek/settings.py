@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "django_filters",
     "graphql_jwt.refresh_token.apps.RefreshTokenConfig",
     "graphql_auth",
-    'corsheaders',
+    # 'corsheaders',
     'graphql_playground',
     
 ]
@@ -103,23 +103,23 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'kwekdb1',
-#         'USER': 'admin',
-#         'PASSWORD': 'AbioDune22@A',
-#         'HOST': 'localhost',
-#         'PORT': '',
-#         }
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
+# }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'kwekdb1',
+        'USER': 'admin',
+        'PASSWORD': 'AbioDune22@A',
+        'HOST': 'localhost',
+        'PORT': '',
+        }
+    }
 
 # DATABASES = {
 #     'default': {
