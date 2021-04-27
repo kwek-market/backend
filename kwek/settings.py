@@ -214,8 +214,10 @@ EMAIL_HOST_USER = 'gregoflash01@gmail.com' # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = 'greg1998'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com', 'http://localhost:3000', 'https://localhost:3000', 'https://kwek.vercel.app','http://kwek.vercel.app']
-CORS_ORIGIN_ALLOW_ALL = False
+# ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com', 'http://localhost:3000', 'https://localhost:3000', 'https://kwek.vercel.app','http://kwek.vercel.app']
+# CORS_ORIGIN_ALLOW_ALL = False
+ALLOWED_HOSTS = ['*']
+CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ORIGIN_WHITELIST = (
 
@@ -233,6 +235,11 @@ CORS_ALLOW_METHODS = [
     'PATCH',
     'POST',
     'PUT',
+]
+from corsheaders.defaults import default_methods
+
+CORS_ALLOW_METHODS = list(default_methods) + [
+    'POKE',
 ]
 
 CORS_ALLOW_HEADERS = [
