@@ -35,7 +35,7 @@ def verify_email(request):
                 return render(request, "kwek_auth/email_verification.html", context)
                 # return redirect("https://{}/login".format(settings.DOMAIN))
             except Exception as e:
-                context ={'status' : "false", 'Message' : "{} for {}".format(e,username), 'token' : token, 'alert_type' : "danger"}
+                context ={'status' : "false", 'Message' : "{}".format(e), 'token' : token, 'alert_type' : "danger"}
                 return render(request, "kwek_auth/email_verification.html", context)
                 # return redirect("https://{}/not_login".format(settings.DOMAIN))
 
