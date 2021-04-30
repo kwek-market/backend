@@ -48,7 +48,7 @@ def expire_token(token):
 
 
 def send_confirmation_email(email):
-    username, SECRET_KEY, DOMAIN= email, settings.SECRET_KEY, settings.DOMAIN
+    username, SECRET_KEY, DOMAIN = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode('utf-8')
 
@@ -63,7 +63,7 @@ def send_confirmation_email(email):
         'token': token_path,
         'button_name': "Verify Account",
         'title': "Email Verification",
-        'path': "verify/",
+        'path': "email_verification/",
     }
     # locates our email.html in the templates folder
     msg_html = render_to_string('users/email.html', context)

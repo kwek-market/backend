@@ -103,23 +103,23 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'kwekdb1',
-        'USER': 'admin',
-        'PASSWORD': 'AbioDune22@A',
-        'HOST': 'localhost',
-        'PORT': '',
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'kwekdb1',
+#         'USER': 'admin',
+#         'PASSWORD': 'AbioDune22@A',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#         }
+#     }
 
 # DATABASES = {
 #     'default': {
@@ -205,7 +205,7 @@ REGISTER_MUTATION_FIELDS = {
     "full_name": "String",
 }
 
-
+BACKEND_DOMAIN = "http://www.kwekapi.com"
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = 'gregoflash01@gmail.com'
 

@@ -4,5 +4,6 @@ from .schema import schema
 from . import views
 
 urlpatterns = [
-    path("graphql", GraphQLView.as_view(graphiql=True, schema=schema)),
+    path("email_verification/", views.verify_email, name = "login"),
+    path("", views.home_redirect, name = "Home Page"),
 ]

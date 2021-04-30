@@ -21,6 +21,7 @@ from graphql_playground.views import GraphQLPlaygroundView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('users.urls')),
     path('', include('kwek_auth.urls')),
     path("v1/users_auth", csrf_exempt(GraphQLView.as_view())),
     path("v1/graphql", csrf_exempt(GraphQLPlaygroundView.as_view(endpoint="users_auth"))),
