@@ -239,6 +239,8 @@ CORS_ORIGIN_WHITELIST = (
        'https://localhost:3000',
        'https://kwek.vercel.app',
        'http://kwek.vercel.app',
+       'http://kwekapi.com',
+       'https://kwekapi.com',
 
 )
 
