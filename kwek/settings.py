@@ -103,12 +103,12 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 # DATABASES = {
 #     'default': {
@@ -182,8 +182,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+STATICFILES_DIRS = [BASE_DIR,'static']
+STATIC_ROOT = "/home/kwekxbyu/kwekapi.com/static/"
+MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/media"
 
 AUTH_USER_MODEL = "users.ExtendUser"
 
@@ -225,9 +228,9 @@ EMAIL_HOST_USER = 'gregoflash01@gmail.com' # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = 'greg1998'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com', 'http://localhost:3000', 'https://localhost:3000', 'https://kwek.vercel.app','http://kwek.vercel.app']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com']
 # CORS_ORIGIN_ALLOW_ALL = False
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ORIGIN_WHITELIST = (
