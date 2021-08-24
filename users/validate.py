@@ -24,3 +24,12 @@ def validate_passwords(password1, password2):
         return {"status": False, "message": "Passwords do not match"}
     else:
         return {"status": True, "message": "Valid Password"}
+
+
+def validate_user_passwords(new_password):
+    if len(new_password) < 8:
+        return {"status": False, "message": "Password is should not be less than 8 characters"}
+    elif not any(char.isdigit() for char in new_password):
+        return {"status": False, "message": "Password should contain numerical character"}
+    else:
+        return {"status": True, "message": "Valid Password"}

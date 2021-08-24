@@ -103,23 +103,23 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #     }
 #     }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'kwekdb1',
-        'USER': 'admin',
-        'PASSWORD': 'AbioDune22@A',
-        'HOST': 'localhost',
-        'PORT': '',
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'kwekdb1',
+#         'USER': 'admin',
+#         'PASSWORD': 'AbioDune22@A',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#         }
+#     }
 
 # DATABASES = {
 #     'default': {
@@ -131,6 +131,17 @@ DATABASES = {
 #         'PORT': '',
 #         }
 #     }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'kwekxbyu_kwekdb',
+        'USER': 'kwekxbyu_kwekadmin',
+        'PASSWORD': 'kwekadmin',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
+      }
+    }
 
 
 # Password validation
@@ -253,3 +264,4 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+FLUTTER_SEC_KEY = 'FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X'

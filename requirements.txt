@@ -21,6 +21,7 @@ PyJWT==1.7.1
 pytz==2021.1
 requests==2.25.1
 Rx==1.6.1
+simplejson==3.17.3
 singledispatch==3.6.1
 six==1.15.0
 sqlparse==0.4.1
