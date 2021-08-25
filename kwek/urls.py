@@ -23,7 +23,7 @@ urlpatterns = [
     path('devadmin/', admin.site.urls),
     path('', include('users.urls')),
     path('', include('kwek_auth.urls')),
-    path("v1/users_auth", csrf_exempt(GraphQLView.as_view())),
+    path("v1/kwekql", csrf_exempt(GraphQLView.as_view())),
     path("v2/graphql", csrf_exempt(GraphQLView.as_view(graphiql=True))),
-    path("v1/graphql", csrf_exempt(GraphQLPlaygroundView.as_view(endpoint="users_auth"))),
+    path("v1/graphql", csrf_exempt(GraphQLPlaygroundView.as_view(endpoint="kwekql"))),
 ]
