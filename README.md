@@ -1,2 +1,2 @@
 # kwek_backend
-Kwek's Graphql Backebd
+Kwek's Graphql Backend
