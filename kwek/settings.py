@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "market",
     'kwek_auth',
     'users',
     "graphene_django",
@@ -84,24 +85,24 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-# if DEBUG:
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.sqlite3',
-#             'NAME': BASE_DIR / 'db.sqlite3',
-#         }
-#     }
-# else:
-#     DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'kwekdb',
-#         'USER': 'admin',
-#         'PASSWORD': 'AbioDune22@A',
-#         'HOST': 'localhost',
-#         'PORT': '',
-#     }
-#     }
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'kwekdb',
+        'USER': 'admin',
+        'PASSWORD': 'AbioDune22@A',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+    }
 
 # DATABASES = {
 #     'default': {
@@ -132,16 +133,16 @@ WSGI_APPLICATION = 'kwek.wsgi.application'
 #         }
 #     }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'kwekxbyu_kwekdb',
-        'USER': 'kwekxbyu_kwekadmin',
-        'PASSWORD': 'kwekadmin',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-      }
-    }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'kwekxbyu_kwekdb',
+#         'USER': 'kwekxbyu_kwekadmin',
+#         'PASSWORD': 'kwekadmin',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
+#       }
+#     }
 
 
 # Password validation
@@ -192,6 +193,7 @@ AUTH_USER_MODEL = "users.ExtendUser"
 
 GRAPHENE = {
     'SCHEMA': 'users.schema.schema',
+    
     'MIDDLEWARE': [
         'graphql_jwt.middleware.JSONWebTokenMiddleware',
     ],
