@@ -18,6 +18,7 @@ entrypoint.sh
 .Python
 build/
 # .github/
+Makefile
 develop-eggs/
 dist/
 downloads/

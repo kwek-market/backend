@@ -42,8 +42,8 @@ jobs:
           # password: ${{ secrets.PASSWORD }}
           host: premium219.web-hosting.com
           # port: 2083
-          port: 21098
-          password: uZOKTPXdDXKo
+          port: ${{ secrets.PORT }}
+          password: ${{ secrets.PASSWORD }}
           username: ${{ secrets.USERNAME }}
           script: |
             source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
