@@ -37,18 +37,19 @@ jobs:
       - name: Git Pull on Server
         uses: kielabokkie/ssh-key-and-known-hosts-action@v1
         with:
-          ssh-private-key: ${{ secrets.PASSWORD }}
-          ssh-host: ${{ secrets.KWEK_HOST }}
-          ssh-port: ${{ secrets.PORT }}
-          # host: ${{ secrets.KWEK_HOST }}
-          # username: ${{ secrets.USERNAME }}
-          # password: ${{ secrets.PASSWORD }}
-          # script: |
-          #   source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
-          #   git pull origin prod
-          #   pip install -r requirements.txt
-          #   python manage.py makeigrations
-          #   python manage.py migrate
-          #   python manage.py collectstatic
-          #   yes
-          #   python passenger_wsgi.py 
+          # ssh-private-key: ${{ secrets.PASSWORD }}
+          # ssh-host: ${{ secrets.KWEK_HOST }}
+          # ssh-port: ${{ secrets.PORT }}
+          host: ${{ secrets.KWEK_HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
+            git pull origin prod
+            pip install -r requirements.txt
+            python manage.py makeigrations
+            python manage.py migrate
+            python manage.py collectstatic
+            yes
+            python passenger_wsgi.py 
