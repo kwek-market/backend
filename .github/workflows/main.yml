@@ -43,12 +43,12 @@ jobs:
           # host: ${{ secrets.KWEK_HOST }}
           # username: ${{ secrets.USERNAME }}
           # password: ${{ secrets.PASSWORD }}
-          script: |
-            source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
-            git pull origin prod
-            pip install -r requirements.txt
-            python manage.py makeigrations
-            python manage.py migrate
-            python manage.py collectstatic
-            yes
-            python passenger_wsgi.py 
+          # script: |
+          #   source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
+          #   git pull origin prod
+          #   pip install -r requirements.txt
+          #   python manage.py makeigrations
+          #   python manage.py migrate
+          #   python manage.py collectstatic
+          #   yes
+          #   python passenger_wsgi.py 
