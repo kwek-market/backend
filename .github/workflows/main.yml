@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Git Pull on Server
-        uses: appleboy/ssh-action@master
+        # uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.KWEK_HOST }}
           username: ${{ secrets.USERNAME }}
