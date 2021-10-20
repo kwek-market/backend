@@ -41,6 +41,5 @@ def verify_email(request):
 
 
 def home_redirect(request):
-    # return redirect("https://{}/".format(settings.DOMAIN))
-    return redirect("https://google.com/q=test")
+    return redirect("https://{}/".format(settings.DOMAIN))
         
