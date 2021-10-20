@@ -47,9 +47,9 @@ jobs:
           username: ${{ secrets.USERNAME }}
           script: |
             source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
-            git pull origin prod
+            git pull upstream prod
             pip install -r requirements.txt
             python manage.py makeigrations
             python manage.py migrate
-            python manage.py collectstatic
+            python manage.py collectstatic --noinput
             python passenger_wsgi.py 
