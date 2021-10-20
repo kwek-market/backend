@@ -34,12 +34,9 @@ jobs:
       #       yes
       #       python passenger_wsgi.py 
 
-      - name: Git Pull on Server
-        uses: kielabokkie/ssh-key-and-known-hosts-action@v1
+      - name: Exec remote commands via SSH
+        uses: appleboy/ssh-action@master
         with:
-          # ssh-private-key: ${{ secrets.PASSWORD }}
-          # ssh-host: ${{ secrets.KWEK_HOST }}
-          # ssh-port: ${{ secrets.PORT }}
           host: ${{ secrets.KWEK_HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
