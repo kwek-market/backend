@@ -37,10 +37,13 @@ jobs:
       - name: Exec remote commands via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.KWEK_HOST }}
+          # host: ${{ secrets.KWEK_HOST }}
+          # username: ${{ secrets.USERNAME }}
+          # password: ${{ secrets.PASSWORD }}
+          host: kwekxbyu@premium219.web-hosting.com
+          port: 21098
+          password: uZOKTPXdDXKo
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: ${{ secrets.PORT }}
           script: |
             source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
             git pull origin prod
