@@ -40,7 +40,8 @@ jobs:
           # host: ${{ secrets.KWEK_HOST }}
           # username: ${{ secrets.USERNAME }}
           # password: ${{ secrets.PASSWORD }}
-          host: https://premium219.web-hosting.com:2083/
+          host: https://premium219.web-hosting.com
+          port: 2083
           # port: 21098
           password: uZOKTPXdDXKo
           username: ${{ secrets.USERNAME }}
