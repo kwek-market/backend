@@ -17,6 +17,8 @@ entrypoint.sh
 # Distribution / packaging
 .Python
 build/
+# .github/
+Makefile
 develop-eggs/
 dist/
 downloads/

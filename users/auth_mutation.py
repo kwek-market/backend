@@ -182,7 +182,6 @@ class VerifyToken(graphene.Mutation):
         else:
             return VerifyToken(status=False, message="User is not Authenticated")
 
-
 class RevokeToken(graphene.Mutation):
     user = graphene.Field(UserType)
     message = graphene.String()
@@ -262,7 +261,6 @@ class ChangePassword(graphene.Mutation):
     user = graphene.Field(UserType)
     status = graphene.Boolean()
     message = graphene.String()
-
     class Arguments:
         token = graphene.String(required=True)
         password1 = graphene.String()
@@ -521,7 +519,6 @@ class CompleteSellerVerification(graphene.Mutation):
             userid = c_user.id
 
             seller = SellerProfile.objects.get(user=userid)
-
             seller.seller_is_verified = True
             seller.save()
             return CompleteSellerVerification(status=True, message="Successful")
@@ -609,7 +606,6 @@ class UserPasswordUpdate(graphene.Mutation):
     user = graphene.Field(UserType)
     status = graphene.Boolean()
     message = graphene.String()
-
     class Arguments:
         token = graphene.String(required=True)
         current_password = graphene.String()
@@ -650,7 +646,6 @@ class StoreUpdate(graphene.Mutation):
     seller = graphene.Field(SellerProfileType)
     status = graphene.Boolean()
     message = graphene.String()
-
     class Arguments:
         token = graphene.String(required=True)
         store_banner = graphene.String(required=True)
@@ -677,7 +672,6 @@ class StoreLocationUpdate(graphene.Mutation):
     seller = graphene.Field(SellerProfileType)
     status = graphene.Boolean()
     message = graphene.String()
-
     class Arguments:
         token = graphene.String(required=True)
         shop_address = graphene.String(required=True)

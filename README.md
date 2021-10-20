@@ -1,2 +1,2 @@
-# kwek_backend
-Kwek's Graphql Backend
+# backend
+Kwek Market's Django Graphql Backend

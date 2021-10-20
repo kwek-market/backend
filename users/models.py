@@ -3,16 +3,21 @@ from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 
+
 class ExtendUser(AbstractUser):
-    email = models.EmailField(blank=False, max_length=255, verbose_name="email", unique=True)
+    email = models.EmailField(
+        blank=False, max_length=255, verbose_name="email", unique=True
+    )
     full_name = models.CharField(blank=False, max_length=255, verbose_name="full_name")
-    phone_number = models.CharField(blank=True, max_length=255, verbose_name="full_name")
+    phone_number = models.CharField(
+        blank=True, max_length=255, verbose_name="full_name"
+    )
     is_verified = models.BooleanField(default=False, verbose_name="is_verified")
     is_seller = models.BooleanField(default=False, verbose_name="is_seller")
 
-
     USERNAME_FIELD = "username"
     EmailField = "email"
+
 
 class SellerProfile(models.Model):
     user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE, null=True)
@@ -37,10 +42,15 @@ class SellerProfile(models.Model):
     bank_sort_code = models.CharField(max_length=255, blank=True, null=True)
     bank_account_number = models.CharField(max_length=255, blank=True, null=True)
     bank_account_name = models.CharField(max_length=255, blank=True, null=True)
-    seller_is_verified = models.BooleanField(default=False, verbose_name="seller_is_verified")
-    bank_account_is_verified = models.BooleanField(default=False, verbose_name="bank_account_is_verified")
-    accepted_vendor_policy = models.BooleanField(default=False, verbose_name="accepted_vendor_policy")
-    
+    seller_is_verified = models.BooleanField(
+        default=False, verbose_name="seller_is_verified"
+    )
+    bank_account_is_verified = models.BooleanField(
+        default=False, verbose_name="bank_account_is_verified"
+    )
+    accepted_vendor_policy = models.BooleanField(
+        default=False, verbose_name="accepted_vendor_policy"
+    )
 
     def __str__(self):
         return self.user
