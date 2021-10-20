@@ -1,0 +1,1 @@
+from kwek.wsgi import application
