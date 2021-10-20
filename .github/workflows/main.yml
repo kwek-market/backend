@@ -3,7 +3,7 @@ name: Zuri DM Deployment File
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [main]
+    branches: [prod]
   #pull_request:
    # branches: [main]
 
@@ -24,7 +24,7 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           script: |
             source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
-            git pull origin main
+            git pull origin prod
             pip install -r requirements.txt
             python manage.py makeigrations
             python manage.py migrate
