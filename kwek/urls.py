@@ -20,9 +20,9 @@ from graphene_django.views import GraphQLView
 from graphql_playground.views import GraphQLPlaygroundView
 
 urlpatterns = [
-    path('devadmin/', admin.site.urls),
-    path('', include('users.urls')),
-    path('', include('kwek_auth.urls')),
+    path("devadmin/", admin.site.urls),
+    path("", include("users.urls")),
+    path("", include("kwek_auth.urls")),
     path("v1/kwekql", csrf_exempt(GraphQLView.as_view())),
     path("v2/graphql", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("v1/graphql", csrf_exempt(GraphQLPlaygroundView.as_view(endpoint="kwekql"))),
