@@ -5,7 +5,10 @@ from django.template.loader import get_template
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
-import datetime;
+import datetime
+import requests
+import json
+
 
 def user_loggedIN(token):
     try:
@@ -18,11 +21,13 @@ def user_loggedIN(token):
     except Exception as e:
         return False
 
+
 def refresh_user_token(email):
     ct = int(('{}'.format(time.time())).split('.')[0])
-    payload = { user.USERNAME_FIELD: email,'exp': ct + 151200,'origIat': ct}
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
-    return {"status": False, "token" : token, "message" : "New Token"}
+    payload = {user.USERNAME_FIELD: email, 'exp': ct + 151200, 'origIat': ct}
+    token = jwt.encode(payload, settings.SECRET_KEY,
+                       algorithm='HS256').decode('utf-8')
+    return {"status": False, "token": token, "message": "New Token"}
 
 
 def expire_token(token):
@@ -31,7 +36,7 @@ def expire_token(token):
         if dt['exp']:
             exp = int("{}".format(dt['exp']))
             if time.time() > exp:
-                return {"status": True, "token" : token, "message" : "Logged Out"}
+                return {"status": True, "token": token, "message": "Logged Out"}
             else:
                 pt = int(('{}'.format(time.time())).split('.')[0])
                 payload = {
@@ -39,85 +44,76 @@ def expire_token(token):
                     'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
                     'origIat': int(('{}'.format(time.time())).split('.')[0])
                 }
-                
-                return {"status": True, "payload":dt, "token" : jwt.encode(pt, settings.SECRET_KEY, algorithm='HS256').decode('utf-8'), "message" : "Logged Out"}
+
+                return {"status": True, "payload": dt, "token": jwt.encode(pt, settings.SECRET_KEY, algorithm='HS256').decode('utf-8'), "message": "Logged Out"}
         else:
-            return {"status": False, "token" : token, "message" : "Invalid Token"}
+            return {"status": False, "token": token, "message": "Invalid Token"}
     except Exception as e:
-        return {"status": False, "token" : token, "message" : "Invalid Token"}
+        return {"status": False, "token": token, "message": "Invalid Token"}
 
 
 def send_confirmation_email(email):
-    username, SECRET_KEY, DOMAIN = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN
+    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode('utf-8')
 
     token_path = "?token={}".format(token)
-    context = {
-        'small_text_detail': 'Thank you for '
-                             'creating an account. '
-                             'Please verify your email '
-                             'address to set up your account.',
-        'email': email,
-        'domain': DOMAIN,
-        'token': token_path,
-        'button_name': "Verify Account",
-        'title': "Email Verification",
-        'path': "email_verification/",
-    }
-    # locates our email.html in the templates folder
-    msg_html = render_to_string('users/email.html', context)
-    # message = Mail(
-    #     # the email that sends the confirmation email
-    #     from_email=settings.KWEK_EMAIL,
-    #     to_emails=[email],  # list of email receivers
-    #     subject='Account Verification',  # subject of your email
-    #     html_content=msg_html)
-    from_email=settings.KWEK_EMAIL
-    subject='Account Verification'
-    newsletter_txt = strip_tags(msg_html)
-    # html_template = get_template('users/email.html').render()
-    message = EmailMultiAlternatives(subject, newsletter_txt, from_email, [email])
-    message.attach_alternative(msg_html, 'text/html')
-    # message.send()
-    try:
-        if message.send():
-            return {"status" : True, "message" : "Email sent", "email" : msg_html}
-        else:
-            return {"status" : False, "message" : "Email not sent"}
-    except Exception as e:
-        return {"status" : False, "message" : e}
+    link = "{}/email_verification/{}".format(DOMAIN, token_path)
+    payload = {
+        "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
+        "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "firstCorReset",
+        "title": 'Account Verification',"small_text_detail": "You have to verify your new E-mail to activate your account",
+        "link": link,"link_keyword": "Verify"
+            }
 
+    try:
+        status,message = send_email_through_PHP(payload)
+        if status:
+            return {"status": True, "message": message}
+        else:
+            return {"status": False, "message": message}
+    except Exception as e:
+        print(e)
+        return {"status": False, "message": e}
 
 
 def send_password_reset_email(email):
-    username, SECRET_KEY, DOMAIN= email, settings.SECRET_KEY, settings.DOMAIN
-    token = jwt.encode({'user': username, "validity" : True, 'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
-                    'origIat': int(('{}'.format(time.time())).split('.')[0])},
-                     SECRET_KEY,
+    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.DOMAIN,"Kwek Market"
+    token = jwt.encode({'user': username, "validity": True, 'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
+                        'origIat': int(('{}'.format(time.time())).split('.')[0])},
+                       SECRET_KEY,
                        algorithm='HS256').decode('utf-8')
     token_path = "?token={}".format(token)
-    context = {
-        'small_text_detail': 'Please click '
-                             'the button below '
-                             'to change your Password. ',
-        'email': email,
-        'domain': DOMAIN,
-        'token': token_path,
-        'button_name': "Reset Password",
-        'title': "Password Reset",
-        'path': "change_password/",
-    }
-    msg_html = render_to_string('users/email.html', context)
-    from_email=settings.KWEK_EMAIL
-    subject='Password Reset'
-    newsletter_txt = strip_tags(msg_html)
-    message = EmailMultiAlternatives(subject, newsletter_txt, from_email, [email])
-    message.attach_alternative(msg_html, 'text/html')
+    link = "{}/change_password/{}".format(DOMAIN, token_path)
+    payload = {
+        "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
+        "from_email": settings.KWEK_EMAIL,"subject": 'Password Reset',"event": "firstCorReset",
+        "title": 'Password Reset',"small_text_detail": "You have requested to change your password",
+        "link": link,"link_keyword": "Change Password"
+            }
+
     try:
-        if message.send():
-            return {"status" : True, "message" : "Email sent", "email" : msg_html}
+        status,message = send_email_through_PHP(payload)
+        if status:
+            return {"status": True, "message": message}
         else:
-            return {"status" : False, "message" : "Email not sent"}
+            return {"status": False, "message": message}
     except Exception as e:
-        return {"status" : False, "message" : e}
+        print(e)
+        return {"status": False, "message": e}
+
+
+def send_email_through_PHP(payload_dictionary):
+    url, payload, headers = "https://emailapi.kwekapi.com/", json.dumps(
+        payload_dictionary), {'Content-Type': 'application/json'}
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        if response.json()["status"]:
+            return True,response.json()['message']
+        else:
+            return False
+    except Exception as e:
+        return False,response.json()['message'] 
+
+
+# send_password_reset_email("gregoflash05@gmail.com")

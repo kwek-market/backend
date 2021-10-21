@@ -20,7 +20,6 @@ from .model_object_type import UserType, SellerProfileType
 
 
 class CreateUser(graphene.Mutation):
-    user = graphene.Field(UserType)
     sender = settings.EMAIL_HOST_USER
     status = graphene.Boolean()
     message = graphene.String()
@@ -55,7 +54,6 @@ class CreateUser(graphene.Mutation):
                 user.save()
                 return CreateUser(
                     status=True,
-                    email_text=sen_m["email"],
                     message="Successfully created account for, {}".format(
                         user.username
                     ),
@@ -67,8 +65,6 @@ class CreateUser(graphene.Mutation):
 
 
 class ResendVerification(graphene.Mutation):
-    user = graphene.Field(UserType)
-    sender = settings.EMAIL_HOST_USER
     status = graphene.Boolean()
     message = graphene.String()
     email_text = graphene.String()
@@ -82,7 +78,6 @@ class ResendVerification(graphene.Mutation):
         if sen_m["status"] == True:
             return ResendVerification(
                 status=True,
-                email_text=sen_m["email"],
                 message="Successfully sent email to {}".format(email),
             )
         else:
@@ -91,7 +86,6 @@ class ResendVerification(graphene.Mutation):
 
 
 class VerifyUser(graphene.Mutation):
-    user = graphene.Field(UserType)
     status = graphene.Boolean()
     message = graphene.String()
 
@@ -114,12 +108,8 @@ class LoginUser(graphene.Mutation):
     user = graphene.Field(UserType)
     message = graphene.String()
     token = graphene.String()
-    refresh_token = graphene.String()
-    payload_string = graphene.String()
     status = graphene.Boolean()
-    verification_prompt = graphene.String()
     payload = graphene.String()
-    time_diff = graphene.String()
 
     class Arguments:
         email = graphene.String()
@@ -167,7 +157,6 @@ class LoginUser(graphene.Mutation):
 
 
 class VerifyToken(graphene.Mutation):
-    user = graphene.Field(UserType)
     message = graphene.String()
     status = graphene.Boolean()
 
@@ -183,7 +172,6 @@ class VerifyToken(graphene.Mutation):
             return VerifyToken(status=False, message="User is not Authenticated")
 
 class RevokeToken(graphene.Mutation):
-    user = graphene.Field(UserType)
     message = graphene.String()
     token = graphene.String()
     payload = graphene.String()
@@ -209,10 +197,8 @@ class RevokeToken(graphene.Mutation):
 
 
 class RefreshToken(graphene.Mutation):
-    user = graphene.Field(UserType)
     message = graphene.String()
     token = graphene.String()
-    payload = graphene.String()
     status = graphene.Boolean()
 
     class Arguments:
@@ -234,11 +220,8 @@ class RefreshToken(graphene.Mutation):
 
 
 class SendPasswordResetEmail(graphene.Mutation):
-    user = graphene.Field(UserType)
-    sender = settings.EMAIL_HOST_USER
     status = graphene.Boolean()
     message = graphene.String()
-    email_text = graphene.String()
 
     class Arguments:
         email = graphene.String(required=True)
@@ -249,7 +232,6 @@ class SendPasswordResetEmail(graphene.Mutation):
         if sen_m["status"] == True:
             return SendPasswordResetEmail(
                 status=True,
-                email_text=sen_m["email"],
                 message="Successfully sent password reset link to {}".format(email),
             )
         else:
@@ -258,7 +240,6 @@ class SendPasswordResetEmail(graphene.Mutation):
 
 
 class ChangePassword(graphene.Mutation):
-    user = graphene.Field(UserType)
     status = graphene.Boolean()
     message = graphene.String()
     class Arguments:
@@ -273,7 +254,7 @@ class ChangePassword(graphene.Mutation):
             username, validity = dt["user"], dt["validity"]
             if validity:
                 if validate_passwords(password1, password2)["status"] == False:
-                    return CreateUser(
+                    return ChangePassword(
                         status=False,
                         message=validate_passwords(password1, password2)["message"],
                     )
@@ -281,7 +262,7 @@ class ChangePassword(graphene.Mutation):
                     user = ExtendUser.objects.get(email=username)
                     user.set_password(password1)
                     user.save()
-                    return CreateUser(status=True, message="Password Change Successful")
+                    return ChangePassword(status=True, message="Password Change Successful")
             else:
                 return ChangePassword(status=False, message="Invalid Token")
             # return ChangePassword(status=True, message = "Verification Successful")
@@ -290,8 +271,6 @@ class ChangePassword(graphene.Mutation):
 
 
 class StartSelling(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     message = graphene.String()
     status = graphene.Boolean()
 
@@ -384,10 +363,7 @@ class TestToken(graphene.Mutation):
 
 
 class AccountNameRetrieval(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     message = graphene.String()
-    message1 = graphene.String()
     account_number = graphene.String()
     account_name = graphene.String()
     status = graphene.Boolean()
@@ -435,8 +411,6 @@ class AccountNameRetrieval(graphene.Mutation):
 
 
 class SellerVerification(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     message = graphene.String()
     status = graphene.Boolean()
 
@@ -504,8 +478,6 @@ class SellerVerification(graphene.Mutation):
 
 
 class CompleteSellerVerification(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     message = graphene.String()
     status = graphene.Boolean()
 
@@ -522,13 +494,11 @@ class CompleteSellerVerification(graphene.Mutation):
             seller.seller_is_verified = True
             seller.save()
             return CompleteSellerVerification(status=True, message="Successful")
-        except EXCEPTION as e:
+        except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
 
 
 class UserAccountUpdate(graphene.Mutation):
-    user = graphene.Field(UserType)
-    # seller = graphene.Field(SellerProfileType)
     message = graphene.String()
     token = graphene.String()
     status = graphene.Boolean()
@@ -603,7 +573,6 @@ class UserAccountUpdate(graphene.Mutation):
 
 
 class UserPasswordUpdate(graphene.Mutation):
-    user = graphene.Field(UserType)
     status = graphene.Boolean()
     message = graphene.String()
     class Arguments:
@@ -642,8 +611,6 @@ class UserPasswordUpdate(graphene.Mutation):
 
 
 class StoreUpdate(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     status = graphene.Boolean()
     message = graphene.String()
     class Arguments:
@@ -668,8 +635,6 @@ class StoreUpdate(graphene.Mutation):
 
 
 class StoreLocationUpdate(graphene.Mutation):
-    user = graphene.Field(UserType)
-    seller = graphene.Field(SellerProfileType)
     status = graphene.Boolean()
     message = graphene.String()
     class Arguments:

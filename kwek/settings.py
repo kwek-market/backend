@@ -86,23 +86,6 @@ WSGI_APPLICATION = "kwek.wsgi.application"
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 # if DEBUG:
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.sqlite3',
-#             'NAME': BASE_DIR / 'db.sqlite3',
-#         }
-#     }
-# else:
-#     DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'kwekdb',
-#         'USER': 'admin',
-#         'PASSWORD': 'AbioDune22@A',
-#         'HOST': 'localhost',
-#         'PORT': '',
-#     }
-#     }
 
 # DATABASES = {
 #     'default': {
@@ -111,39 +94,27 @@ WSGI_APPLICATION = "kwek.wsgi.application"
 #     }
 # }
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.getenv("NAME"),
+#         "USER": os.getenv("USERNAME"),
+#         "PASSWORD": os.getenv("PASSWORD"),
+#         "HOST": os.getenv("HOST"),
+#         "PORT": os.getenv("PORT"),
+#     }
+# }
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("NAME"),
-        "USER": os.getenv("USER"),
-        "PASSWORD": os.getenv("PASSWORD"),
-        "HOST": os.getenv("HOST"),
-        "PORT": os.getenv("PORT"),
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'kwekxbyu_kwekdb',
+        'USER': 'kwekxbyu_kwekadmin',
+        'PASSWORD': 'kwekadmin',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
+      }
     }
-}
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'kwekdb',
-#         'USER': 'admin',
-#         'PASSWORD': 'AbioDune22@A',
-#         'HOST': 'localhost',
-#         'PORT': '',
-#         }
-#     }
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'kwekxbyu_kwekdb',
-#         'USER': 'kwekxbyu_kwekadmin',
-#         'PASSWORD': 'kwekadmin',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#       }
-#     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -222,7 +193,8 @@ REGISTER_MUTATION_FIELDS = {
 
 BACKEND_DOMAIN = "http://www.kwekapi.com"
 DOMAIN = "www.kwekmarket.com"
-KWEK_EMAIL = "gregoflash01@gmail.com"
+KWEK_EMAIL = "support@kwekmarket.com"
+PHPWEB = "kwekmailapiphpmailsystem"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = "gregoflash01@gmail.com"  # this is exactly the value 'apikey'
