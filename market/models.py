@@ -28,14 +28,14 @@ class VerboseSubCategoryManager(models.Manager):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=255, blank=False, null=True)
+    name = models.CharField(max_length=255, blank=False, null=True, unique=True)
 
     def __str__(self):
         return self.name
 
 
 class Subcategory(models.Model):
-    name = models.CharField(max_length=255, blank=False, null=True)
+    name = models.CharField(max_length=255, blank=False, null=True, unique=True)
     categories = models.ManyToManyField("Category", related_name="subcategories")
     parent = ArrayField(models.IntegerField(), blank=True, default=list)
     child = ArrayField(models.IntegerField(), blank=True, default=list)
@@ -48,7 +48,7 @@ class Subcategory(models.Model):
 
 
 class Keyword(models.Model):
-    keyword = models.CharField(max_length=255, blank=False, null=True)
+    keyword = models.CharField(max_length=255, blank=False, null=True, unique=True)
 
     def __str__(self):
         return self.keyword
