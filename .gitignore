@@ -10,6 +10,7 @@ nginx/
 docker-compose.yml
 Dockerfile
 entrypoint.sh
+prod.env
 
 # C extensions
 *.so

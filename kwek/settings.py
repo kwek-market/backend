@@ -26,7 +26,8 @@ load_dotenv()
 SECRET_KEY = "yx6&m47urn&p8)1=p0d(!0edgy1$dx!pb%u5v5%i5r3*7h)qn-"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+DEBUG = os.getenv('DEGUG', True)
 
 
 # Application definition
@@ -98,23 +99,13 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DATABASE"),
-        "USER": os.getenv("USER"),
+        "USER": os.getenv("USER_NAME"),
         "PASSWORD": os.getenv("PASSWORD"),
         "HOST": os.getenv("HOST"),
         "PORT": os.getenv("PORT"),
     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'kwekxbyu_kwekdb',
-#         'USER': 'kwekxbyu_kwekadmin',
-#         'PASSWORD': 'kwekadmin',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#       }
-#     }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
