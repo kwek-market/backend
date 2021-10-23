@@ -1,5 +1,7 @@
 import graphene
 from graphql import GraphQLError
+
+from users.models import ExtendUser
 from .models import *
 from .object_types import *
 from graphene import List, String
@@ -13,20 +15,65 @@ class CategoryInput(graphene.InputObjectType):
     name = graphene.String(required=True)
 
 
+class ProductInput(graphene.InputObjectType):
+    id = graphene.String()
+    product_title = graphene.String(required=True)
+    user_id = graphene.Int(required=True)
+    subcategory_id = graphene.Int(required=True)
+    brand = graphene.String()
+    product_weight = graphene.String()
+    short_description = graphene.String()
+    charge_five_percent_vat = graphene.Boolean(required=True)
+    return_policy = graphene.String()
+    warranty = graphene.String()
+    color = graphene.String()
+    gender = graphene.String()
+    keyword = graphene.List(graphene.Int)
+    clicks = graphene.Int()
+    promoted = graphene.Boolean()
+
+
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
     category = graphene.Field(CategoryType)
     status = graphene.Boolean()
 
     class Arguments:
+        id = graphene.Int(required=True)
         category_data = CategoryInput(required=True)
 
     @staticmethod
-    def mutate(root, info, category_data=None):
-        category = Category.objects.get(id=category_data.id)
+    def mutate(root, info, id=None, category_data=None):
+        category = Category.objects.get(id=id)
         category.name = category_data.name
         category.save()
         return UpdateCategoryMutation(category=category, status=True)
+
+
+class CreateProductMutation(graphene.Mutation):
+    product = graphene.Field(ProductType)
+
+    class Arguments:
+        product_data = ProductInput(required=True)
+
+    @staticmethod
+    def mutate(root, info, product_data=None):
+        product = Product.objects.create(**product_data)
+        return CreateProductMutation(product=product)
+
+
+class UpdateProductMutation(graphene.Mutation):
+    product = graphene.Field(ProductType)
+
+    class Arguments:
+        id = graphene.Int(required=True)
+        product_data = ProductInput(required=True)
+
+    @staticmethod
+    def mutate(root, info, id=None, product_data=None):
+        product = Product.objects.filter(id=id)
+        product.update(**product_data)
+        return CreateProductMutation(product=product.first())
 
 
 class GetCategorysSubcategory(graphene.Mutation):

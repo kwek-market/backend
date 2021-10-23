@@ -53,3 +53,5 @@ class Mutation(AuthMutation, graphene.ObjectType):
     get_categorys_subcategories = GetCategorysSubcategory.Field()
     get_all_categorys_subcategories = GetAllCategorysSubcategory.Field()
     add_multiple_product_category = AddMultipleProductCategory.Field()
+    create_product = CreateProductMutation.Field()
+    update_product = UpdateProductMutation.Field()

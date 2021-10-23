@@ -94,27 +94,27 @@ WSGI_APPLICATION = "kwek.wsgi.application"
 #     }
 # }
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.getenv("NAME"),
-#         "USER": os.getenv("USERNAME"),
-#         "PASSWORD": os.getenv("PASSWORD"),
-#         "HOST": os.getenv("HOST"),
-#         "PORT": os.getenv("PORT"),
-#     }
-# }
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'kwekxbyu_kwekdb',
-        'USER': 'kwekxbyu_kwekadmin',
-        'PASSWORD': 'kwekadmin',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-      }
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DATABASE"),
+        "USER": os.getenv("USER"),
+        "PASSWORD": os.getenv("PASSWORD"),
+        "HOST": os.getenv("HOST"),
+        "PORT": os.getenv("PORT"),
     }
+}
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'kwekxbyu_kwekdb',
+#         'USER': 'kwekxbyu_kwekadmin',
+#         'PASSWORD': 'kwekadmin',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
+#       }
+#     }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
