@@ -27,7 +27,7 @@ SECRET_KEY = "yx6&m47urn&p8)1=p0d(!0edgy1$dx!pb%u5v5%i5r3*7h)qn-"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = os.getenv('DEGUG', True)
+DEBUG = os.getenv("DEGUG", True)
 
 
 # Application definition
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "market",
     "kwek_auth",
+    "asset_mgmt",
     "users",
     "graphene_django",
     "django_filters",
@@ -144,12 +145,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = "/static/"
-MEDIA_URL = "/media/"
+MEDIA_URL = "/asset/"
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 STATICFILES_DIRS = [BASE_DIR, "static"]
 STATIC_ROOT = "/home/kwekxbyu/kwekapi.com/static/"
-MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/media"
+if DEBUG:
+    MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
+else:
+    MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
+
 
 AUTH_USER_MODEL = "users.ExtendUser"
 
