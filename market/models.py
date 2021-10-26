@@ -85,7 +85,9 @@ class ProductImage(models.Model):
 
 
 class ProductOption(models.Model):
-    product = models.ForeignKey("market.Product", on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(
+        "market.Product", related_name="options", on_delete=models.CASCADE, null=True
+    )
     size = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)

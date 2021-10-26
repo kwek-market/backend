@@ -1,6 +1,7 @@
 import graphene
 import jwt
 from graphene_django import DjangoListField
+from graphene_django.filter import DjangoFilterConnectionField
 from graphql_auth.schema import UserQuery, MeQuery
 from django.conf import settings
 from .model_object_type import UserType, SellerProfileType
@@ -14,8 +15,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     categories = DjangoListField(CategoryType)
     category_by_id = graphene.Field(CategoryType, id=graphene.Int(required=True))
-    product_by_id = graphene.Field(ProductType, id=graphene.Int(required=True))
-    products = graphene.Field(ProductType)
+    products = graphene.relay.Node.Field(ProductType)
+    all_products = DjangoFilterConnectionField(ProductType)
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -29,9 +30,3 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_category_by_id(root, info, id):
         return Category.objects.get(pk=id)
-
-    def resolve_product_by_id(root, info, id):
-        return Product.objects.get(pk=id)
-
-    # def resolve_all_categories(root, info):
-    #     return Category.objects.all()
