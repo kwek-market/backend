@@ -115,3 +115,9 @@ class RatingType(DjangoObjectType):
     class Meta:
         model = Rating
         fields = ("id", "product", "rating", "comment", "name", "email", "rated_at")
+
+class NewsletterType(DjangoObjectType):
+    class Meta:
+        model = Newsletter
+        fields = "__all__"
+        

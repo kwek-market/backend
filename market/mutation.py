@@ -32,6 +32,9 @@ class ProductInput(graphene.InputObjectType):
     clicks = graphene.Int()
     promoted = graphene.Boolean()
 
+class NewsletterInput(graphene.InputObjectType):
+    id = graphene.Int()
+    email = graphene.String()
 
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
@@ -522,3 +525,14 @@ class AddMultipleProductCategory(graphene.Mutation):
         return AddMultipleProductCategory(status=res["status"], message=res["message"])
 
         # return AddProductCategory(status=True, message=category_list, m_category=main_category)
+
+class CreateSubscriberMutation(graphene.Mutation):
+    subscriber = graphene.Field(NewsletterType)
+
+    class Arguments:
+        subscriber_data = NewsletterInput(required=True)
+
+    @staticmethod
+    def mutate(root, info, subscriber_data=None):
+        subscriber = Newsletter.objects.create(**subscriber_data)
+        return CreateSubscriberMutation(subscriber=subscriber)
