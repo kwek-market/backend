@@ -32,9 +32,6 @@ class ProductInput(graphene.InputObjectType):
     clicks = graphene.Int()
     promoted = graphene.Boolean()
 
-class NewsletterInput(graphene.InputObjectType):
-    id = graphene.Int()
-    email = graphene.String()
 
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
@@ -138,9 +135,9 @@ class GetCategorysSubcategory(graphene.Mutation):
         cat_list[0][category_name] = subsets
 
         # print(all_subs)
-        return GetCategorysSubcategory(
-            status=True, message="Message", category_data=cat_list
-        )
+        return GetCategorysSubcategory(status=True,
+                                       message="Message",
+                                       category_data=cat_list)
 
 
 class GetAllCategorysSubcategory(graphene.Mutation):
@@ -212,9 +209,9 @@ class GetAllCategorysSubcategory(graphene.Mutation):
         # cat_list[0][category_name] = subsets
 
         # print(all_subs)
-        return GetCategorysSubcategory(
-            status=True, message="Message", category_data=cat_list
-        )
+        return GetCategorysSubcategory(status=True,
+                                       message="Message",
+                                       category_data=cat_list)
 
 
 class AddProductCategory(graphene.Mutation):
@@ -256,7 +253,8 @@ class AddProductCategory(graphene.Mutation):
             main_category, ct_len = category_list[0], len(category_list)
             ct_lp = ct_len - 1
             try:
-                c_category, count = Category.objects.get(name=main_category), -1
+                c_category, count = Category.objects.get(
+                    name=main_category), -1
                 category_id = c_category.id
                 for i in category_list:
                     count += 1
@@ -357,7 +355,8 @@ class AddProductCategory(graphene.Mutation):
             except Exception as e:
                 return {"status": False, "message": e}
 
-        def add_categories(category_list, main_category, Category, Subcategory):
+        def add_categories(category_list, main_category, Category,
+                           Subcategory):
             if Category.objects.filter(name=main_category).exists():
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
@@ -367,7 +366,8 @@ class AddProductCategory(graphene.Mutation):
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
 
-        res = add_categories(category_list, main_category, Category, Subcategory)
+        res = add_categories(category_list, main_category, Category,
+                             Subcategory)
         return AddProductCategory(status=res["status"], message=res["message"])
 
 
@@ -409,7 +409,8 @@ class AddMultipleProductCategory(graphene.Mutation):
             main_category, ct_len = category_list[0], len(category_list)
             ct_lp = ct_len - 1
             try:
-                c_category, count = Category.objects.get(name=main_category), -1
+                c_category, count = Category.objects.get(
+                    name=main_category), -1
                 category_id = c_category.id
                 for i in category_list:
                     count += 1
@@ -510,7 +511,8 @@ class AddMultipleProductCategory(graphene.Mutation):
             except Exception as e:
                 return {"status": False, "message": e}
 
-        def add_categories(category_list, main_category, Category, Subcategory):
+        def add_categories(category_list, main_category, Category,
+                           Subcategory):
             if Category.objects.filter(name=main_category).exists():
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
@@ -522,17 +524,27 @@ class AddMultipleProductCategory(graphene.Mutation):
 
         for d in data:
             res = add_categories(d, d[0], Category, Subcategory)
-        return AddMultipleProductCategory(status=res["status"], message=res["message"])
+        return AddMultipleProductCategory(status=res["status"],
+                                          message=res["message"])
 
         # return AddProductCategory(status=True, message=category_list, m_category=main_category)
 
+
 class CreateSubscriberMutation(graphene.Mutation):
     subscriber = graphene.Field(NewsletterType)
-
+    message = graphene.String()
+    status = graphene.Boolean()
     class Arguments:
-        subscriber_data = NewsletterInput(required=True)
+        email = graphene.String(required=True)
 
     @staticmethod
-    def mutate(root, info, subscriber_data=None):
-        subscriber = Newsletter.objects.create(**subscriber_data)
-        return CreateSubscriberMutation(subscriber=subscriber)
+    def mutate(root, info, email):
+        if Newsletter.objects.filter(email=email).exists():
+            return CreateSubscriberMutation(
+                status=False, message="You have already subscribed")
+        else:
+            subscriber = Newsletter(email=email)
+            subscriber.save()
+        return CreateSubscriberMutation(subscriber=subscriber,
+                                        status=True,
+                                        message="Subscription Successful")
