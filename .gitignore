@@ -11,6 +11,7 @@ docker-compose.yml
 Dockerfile
 entrypoint.sh
 prod.env
+.vscode/
 
 # C extensions
 *.so
