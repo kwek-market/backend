@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib.postgres.fields import ArrayField
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
+from users.models import ExtendUser as User
 
 # Create your models here.
 
@@ -129,3 +130,22 @@ class Newsletter(models.Model):
 
     def __str__(self):
         return str(self.email)
+
+class Cart(models.Model):
+    product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name="user_carts", on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
+    price = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.product.name} - {self.user.email}"
+
+    class Meta:
+        ordering = ("-created_at",)
+
+class Wishlist(models.Model):
+    user = models.OneToOneField(User, related_name="user_wish", on_delete=models.CASCADE)
+    products = models.ManyToManyField(Product, related_name="products_wished")
+    created_at = models.DateTimeField(auto_now_add=True)
+

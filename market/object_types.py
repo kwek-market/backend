@@ -110,7 +110,6 @@ class ProductPromotionType(DjangoObjectType):
             "link_clicks",
         )
 
-
 class RatingType(DjangoObjectType):
     class Meta:
         model = Rating
@@ -120,4 +119,11 @@ class NewsletterType(DjangoObjectType):
     class Meta:
         model = Newsletter
         fields = "__all__"
-        
+
+class CartType(DjangoObjectType):
+    class Meta:
+        model = Cart
+
+class WishlistType(DjangoObjectType):
+    class Meta:
+        model = Wishlist

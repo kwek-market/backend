@@ -11,6 +11,7 @@ docker-compose.yml
 Dockerfile
 entrypoint.sh
 prod.env
+.vscode/
 
 # C extensions
 *.so
@@ -139,3 +140,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode

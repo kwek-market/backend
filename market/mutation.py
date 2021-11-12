@@ -36,6 +36,16 @@ class NewsletterInput(graphene.InputObjectType):
     id = graphene.Int()
     email = graphene.String()
 
+class CartInput(graphene.InputObjectType):
+    id = graphene.Int()
+    user = graphene.String()
+    products = graphene.String()
+
+class WishlistInput(graphene.InputObjectType):
+    id = graphene.Int()
+    user = graphene.String()
+    products = graphene.String()
+
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
     category = graphene.Field(CategoryType)
@@ -138,9 +148,9 @@ class GetCategorysSubcategory(graphene.Mutation):
         cat_list[0][category_name] = subsets
 
         # print(all_subs)
-        return GetCategorysSubcategory(
-            status=True, message="Message", category_data=cat_list
-        )
+        return GetCategorysSubcategory(status=True,
+                                       message="Message",
+                                       category_data=cat_list)
 
 
 class GetAllCategorysSubcategory(graphene.Mutation):
@@ -212,9 +222,9 @@ class GetAllCategorysSubcategory(graphene.Mutation):
         # cat_list[0][category_name] = subsets
 
         # print(all_subs)
-        return GetCategorysSubcategory(
-            status=True, message="Message", category_data=cat_list
-        )
+        return GetCategorysSubcategory(status=True,
+                                       message="Message",
+                                       category_data=cat_list)
 
 
 class AddProductCategory(graphene.Mutation):
@@ -256,7 +266,8 @@ class AddProductCategory(graphene.Mutation):
             main_category, ct_len = category_list[0], len(category_list)
             ct_lp = ct_len - 1
             try:
-                c_category, count = Category.objects.get(name=main_category), -1
+                c_category, count = Category.objects.get(
+                    name=main_category), -1
                 category_id = c_category.id
                 for i in category_list:
                     count += 1
@@ -357,7 +368,8 @@ class AddProductCategory(graphene.Mutation):
             except Exception as e:
                 return {"status": False, "message": e}
 
-        def add_categories(category_list, main_category, Category, Subcategory):
+        def add_categories(category_list, main_category, Category,
+                           Subcategory):
             if Category.objects.filter(name=main_category).exists():
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
@@ -367,7 +379,8 @@ class AddProductCategory(graphene.Mutation):
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
 
-        res = add_categories(category_list, main_category, Category, Subcategory)
+        res = add_categories(category_list, main_category, Category,
+                             Subcategory)
         return AddProductCategory(status=res["status"], message=res["message"])
 
 
@@ -409,7 +422,8 @@ class AddMultipleProductCategory(graphene.Mutation):
             main_category, ct_len = category_list[0], len(category_list)
             ct_lp = ct_len - 1
             try:
-                c_category, count = Category.objects.get(name=main_category), -1
+                c_category, count = Category.objects.get(
+                    name=main_category), -1
                 category_id = c_category.id
                 for i in category_list:
                     count += 1
@@ -510,7 +524,8 @@ class AddMultipleProductCategory(graphene.Mutation):
             except Exception as e:
                 return {"status": False, "message": e}
 
-        def add_categories(category_list, main_category, Category, Subcategory):
+        def add_categories(category_list, main_category, Category,
+                           Subcategory):
             if Category.objects.filter(name=main_category).exists():
                 res = add_sub_category(category_list, Category, Subcategory)
                 return res
@@ -522,17 +537,138 @@ class AddMultipleProductCategory(graphene.Mutation):
 
         for d in data:
             res = add_categories(d, d[0], Category, Subcategory)
-        return AddMultipleProductCategory(status=res["status"], message=res["message"])
+        return AddMultipleProductCategory(status=res["status"],
+                                          message=res["message"])
 
         # return AddProductCategory(status=True, message=category_list, m_category=main_category)
 
+
 class CreateSubscriberMutation(graphene.Mutation):
     subscriber = graphene.Field(NewsletterType)
-
+    message = graphene.String()
+    status = graphene.Boolean()
     class Arguments:
-        subscriber_data = NewsletterInput(required=True)
+        email = graphene.String(required=True)
 
     @staticmethod
-    def mutate(root, info, subscriber_data=None):
-        subscriber = Newsletter.objects.create(**subscriber_data)
-        return CreateSubscriberMutation(subscriber=subscriber)
+    def mutate(root, info, email):
+        if Newsletter.objects.filter(email=email).exists():
+            return CreateSubscriberMutation(
+                status=False, message="You have already subscribed")
+        else:
+            subscriber = Newsletter(email=email)
+            subscriber.save()
+        return CreateSubscriberMutation(subscriber=subscriber,
+                                        status=True,
+                                        message="Subscription Successful")
+
+class WishListMutation(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        product_id = graphene.ID(required=True)
+        is_check = graphene.Boolean()
+
+    def mutate(self, info, product_id, is_check=False):
+        try:
+            try:
+                product = Product.objects.get(id=product_id)
+            except Exception:
+                raise Exception("Product with product_id does not exist")
+
+            try:
+                user_wish = info.context.user.user_wish
+            except Exception:
+                user_wish = Wishlist.objects.create(user_id=info.context.user.id)
+
+            has_product = user_wish.products.filter(id=product_id)
+
+            if has_product:
+                if is_check:
+                    return WishListMutation(status=True)
+                user_wish.products.remove(product)
+            else:
+                if is_check:
+                    return WishListMutation(status=False)
+                user_wish.products.add(product)
+
+            return WishListMutation(
+                status = True,
+                message = "Successful"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+
+class CreateCartItem(graphene.Mutation):
+    cart_item = graphene.Field(CartType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        product_id = graphene.ID(required=True)
+        quantity = graphene.Int()
+        price = graphene.Float()
+
+    def mutate(self, info, product_id, **kwargs):
+        try:
+            Cart.objects.filter(product_id=product_id, user_id=info.context.user.id).delete()
+
+            cart_item = Cart.objects.create(product_id=product_id, user_id=info.context.user.id, **kwargs)
+
+            return CreateCartItem(
+                cart_item=cart_item,
+                status = True,
+                message = "Added to cart"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+
+
+class UpdateCartItem(graphene.Mutation):
+    cart_item = graphene.Field(CartType)
+
+    class Arguments:
+        cart_id = graphene.ID(required=True)
+        quantity = graphene.Int(required=True)
+        price = graphene.Float(required=True)
+
+    def mutate(self, info, cart_id, **kwargs):
+        try:
+            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).update(**kwargs)
+
+            return UpdateCartItem(
+                cart_item = Cart.objects.get(id=cart_id),
+                status = True,
+                message = "Cart Updated"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+class DeleteCartItem(graphene.Mutation):
+    status = graphene.Boolean()
+
+    class Arguments:
+        cart_id = graphene.ID(required=True)
+
+    def mutate(self, info, cart_id):
+        try:
+            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).delete()
+
+            return DeleteCartItem(
+                status = True,
+                message = "Deleted successfully"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
