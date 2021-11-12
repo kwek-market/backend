@@ -43,8 +43,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return cart_item
 
     def resolve_wishlists(root, info, name=False):
-        wishlist_item = Cart.objects.select_related("user", "product").filter(user_id=info.context.user.id)
+        wishlist_item = Wishlist.objects.select_related("user", "products").filter(user_id=info.context.user.id)
 
         if name:
-            wishlist_item = wishlist_item.filter(Q(product__name__icontains=name) | Q(product__name__iexact=name)).distinct()
+            wishlist_item = wishlist_item.filter(Q(user__name__icontains=name) | Q(user__name__iexact=name)).distinct()
         return wishlist_item
