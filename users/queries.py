@@ -20,6 +20,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     all_products = DjangoFilterConnectionField(ProductType)
     subcribers = DjangoListField(NewsletterType)
     carts = graphene.List(CartType, name=graphene.String())
+    wishlists = graphene.List(WishlistType, name=graphene.String())
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -41,3 +42,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             cart_item = cart_item.filter(Q(product__name__icontains=name) | Q(product__name__iexact=name)).distinct()
         return cart_item
 
+    def resolve_wishlists(root, info, name=False):
+        wishlist_item = Cart.objects.select_related("user", "product").filter(user_id=info.context.user.id)
+
+        if name:
+            wishlist_item = wishlist_item.filter(Q(product__name__icontains=name) | Q(product__name__iexact=name)).distinct()
+        return wishlist_item
