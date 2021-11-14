@@ -1,6 +1,8 @@
 import graphene
 from graphql import GraphQLError
+import jwt
 
+from django.conf import settings
 from users.models import ExtendUser
 from .models import *
 from .object_types import *
@@ -31,20 +33,6 @@ class ProductInput(graphene.InputObjectType):
     keyword = graphene.List(graphene.Int)
     clicks = graphene.Int()
     promoted = graphene.Boolean()
-
-class NewsletterInput(graphene.InputObjectType):
-    id = graphene.Int()
-    email = graphene.String()
-
-class CartInput(graphene.InputObjectType):
-    id = graphene.Int()
-    user = graphene.String()
-    products = graphene.String()
-
-class WishlistInput(graphene.InputObjectType):
-    id = graphene.Int()
-    user = graphene.String()
-    products = graphene.String()
 
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
@@ -609,14 +597,12 @@ class CreateCartItem(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        product_id = graphene.ID(required=True)
-        quantity = graphene.Int()
-        price = graphene.Float()
+        token = graphene.String(required=True)
 
-    def mutate(self, info, product_id, **kwargs):
+    def mutate(self, info, token, **kwargs):
+        product_id = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["product_id"]
         try:
-            Cart.objects.filter(product_id=product_id, user_id=info.context.user.id).delete()
-
+              
             cart_item = Cart.objects.create(product_id=product_id, user_id=info.context.user.id, **kwargs)
 
             return CreateCartItem(
@@ -637,11 +623,10 @@ class UpdateCartItem(graphene.Mutation):
     class Arguments:
         cart_id = graphene.ID(required=True)
         quantity = graphene.Int(required=True)
-        price = graphene.Float(required=True)
 
-    def mutate(self, info, cart_id, **kwargs):
+    def mutate(self, info, cart_id, quantity):
         try:
-            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).update(**kwargs)
+            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).update(quantity)
 
             return UpdateCartItem(
                 cart_item = Cart.objects.get(id=cart_id),
