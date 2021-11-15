@@ -32,6 +32,19 @@ class ProductInput(graphene.InputObjectType):
     clicks = graphene.Int()
     promoted = graphene.Boolean()
 
+class NewsletterInput(graphene.InputObjectType):
+    id = graphene.Int()
+    email = graphene.String()
+
+class CartInput(graphene.InputObjectType):
+    id = graphene.Int()
+    user = graphene.String()
+    products = graphene.String()
+
+class WishlistInput(graphene.InputObjectType):
+    id = graphene.Int()
+    user = graphene.String()
+    products = graphene.String()
 
 class UpdateCategoryMutation(graphene.Mutation):
     message = graphene.String()
@@ -548,3 +561,114 @@ class CreateSubscriberMutation(graphene.Mutation):
         return CreateSubscriberMutation(subscriber=subscriber,
                                         status=True,
                                         message="Subscription Successful")
+
+class WishListMutation(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        product_id = graphene.ID(required=True)
+        is_check = graphene.Boolean()
+
+    def mutate(self, info, product_id, is_check=False):
+        try:
+            try:
+                product = Product.objects.get(id=product_id)
+            except Exception:
+                raise Exception("Product with product_id does not exist")
+
+            try:
+                user_wish = info.context.user.user_wish
+            except Exception:
+                user_wish = Wishlist.objects.create(user_id=info.context.user.id)
+
+            has_product = user_wish.products.filter(id=product_id)
+
+            if has_product:
+                if is_check:
+                    return WishListMutation(status=True)
+                user_wish.products.remove(product)
+            else:
+                if is_check:
+                    return WishListMutation(status=False)
+                user_wish.products.add(product)
+
+            return WishListMutation(
+                status = True,
+                message = "Successful"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+
+class CreateCartItem(graphene.Mutation):
+    cart_item = graphene.Field(CartType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        product_id = graphene.ID(required=True)
+        quantity = graphene.Int()
+        price = graphene.Float()
+
+    def mutate(self, info, product_id, **kwargs):
+        try:
+            Cart.objects.filter(product_id=product_id, user_id=info.context.user.id).delete()
+
+            cart_item = Cart.objects.create(product_id=product_id, user_id=info.context.user.id, **kwargs)
+
+            return CreateCartItem(
+                cart_item=cart_item,
+                status = True,
+                message = "Added to cart"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+
+
+class UpdateCartItem(graphene.Mutation):
+    cart_item = graphene.Field(CartType)
+
+    class Arguments:
+        cart_id = graphene.ID(required=True)
+        quantity = graphene.Int(required=True)
+        price = graphene.Float(required=True)
+
+    def mutate(self, info, cart_id, **kwargs):
+        try:
+            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).update(**kwargs)
+
+            return UpdateCartItem(
+                cart_item = Cart.objects.get(id=cart_id),
+                status = True,
+                message = "Cart Updated"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
+class DeleteCartItem(graphene.Mutation):
+    status = graphene.Boolean()
+
+    class Arguments:
+        cart_id = graphene.ID(required=True)
+
+    def mutate(self, info, cart_id):
+        try:
+            Cart.objects.filter(id=cart_id, user_id=info.context.user.id).delete()
+
+            return DeleteCartItem(
+                status = True,
+                message = "Deleted successfully"
+            )
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }

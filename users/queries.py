@@ -7,6 +7,7 @@ from django.conf import settings
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import ExtendUser, SellerProfile
+from django.db.models import Q
 
 
 class Query(UserQuery, MeQuery, graphene.ObjectType):
@@ -17,6 +18,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     category_by_id = graphene.Field(CategoryType, id=graphene.Int(required=True))
     products = graphene.relay.Node.Field(ProductType)
     all_products = DjangoFilterConnectionField(ProductType)
+    subcribers = DjangoListField(NewsletterType)
+    carts = graphene.List(CartType, name=graphene.String())
+    wishlists = graphene.List(WishlistType, name=graphene.String())
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -30,3 +34,17 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_category_by_id(root, info, id):
         return Category.objects.get(pk=id)
+
+    def resolve_carts(root, info, name=False):
+        cart_item = Cart.objects.select_related("user", "product").filter(user_id=info.context.user.id)
+
+        if name:
+            cart_item = cart_item.filter(Q(product__name__icontains=name) | Q(product__name__iexact=name)).distinct()
+        return cart_item
+
+    def resolve_wishlists(root, info, name=False):
+        wishlist_item = Wishlist.objects.select_related("user", "products").filter(user_id=info.context.user.id)
+
+        if name:
+            wishlist_item = wishlist_item.filter(Q(user__name__icontains=name) | Q(user__name__iexact=name)).distinct()
+        return wishlist_item
