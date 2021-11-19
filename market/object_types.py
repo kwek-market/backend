@@ -6,34 +6,7 @@ from .models import *
 class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
-        fields = ("id", "name", "subcategories")
-
-
-class ParentChildType(DjangoObjectType):
-    class Meta:
-        model = Subcategory
-        fields = ("id", "name", "categories")
-
-
-class SubcategoryType(DjangoObjectType):
-    class Meta:
-        model = Subcategory
-        fields = (
-            "id",
-            "name",
-            "categories",
-            "parent",
-            "child",
-        )
-
-    parent = graphene.List(ParentChildType)
-    child = graphene.List(ParentChildType)
-
-    def resolve_parent(self, info, **kwargs):
-        return Subcategory.objects.filter(pk__in=self.parent)
-
-    def resolve_child(self, info, **kwargs):
-        return Subcategory.objects.filter(pk__in=self.child)
+        fields = "__all__"
 
 
 class KeywordType(DjangoObjectType):
@@ -50,7 +23,7 @@ class ProductType(DjangoObjectType):
             "id",
             "product_title",
             "user",
-            "subcategory",
+            "category",
             "brand",
             "product_weight",
             "short_description",

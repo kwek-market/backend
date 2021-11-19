@@ -19,8 +19,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     products = graphene.relay.Node.Field(ProductType)
     all_products = DjangoFilterConnectionField(ProductType)
     subcribers = DjangoListField(NewsletterType)
-    carts = graphene.List(CartType, name=graphene.String())
-    wishlists = graphene.List(WishlistType, name=graphene.String())
+    carts = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
+    wishlists = graphene.List(WishlistType, name=graphene.String(), ip=graphene.String())
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -35,11 +35,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     def resolve_category_by_id(root, info, id):
         return Category.objects.get(pk=id)
 
-    def resolve_carts(root, info, name=False):
-        cart_item = Cart.objects.select_related("user", "product").filter(user_id=info.context.user.id)
-
-        if name:
-            cart_item = cart_item.filter(Q(product__name__icontains=name) | Q(product__name__iexact=name)).distinct()
+    def resolve_carts(root, info, token=None, ip=None):
+        if token is not None:
+            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+            user = ExtendUser.objects.get(email=email)
+            if user.exists():
+                cart_item = Cart.objects.select_related("user", "product").filter(user=user)
+        if ip is not None:
+            cart_item = Cart.objects.select_related("user", "product").filter(ip=ip)
         return cart_item
 
     def resolve_wishlists(root, info, name=False):

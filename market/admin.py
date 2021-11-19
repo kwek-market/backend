@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import (
     Category,
-    Subcategory,
     Product,
     ProductImage,
     ProductOption,
@@ -12,7 +11,6 @@ from .models import (
 from django.apps import apps
 
 admin.site.register(Category)
-admin.site.register(Subcategory)
 admin.site.register(Product)
 admin.site.register(ProductImage)
 admin.site.register(ProductOption)
