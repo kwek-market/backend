@@ -1,5 +1,6 @@
-from graphene_django import DjangoObjectType, DjangoListField
 import graphene
+from graphene.relay.connection import Connection
+from graphene_django import DjangoObjectType
 from .models import *
 
 
@@ -18,7 +19,6 @@ class KeywordType(DjangoObjectType):
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
-        interfaces = (graphene.relay.Node,)
         fields = (
             "id",
             "product_title",
@@ -37,16 +37,6 @@ class ProductType(DjangoObjectType):
             "clicks",
             "promoted",
         )
-        filter_fields = {
-            "id": ["exact"],
-            "product_title": ["exact", "icontains"],
-            "color": ["exact", "iexact"],
-            "brand": ["exact", "iexact"],
-            "gender": ["exact", "iexact", "istartswith"],
-            "short_description": ["exact", "icontains"],
-            "keyword__keyword": ["exact", "icontains", "istartswith"],
-        }
-
 
 class ProductImageType(DjangoObjectType):
     class Meta:

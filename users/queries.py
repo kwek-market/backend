@@ -15,9 +15,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
 
     categories = DjangoListField(CategoryType)
-    category_by_id = graphene.Field(CategoryType, id=graphene.Int(required=True))
-    products = graphene.relay.Node.Field(ProductType)
-    all_products = DjangoFilterConnectionField(ProductType)
+    category = graphene.Field(CategoryType, id=graphene.Int(required=True))
+    product = graphene.relay.Node.Field(ProductType)
+    products = graphene.List(ProductType, search=graphene.String(), keyword=graphene.List(graphene.String))
     subcribers = DjangoListField(NewsletterType)
     carts = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistType, name=graphene.String(), ip=graphene.String())
@@ -32,7 +32,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         userid = c_user.id
         return SellerProfile.objects.get(user=userid)
 
-    def resolve_category_by_id(root, info, id):
+    def resolve_category(root, info, id):
         return Category.objects.get(pk=id)
 
     def resolve_carts(root, info, token=None, ip=None):
@@ -51,3 +51,25 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if name:
             wishlist_item = wishlist_item.filter(Q(user__name__icontains=name) | Q(user__name__iexact=name)).distinct()
         return wishlist_item
+    
+    def resolve_products(root, info, search=None, keyword=None):
+        if search:
+            filter = (
+                Q(product_title__icontains=search) |
+                Q(color__iexact=search) |
+                Q(brand__iexact=search) |
+                Q(gender__iexact=search) |
+                Q(category__name__icontains=search) |
+                Q(short_description__icontains=search)
+            )
+
+            return Product.objects.filter(filter)
+        
+        if keyword:
+            filter = (
+                Q(keyword__overlap=keyword)
+            )
+
+            return Product.objects.filter(filter)
+        
+        return Product.objects.all()

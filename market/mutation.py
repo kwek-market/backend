@@ -23,12 +23,12 @@ class ProductInput(graphene.InputObjectType):
     warranty = graphene.String()
     color = graphene.String()
     gender = graphene.String()
-    keyword = graphene.List(graphene.Int)
+    keyword = graphene.List(graphene.String)
     clicks = graphene.Int()
     promoted = graphene.Boolean()
 
 class AddCategory(graphene.Mutation):
-    category = graphene.String()
+    category = graphene.Field(CategoryType)
     subcategory = graphene.String()
     status = graphene.Boolean()
     message = graphene.String()
@@ -48,7 +48,7 @@ class AddCategory(graphene.Mutation):
                 if parent is None:
                     category = Category.objects.create(name=name)
                     return AddCategory(
-                        category=category.name,
+                        category=category,
                         status=True,
                         message="Category added successfully"
                     )
@@ -57,8 +57,7 @@ class AddCategory(graphene.Mutation):
                         parent = Category.objects.get(name=parent)
                         category = Category.objects.create(name=name, parent=parent)
                         return AddCategory(
-                            category=parent.name,
-                            subcategory=category.name,
+                            category=category,
                             status=True,
                             message="Subcategory added successfully"
                         )
@@ -75,7 +74,7 @@ class AddCategory(graphene.Mutation):
 
 class UpdateCategory(graphene.Mutation):
     message = graphene.String()
-    category = graphene.String()
+    category = graphene.Field(CategoryType)
     status = graphene.Boolean()
 
     class Arguments:
@@ -154,7 +153,7 @@ class CreateProduct(graphene.Mutation):
         warranty = graphene.String()
         color = graphene.String()
         gender = graphene.String()
-        keyword = graphene.Int()
+        keyword = graphene.List(graphene.String)
         clicks = graphene.Int()
         promoted = graphene.Boolean()
 
@@ -167,29 +166,26 @@ class CreateProduct(graphene.Mutation):
         category,
         charge_five_percent_vat,
         keyword,
-        brand=None,
-        product_weight=None,
-        short_description=None,
-        return_policy=None,
-        warranty=None,
-        color=None,
-        gender=None,
-        clicks=None,
-        promoted=None
+        brand="",
+        product_weight="",
+        short_description="",
+        return_policy="",
+        warranty="",
+        color="",
+        gender="",
+        clicks=1,
+        promoted=False
     ):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         p_cat = Category.objects.get(name=category)
-        
-        if Keyword.objects.filter(id=keyword).exists():
-            p_keyword = Keyword.objects.get(keyword=keyword)
-        else:
-            Keyword.objects.create(keyword=product_title)
-            p_keyword = Keyword.objects.get(keyword=keyword)
-            print(p_keyword)
+
+        for word in keyword:
+            if not Keyword.objects.filter(keyword=word).exists():
+                Keyword.objects.create(keyword=word)
 
         product = Product.objects.create(
-            keyword.set(p_keyword),
+            keyword=keyword,
             product_title=product_title,
             user=user,
             category=p_cat,
@@ -296,20 +292,20 @@ class CreateCartItem(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        token = graphene.String(required=False)
-        ip_address = graphene.String(required=False)
+        token = graphene.String()
+        ip_address = graphene.String()
         product_id = graphene.String(required=True)
-        quantity = graphene.String(required=False)
+        quantity = graphene.Int()
 
     @staticmethod
-    def mutate(self, info, token, product_id, quantity, ip_address):
+    def mutate(self, info, product_id, quantity, token="", ip_address=""):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         product = Product.objects.get(id=product_id)
-        price = product.price
-        if user.exists():
+        price = 230.04
+        if user:
             try:
-                cart_item = Cart.objects.create(product=product, user=user, quantity=quantity, price=price)
+                cart_item = Cart.objects.create(product=product, user_id=user, quantity=quantity, price=price)
                 return CreateCartItem(
                     cart_item=cart_item,
                     status = True,
