@@ -1,10 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+import uuid
 
 # Create your models here.
 
 
 class ExtendUser(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(
         blank=False, max_length=255, verbose_name="email", unique=True
     )
@@ -20,6 +22,7 @@ class ExtendUser(AbstractUser):
 
 
 class SellerProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE, null=True)
     firstname = models.CharField(max_length=255, blank=False, null=True)
     lastname = models.CharField(max_length=255, blank=False, null=True)
