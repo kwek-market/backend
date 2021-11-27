@@ -111,7 +111,7 @@ class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
     user_id = models.ForeignKey(User, related_name="user_carts", on_delete=models.CASCADE, null=True)
-    ip = models.CharField(max_length=15, null=True)
+    ip = models.CharField(max_length=255, blank=True, null=True)
     quantity = models.IntegerField(default=1)
     price = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -124,7 +124,7 @@ class Cart(models.Model):
 
 class Wishlist(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.OneToOneField(User, related_name="user_wish", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name="user_wish", on_delete=models.CASCADE)
     products = models.ManyToManyField(Product, related_name="products_wished")
     created_at = models.DateTimeField(auto_now_add=True)
 

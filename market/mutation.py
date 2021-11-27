@@ -246,45 +246,36 @@ class WishListMutation(graphene.Mutation):
     class Arguments:
         token = graphene.String()
         product_id = graphene.String()
-        is_check = graphene.Boolean()
 
     @staticmethod
     def mutate(self, info, product_id, token, is_check=False):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         
-        if user.exists():
+        if user:
             try:
-                try:
-                    product = Product.objects.get(id=product_id)
-                except Exception:
-                    raise Exception("Product with product_id does not exist")
-
-                try:
-                    user_wish = info.context.user.user_wish
-                except Exception:
-                    user_wish = Wishlist.objects.create(user_id=info.context.user.id)
-
-                has_product = user_wish.products.filter(id=product_id)
-
-                if has_product:
-                    if is_check:
-                        return WishListMutation(status=True)
-                    user_wish.products.remove(product)
-                else:
-                    if is_check:
-                        return WishListMutation(status=False)
-                    user_wish.products.add(product)
-
-                return WishListMutation(
-                    status = True,
-                    message = "Successful"
-                )
-            except Exception as e:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
                 return {
-                    "status": False,
-                    "message": e
+                    "status" : False,
+                    "message" : "Product with product_id does not exist"
                 }
+
+            try:
+                user_wish = user.user_wish
+            except Exception:
+                user_wish = Wishlist.objects.create(user_id=user)
+
+            has_product = user_wish.products.filter(id=product_id)
+
+            if has_product:
+                user_wish.products.remove(product)
+            else:
+                user_wish.products.add(product)
+            return WishListMutation(
+                status = True,
+                message = "Successful"
+            )
 
 class CreateCartItem(graphene.Mutation):
     cart_item = graphene.Field(CartType)
