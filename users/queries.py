@@ -20,7 +20,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     products = graphene.List(ProductType, search=graphene.String(), keyword=graphene.List(graphene.String))
     subcribers = DjangoListField(NewsletterType)
     carts = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
-    wishlists = graphene.List(WishlistType, name=graphene.String(), ip=graphene.String())
+    wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -39,17 +39,19 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if token is not None:
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
-            if user.exists():
-                cart_item = Cart.objects.select_related("user", "product").filter(user=user)
+            if user:
+                cart_item = Cart.objects.select_related("user_id", "product").filter(user_id=user)
         if ip is not None:
-            cart_item = Cart.objects.select_related("user", "product").filter(ip=ip)
+            cart_item = Cart.objects.select_related("user_id", "product").filter(ip=ip)
         return cart_item
 
-    def resolve_wishlists(root, info, name=False):
-        wishlist_item = Wishlist.objects.select_related("user", "products").filter(user_id=info.context.user.id)
-
+    def resolve_wishlists(root, info, token):
+        wishlist_item = Wishlist.objects.select_related("user")
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        name = user.full_name
         if name:
-            wishlist_item = wishlist_item.filter(Q(user__name__icontains=name) | Q(user__name__iexact=name)).distinct()
+            wishlist_item = wishlist_item.filter(Q(user_id__full_name__icontains=name) | Q(user_id__full_name__iexact=name)).distinct()
         return wishlist_item
     
     def resolve_products(root, info, search=None, keyword=None):

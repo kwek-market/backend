@@ -59,9 +59,7 @@ class ProductImage(models.Model):
 
 class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(
-        Product, related_name="options", on_delete=models.CASCADE, null=True
-    )
+    product = models.OneToOneField(Product, related_name="options", on_delete=models.CASCADE, null=True)
     size = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
@@ -111,13 +109,13 @@ class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
     user_id = models.ForeignKey(User, related_name="user_carts", on_delete=models.CASCADE, null=True)
-    ip = models.CharField(max_length=15, null=True)
+    ip = models.CharField(max_length=255, blank=True, null=True)
     quantity = models.IntegerField(default=1)
     price = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.product.name} - {self.user.email}"
+        return f"{self.product.product_title} - {self.user_id.email}"
 
     class Meta:
         ordering = ("-created_at",)

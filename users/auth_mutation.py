@@ -2,6 +2,8 @@ import graphene
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+
+from market.mutation import verify_cart
 from .validate import validate_email, validate_passwords, validate_user_passwords
 from .sendmail import (
     send_confirmation_email,
@@ -112,11 +114,12 @@ class LoginUser(graphene.Mutation):
     payload = graphene.String()
 
     class Arguments:
-        email = graphene.String()
-        password = graphene.String()
+        email = graphene.String(required=True)
+        password = graphene.String(required=True)
+        ip = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, email, password):
+    def mutate(self, info, email, password, ip):
         user = authenticate(username=email, password=password)
         error_message = "Invalid login credentials"
         success_message = "You logged in successfully."
@@ -143,8 +146,10 @@ class LoginUser(graphene.Mutation):
                 token = jwt.encode(
                     payload, settings.SECRET_KEY, algorithm="HS256"
                 ).decode("utf-8")
+                print(token)
                 # token = get_token(user)
                 refresh_token = create_refresh_token(user)
+                verify_cart(ip, token)
                 return LoginUser(
                     user=user,
                     status=True,
