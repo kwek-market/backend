@@ -55,4 +55,6 @@ class Mutation(AuthMutation, graphene.ObjectType):
     update_product = UpdateProductMutation.Field()
     create_subscriber = CreateSubscriber.Field()
     add_to_cart = CreateCartItem.Field()
+    delete_cart = DeleteCart.Field()
+    delete_cart_item = DeleteCartItem.Field()
     add_to_wishlist = WishListMutation.Field()

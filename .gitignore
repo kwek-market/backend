@@ -143,4 +143,4 @@ dmypy.json
 
 .vscode
 
-user_token*
+user_token.txt
