@@ -16,6 +16,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     categories = DjangoListField(CategoryType)
     category = graphene.Field(CategoryType, id=graphene.Int(required=True))
+    subcategories = graphene.List(CategoryType)
     product = graphene.relay.Node.Field(ProductType)
     products = graphene.List(ProductType, search=graphene.String(), keyword=graphene.List(graphene.String))
     subcribers = DjangoListField(NewsletterType)
@@ -34,6 +35,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_category(root, info, id):
         return Category.objects.get(pk=id)
+
+    def resolve_subcategories(root, info):
+        categories = Category.objects.all()
+        cat_list=[]
+
+        for category in categories:
+            if category.parent:
+                cat_list.append(category)
+        return cat_list
 
     def resolve_carts(root, info, token=None, ip=None):
         if token is not None:
@@ -54,7 +64,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             wishlist_item = wishlist_item.filter(Q(user_id__full_name__icontains=name) | Q(user_id__full_name__iexact=name)).distinct()
         return wishlist_item
     
-    def resolve_products(root, info, search=None, keyword=None):
+    def resolve_products(root, info, search=None, keyword=None, rating=None):
         if search:
             filter = (
                 Q(product_title__icontains=search) |
@@ -62,7 +72,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(brand__iexact=search) |
                 Q(gender__iexact=search) |
                 Q(category__name__icontains=search) |
-                Q(short_description__icontains=search)
+                Q(short_description__icontains=search) |
+                Q(options__price__icontains=search) |
+                Q(options__size__iexact=search) 
             )
 
             return Product.objects.filter(filter)
