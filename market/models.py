@@ -50,7 +50,7 @@ class Product(models.Model):
 
 class ProductImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='image', on_delete=models.CASCADE)
     image_url = models.TextField(blank=False, null=True)
 
     def __str__(self):
@@ -59,7 +59,7 @@ class ProductImage(models.Model):
 
 class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.OneToOneField(Product, related_name="options", on_delete=models.CASCADE, null=True)
+    product = models.OneToOneField(Product, related_query_name="options", on_delete=models.CASCADE, null=True)
     size = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
@@ -72,7 +72,7 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, related_query_name="promo", on_delete=models.CASCADE, null=True)
     start_date = models.CharField(max_length=255, blank=False, null=True)
     end_date = models.CharField(max_length=255, blank=False, null=True)
     days = models.IntegerField(blank=False, null=True)
@@ -87,16 +87,19 @@ class ProductPromotion(models.Model):
 
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, related_query_name="product_rating", on_delete=models.CASCADE, null=True)
     rating = models.IntegerField(blank=False, null=True)
     comment = models.TextField(blank=True, null=True)
-    name = models.CharField(max_length=255, blank=False, null=True)
-    email = models.EmailField(blank=False, null=True)
+    user = ""
+    like = models.PositiveIntegerField()
+    dislike = models.PositiveIntegerField()
     rated_at = models.DateTimeField(auto_now_add=True)
     # updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.product
+        return self.user.full_name
+
+
 
 class Newsletter(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)

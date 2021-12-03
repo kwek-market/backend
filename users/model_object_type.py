@@ -12,6 +12,7 @@ class SellerProfileType(DjangoObjectType):
     class Meta:
         model = SellerProfile
         fields = (
+            "id",
             "user",
             "firstname",
             "lastname",

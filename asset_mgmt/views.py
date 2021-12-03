@@ -16,6 +16,8 @@ from django.utils.http import http_date, parse_http_date
 from django.views.static import directory_index, was_modified_since
 from django.utils._os import safe_join
 from pathlib import Path
+from kwek.vendor_array import data
+from market.models import Category
 import posixpath
 
 # Create your views here.
@@ -41,6 +43,27 @@ class FileAssetView(View):
             resp[i.name] = file_url
         return JsonResponse(resp)
 
+class PopulateCategory(View):
+    def post(self, request):
+        for array in data:
+            if Category.objects.filter(name=array[0]).exists():
+                pass
+            else:
+                Category.objects.create(name=array[0])
+            count = 1
+            while count < len(array):
+                parent = Category.objects.get(name=array[count-1])
+                if Category.objects.filter(name=array[count]).exists():
+                    pass
+                else:
+                    Category.objects.create(name=array[count], parent=parent)
+                count += 1
+        return JsonResponse(
+            {
+            "status": True,
+            "message":"Categories and Subcategories populated"
+        }
+        )
 
 class ImageAssetView(View):
     def post(self, request, *args, **kwargs):
