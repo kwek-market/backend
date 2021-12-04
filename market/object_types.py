@@ -19,24 +19,7 @@ class KeywordType(DjangoObjectType):
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = (
-            "id",
-            "product_title",
-            "user",
-            "category",
-            "brand",
-            "product_weight",
-            "short_description",
-            "charge_five_percent_vat",
-            "return_policy",
-            "warranty",
-            "color",
-            "gender",
-            "keyword",
-            "options",
-            "clicks",
-            "promoted",
-        )
+        fields = "__all__"
 
 class ProductImageType(DjangoObjectType):
     class Meta:
@@ -76,7 +59,7 @@ class ProductPromotionType(DjangoObjectType):
 class RatingType(DjangoObjectType):
     class Meta:
         model = Rating
-        fields = ("id", "product", "rating", "comment", "name", "email", "rated_at")
+        fields = "__all__"
 
 class NewsletterType(DjangoObjectType):
     class Meta:
