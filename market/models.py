@@ -90,7 +90,7 @@ class Rating(models.Model):
     product = models.ForeignKey(Product, related_query_name="product_rating", on_delete=models.CASCADE, null=True)
     rating = models.IntegerField(blank=False, null=True)
     comment = models.TextField(blank=True, null=True)
-    user = ""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     like = models.PositiveIntegerField()
     dislike = models.PositiveIntegerField()
     rated_at = models.DateTimeField(auto_now_add=True)

@@ -212,13 +212,13 @@ class CreateProduct(graphene.Mutation):
             message="Product added"
         )
 
-
 class UpdateProductMutation(graphene.Mutation):
     product = graphene.Field(ProductType)
 
     class Arguments:
         id = graphene.Int(required=True)
         product_data = ProductInput(required=True)
+        
 
     @staticmethod
     def mutate(root, info, id=None, product_data=None):
@@ -227,6 +227,21 @@ class UpdateProductMutation(graphene.Mutation):
         return CreateProduct(product=product.first())
 # =====================================================================================================================
 
+# product rating
+class Rating(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        product_id = graphene.String()
+        comment = graphene.String()
+        rating = graphene.Int()
+        user_id = graphene.String()
+    
+    @staticmethod
+    def mutate(self, info):
+        pass
+    pass
 # Subscriber Mutation
 class CreateSubscriber(graphene.Mutation):
     subscriber = graphene.Field(NewsletterType)

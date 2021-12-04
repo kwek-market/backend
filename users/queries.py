@@ -18,7 +18,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     category = graphene.Field(CategoryType, id=graphene.Int(required=True))
     subcategories = graphene.List(CategoryType)
     product = graphene.relay.Node.Field(ProductType)
-    products = graphene.List(ProductType, search=graphene.String(), keyword=graphene.List(graphene.String))
+    products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String))
     subcribers = DjangoListField(NewsletterType)
     carts = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
@@ -73,12 +73,21 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(gender__iexact=search) |
                 Q(category__name__icontains=search) |
                 Q(short_description__icontains=search) |
-                Q(options__price__icontains=search) |
-                Q(options__size__iexact=search) 
+                Q(options__price__icontains=search)
             )
 
             return Product.objects.filter(filter)
-        
+            
+        if rating:
+            rate = rating
+            products_included = []
+            while rate <= 5:
+                filter = (
+                    Q(product_rating__icontains=rating)
+                )
+                products_included.append(Product.objects.filter(filter))
+            return products_included
+
         if keyword:
             filter = (
                 Q(keyword__overlap=keyword)
