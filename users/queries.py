@@ -22,6 +22,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     subcribers = DjangoListField(NewsletterType)
     carts = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
+    reviews = DjangoListField(RatingType)
+    review = graphene.Field(RatingType, review_id=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -82,10 +84,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             rate = rating
             products_included = []
             while rate <= 5:
-                filter = (
-                    Q(product_rating__icontains=rating)
-                )
-                products_included.append(Product.objects.filter(filter))
+                products = Product.objects.filter(product_rating__rating__exact=rate).exclude(product_rating__rating)
+                for product in products:
+                    products_included.append(product)
+                rate += 1
             return products_included
 
         if keyword:
@@ -96,3 +98,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return Product.objects.filter(filter)
         
         return Product.objects.all()
+    
+    def resolve_review(root, info, review_id):
+        review = Rating.objects.get(id=review_id)
+        
+        return review

@@ -228,20 +228,123 @@ class UpdateProductMutation(graphene.Mutation):
 # =====================================================================================================================
 
 # product rating
-class Rating(graphene.Mutation):
+class Reviews(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
+    product_review=graphene.Field(RatingType)
 
     class Arguments:
         product_id = graphene.String()
         comment = graphene.String()
+        review_id = graphene.String()
+        review = graphene.String()
         rating = graphene.Int()
-        user_id = graphene.String()
+        token = graphene.String()
+        vote = graphene.String()
     
     @staticmethod
-    def mutate(self, info):
-        pass
-    pass
+    def mutate(
+        root,
+        info,
+        token,
+        product_id=None,
+        rating=None,
+        review=None,
+        review_id=None,
+        vote=None
+    ):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        
+        if product_id is not None:
+            product = Product.objects.get(id=product_id)
+        if review_id is not None and user:
+            parent = Rating.objects.get(id=review_id)
+            if parent and (review is not None):
+                product_review = Rating.objects.create(
+                    user=user,
+                    review=review,
+                    parent=parent
+                )
+
+                return Reviews(
+                    product_review=product_review,
+                    status=True,
+                    message="Comment added successfully"
+                )
+            if parent and (vote is not None):
+                if vote == "up":
+                    product_review = Rating.objects.get(id=review_id)
+                    likes = product_review.likes
+                    likes += 1
+                    product_review = Rating.objects.filter(id=review_id).update(likes=likes)
+                    return Reviews(
+                        product_review=product_review,
+                        status=True,
+                        message="Upvoted successfully"
+                    )
+                elif vote == "down":
+                    product_review = Rating.objects.get(id=review_id)
+                    dislikes = product_review.dislikes
+                    dislikes += 1
+                    product_review = Rating.objects.filter(id=review_id).update(dislikes=dislikes)
+                    return Reviews(
+                        product_review=product_review,
+                        status=True,
+                        message="Downvoted successfully"
+                    )
+                else:
+                    return {
+                        "status": False,
+                        "message": "Invalid Vote"
+                    }
+            
+        
+        if user:
+            if product and (review is not None) and (rating is not None):
+                product_review=Rating.objects.create(
+                    user=user,
+                    product=product,
+                    rating=rating,
+                    review=review
+                )
+                return Reviews(
+                    product_review=product_review,
+                    status=True,
+                    message="Review and rating added successfully"
+                )
+            elif product and (review is not None):
+                product_review=Rating.objects.create(
+                    user=user,
+                    product=product,
+                    review=review
+                )
+                return Reviews(
+                    product_review=product_review,
+                    status=True,
+                    message="Review added successfully"
+                )
+            elif product and (rating is not None):
+                product_review=Rating.objects.create(
+                    user=user,
+                    product=product,
+                    rating=rating
+                )
+                return Reviews(
+                    product_review=product_review,
+                    status=True,
+                    message="Rating added successfully"
+                )
+            else:
+                return {
+                    "status": False,
+                    "message": "Invaid Product"
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid user"
+            }
 # Subscriber Mutation
 class CreateSubscriber(graphene.Mutation):
     subscriber = graphene.Field(NewsletterType)

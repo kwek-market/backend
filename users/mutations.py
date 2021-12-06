@@ -58,3 +58,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     delete_cart = DeleteCart.Field()
     delete_cart_item = DeleteCartItem.Field()
     add_to_wishlist = WishListMutation.Field()
+    review = Reviews.Field()
