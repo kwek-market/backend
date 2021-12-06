@@ -84,7 +84,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             rate = rating
             products_included = []
             while rate <= 5:
-                products = Product.objects.filter(product_rating__rating__exact=rate).exclude(product_rating__rating)
+                products = Product.objects.filter(product_rating__rating__exact=rate)
                 for product in products:
                     products_included.append(product)
                 rate += 1
