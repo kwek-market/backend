@@ -3,16 +3,3 @@ olatunji = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6Im9sYXR1bmppc2F
 abiola = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImlhbWtvbW9sYWZlLm8uc0BnbWFpbC5jb20iLCJleHAiOjE2MzgyMDA1NzQsIm9yaWdJYXQiOjE2MzgwNDkzNzR9.W29f0OAY-0YERG0Q62_f20usE1HAYDuH7eY0ufHEbkc"
 
 105.112.75.96
-
-face 
-position
-allow
-blood
-song
-screen
-trial
-opera
-express
-total
-neither
-immune 

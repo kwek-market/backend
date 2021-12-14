@@ -23,10 +23,7 @@ from users.auth_mutation import (
     StartSelling,
 )
 from market.mutation import *
-from bill.mutation import (
-    BillingAddress,
-    PickUpLocation
-)
+
 
 class AuthMutation(graphene.ObjectType):
     pass
@@ -62,5 +59,3 @@ class Mutation(AuthMutation, graphene.ObjectType):
     delete_cart_item = DeleteCartItem.Field()
     add_to_wishlist = WishListMutation.Field()
     review = Reviews.Field()
-    billing_address = BillingAddress.Field()
-    pickup_location = PickUpLocation.Field()

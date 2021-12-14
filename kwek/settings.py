@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     "market",
     "kwek_auth",
     "asset_mgmt",
-    "bill",
     "users",
     "graphene_django",
     "django_filters",

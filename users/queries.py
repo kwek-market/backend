@@ -8,7 +8,6 @@ from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import ExtendUser, SellerProfile
 from django.db.models import Q
-from bill.object_types import *
 
 
 class Query(UserQuery, MeQuery, graphene.ObjectType):
@@ -16,7 +15,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
 
     categories = DjangoListField(CategoryType)
-    category = graphene.Field(CategoryType, id=graphene.String(required=True))
+    category = graphene.Field(CategoryType, id=graphene.Int(required=True))
     subcategories = graphene.List(CategoryType)
     product = graphene.relay.Node.Field(ProductType)
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String))
@@ -25,10 +24,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))
-    billing_addresses = DjangoListField(BillingType)
-    billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
-    pickup_locations = DjangoListField(PickupType)
-    pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -108,13 +103,3 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         review = Rating.objects.get(id=review_id)
         
         return review
-    
-    def resolve_billing_address(root, info, address_id):
-        billing_address = Billing.objects.get(id=address_id)
-
-        return billing_address
-
-    def resolve_pickup_location(root, info, location_id):
-        location = Pickups.objects.get(id=location_id)
-
-        return location
