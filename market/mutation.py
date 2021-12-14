@@ -33,7 +33,6 @@ class ProductInput(graphene.InputObjectType):
 # Category Mutations
 class AddCategory(graphene.Mutation):
     category = graphene.Field(CategoryType)
-    subcategory = graphene.String()
     status = graphene.Boolean()
     message = graphene.String()
 
