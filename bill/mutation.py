@@ -5,10 +5,12 @@ from django.conf import settings
 from users.models import ExtendUser
 from .models import (
     Billing,
+    Payment,
     Pickups
 )
 from .object_types import (
     BillingType,
+    PaymentType,
     PickupType
 )
 
@@ -106,3 +108,36 @@ class PickUpLocation(graphene.Mutation):
                     "status": False,
                     "message": e
                 }
+
+class PaymentInitiate(graphene.Mutation):
+    payment = graphene.Field(PaymentType)
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        amount = graphene.Int(required=True)
+        email = graphene.String(required=True)
+    
+    @staticmethod
+    def mutate(self, info, amount, email):
+        if amount and email:
+            try:
+                payment = Payment.objects.create(amount=amount, email=email)
+                payment.save()
+                return PaymentInitiate(
+                    payment=payment,
+                    status=True,
+                    message="Payment Successful"
+                )
+            except Exception as e:
+                return {
+                    "status": False,
+                    "message": e
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid amount or email"
+            }
+
+        pass

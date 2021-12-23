@@ -1,4 +1,5 @@
 import uuid
+import secrets
 from django.db import models
 
 from users.models import ExtendUser
@@ -42,3 +43,29 @@ class Pickups(models.Model):
     @property
     def location(self) -> str:
         return f"{self.address} {self.state} {self.city}"
+
+
+class Payment(models.Model):
+    amount = models.PositiveIntegerField()
+    ref = models.CharField(max_length=200)
+    email = models.EmailField()
+    verified = models.BooleanField(default=False)
+    transaction_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-transaction_date",)
+    
+    def __str__(self) -> str:
+        return f"Payment {self.amount}"
+
+    def save(self, *args, **kwargs):
+        while not self.ref:
+            ref = secrets.token_urlsafe(50)
+            object_with_similar_ref = Payment.objects.filter(ref=ref)
+
+            if not object_with_similar_ref.exists():
+                self.ref = ref
+        super().save(*args, **kwargs)
+    
+    def amount_value(self) -> int:
+        return self.amount*100
