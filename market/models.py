@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib.postgres.fields import ArrayField
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
+from django.db.models.deletion import CASCADE
 from users.models import ExtendUser as User
 import uuid
 
@@ -59,7 +60,7 @@ class ProductImage(models.Model):
 
 class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.OneToOneField(Product, related_query_name="options", on_delete=models.CASCADE, null=True)
+    product = models.OneToOneField(Product, related_name="options", on_delete=models.CASCADE, null=True)
     size = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
@@ -72,7 +73,7 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_query_name="promo", on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, null=True)
     start_date = models.CharField(max_length=255, blank=False, null=True)
     end_date = models.CharField(max_length=255, blank=False, null=True)
     days = models.IntegerField(blank=False, null=True)
@@ -87,12 +88,13 @@ class ProductPromotion(models.Model):
 
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_query_name="product_rating", on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, related_name="product_rating", on_delete=models.CASCADE, null=True)
     rating = models.IntegerField(blank=False, null=True)
-    comment = models.TextField(blank=True, null=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    like = models.PositiveIntegerField()
-    dislike = models.PositiveIntegerField()
+    review = models.TextField(null=True)
+    parent = models.ForeignKey("self", related_name="comment", on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    likes = models.IntegerField(default=0)
+    dislikes = models.IntegerField(default=0)
     rated_at = models.DateTimeField(auto_now_add=True)
     # updated_at = models.DateTimeField(auto_now=True)
 

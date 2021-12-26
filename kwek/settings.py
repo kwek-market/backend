@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "market",
     "kwek_auth",
     "asset_mgmt",
+    "bill",
     "users",
     "graphene_django",
     "django_filters",
@@ -238,3 +239,6 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
+
+# PAYSTACK_SECRET_KEY = config("PAYSTACK_SECRET_KEY")
+# PAYSTACK_PUBLIC_KEY = config("PAYSTACK_PUBLIC_KEY")
