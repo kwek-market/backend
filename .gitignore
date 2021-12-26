@@ -15,7 +15,7 @@ prod.env
 
 # C extensions
 *.so
-
+*migrations/*
 # Distribution / packaging
 .Python
 build/
