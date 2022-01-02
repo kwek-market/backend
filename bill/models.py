@@ -46,10 +46,16 @@ class Pickups(models.Model):
 
 
 class Payment(models.Model):
-    amount = models.PositiveIntegerField()
+    amount = models.FloatField()
     ref = models.CharField(max_length=200)
+    user_id = models.CharField(max_length=225, default=None)
     email = models.EmailField()
+    name = models.CharField(max_length=225, default="admin")
+    phone = models.CharField(max_length=15, default="+1809384583")
+    description = models.CharField(max_length=225, default="Purchase goods")
+    currency = models.CharField(max_length=3, default="USD")
     verified = models.BooleanField(default=False)
+    redirect_url = models.URLField(default="https://kwekmarket.com/")
     transaction_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:

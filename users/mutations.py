@@ -25,7 +25,9 @@ from users.auth_mutation import (
 from market.mutation import *
 from bill.mutation import (
     BillingAddress,
-    PickUpLocation
+    PaymentInitiate,
+    PickUpLocation,
+    PaymentVerification
 )
 
 class AuthMutation(graphene.ObjectType):
@@ -64,3 +66,5 @@ class Mutation(AuthMutation, graphene.ObjectType):
     review = Reviews.Field()
     billing_address = BillingAddress.Field()
     pickup_location = PickUpLocation.Field()
+    payment_link = PaymentInitiate.Field()
+    verify_payment = PaymentVerification.Field()

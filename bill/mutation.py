@@ -13,7 +13,7 @@ from .object_types import (
     PaymentType,
     PickupType
 )
-
+from .flutterwave import get_payment_url, verify_transaction
 
 
 class BillingAddress(graphene.Mutation):
@@ -113,31 +113,100 @@ class PaymentInitiate(graphene.Mutation):
     payment = graphene.Field(PaymentType)
     status = graphene.Boolean()
     message = graphene.String()
+    payment_link = graphene.String()
 
     class Arguments:
         amount = graphene.Int(required=True)
-        email = graphene.String(required=True)
+        token = graphene.String(required=True)
+        description = graphene.String(required=True)
+        currency = graphene.String()
     
     @staticmethod
-    def mutate(self, info, amount, email):
-        if amount and email:
-            try:
-                payment = Payment.objects.create(amount=amount, email=email)
-                payment.save()
-                return PaymentInitiate(
-                    payment=payment,
-                    status=True,
-                    message="Payment Successful"
-                )
-            except Exception as e:
+    def mutate(self, info, amount, token, description, currency=None):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        if user:
+            if amount:
+                try:
+                    payment = Payment.objects.create(
+                        amount=amount,
+                        user_id=user.id,
+                        email=email,
+                        name=user.full_name,
+                        phone=user.phone_number,
+                        description=description,
+                    )
+                    if currency:
+                        payment.currency = currency
+                    payment.save()
+
+                    link = get_payment_url(
+                        user.id,
+                        email,
+                        user.full_name,
+                        user.phone_number,
+                        payment.ref,
+                        float(amount),
+                        payment.currency,
+                        payment.redirect_url,
+                        payment.description
+                    )
+                    if link["status"]==True:
+                        return PaymentInitiate(
+                            payment=payment,
+                            status=True,
+                            message=link["message"],
+                            payment_link=link["payment_link"]
+                        )
+                    else:
+                        return PaymentInitiate(
+                            payment=payment,
+                            status=False,
+                            message=link["message"],
+                            payment_link=link["payment_link"]
+                        )
+                except Exception as e:
+                    return {
+                        "status": False,
+                        "message": e
+                    }
+            else:
                 return {
                     "status": False,
-                    "message": e
+                    "message": "Invalid amount"
                 }
         else:
             return {
-                "status": False,
-                "message": "Invalid amount or email"
+                "status":False,
+                "message": "Invalid user"
             }
 
-        pass
+class PaymentVerification(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    transaction_info = graphene.String()
+
+    class Arguments:
+        transaction_id = graphene.Int(required=True)
+
+    @staticmethod
+    def mutate(self, info, transaction_id):
+        try:
+            verify = verify_transaction(transaction_id)
+            if verify["status"] == True:
+                return {
+                    "status": verify["status"],
+                    "message": verify["message"],
+                    "transaction_info": verify["transaction_info"]
+                }
+            else:
+                return {
+                    "status": verify["status"],
+                    "message": verify["message"],
+                    "transaction_info": verify["transaction_info"]
+                }
+        except Exception as e:
+            return {
+                "status": False,
+                "message": e
+            }
