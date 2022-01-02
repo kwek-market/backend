@@ -14,7 +14,7 @@ def get_payment_url(
     name:str,
     phone:str,
     transaction_reference: str, 
-    amount: int, 
+    amount: float, 
     currency: str, 
     redirect_url: str,
     description: str
@@ -31,7 +31,7 @@ def get_payment_url(
             "currency": currency,
             "redirect_url": redirect_url,
             "payment_options": "",
-            "meta": {"consumer_id": user_id},
+            "meta": {"consumer_id": str(user_id)},
             "customer": {
                 "email": email,
                 "phonenumber": phone,
