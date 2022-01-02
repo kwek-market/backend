@@ -145,7 +145,7 @@ class LoginUser(graphene.Mutation):
                 # token = jwt.encode(dt, settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
                 token = jwt.encode(
                     payload, settings.SECRET_KEY, algorithm="HS256"
-                )
+                ).decode("utf-8")
                 print(token)
                 # token = get_token(user)
                 refresh_token = create_refresh_token(user)
@@ -567,7 +567,7 @@ class UserAccountUpdate(graphene.Mutation):
             payload = {"username": new_email, "exp": ct + 151200, "origIat": ct}
             n_token = jwt.encode(
                 payload, settings.SECRET_KEY, algorithm="HS256"
-            )
+            ).decode("utf-8")
             tu = u_update(email)
             if tu == True:
                 return UserAccountUpdate(

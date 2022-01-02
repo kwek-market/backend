@@ -55,8 +55,7 @@ def expire_token(token):
 def send_confirmation_email(email):
     username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username}, SECRET_KEY,
-                       algorithm='HS256')
-    print(token)
+                       algorithm='HS256').decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/email_verification/{}".format(DOMAIN, token_path)
     payload = {
