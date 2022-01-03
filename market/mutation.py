@@ -27,6 +27,8 @@ class ProductInput(graphene.InputObjectType):
     keyword = graphene.List(graphene.String)
     clicks = graphene.Int()
     promoted = graphene.Boolean()
+    category = graphene.String()
+    subcategory = graphene.String()
 
 
 # =====================================================================================================================
@@ -150,6 +152,7 @@ class CreateProduct(graphene.Mutation):
         token = graphene.String(required=True)
         product_title = graphene.String(required=True)
         category = graphene.String(required=True)
+        subcategory = graphene.String()
         brand = graphene.String()
         product_weight = graphene.String()
         short_description = graphene.String()
@@ -171,6 +174,7 @@ class CreateProduct(graphene.Mutation):
         category,
         charge_five_percent_vat,
         keyword,
+        subcategory=None,
         brand="",
         product_weight="",
         short_description="",
@@ -184,6 +188,9 @@ class CreateProduct(graphene.Mutation):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         p_cat = Category.objects.get(name=category)
+        if subcategory:
+            sub_cat = Category.objects.get(name=subcategory)
+        
 
         for word in keyword:
             if not Keyword.objects.filter(keyword=word).exists():
@@ -194,6 +201,7 @@ class CreateProduct(graphene.Mutation):
             product_title=product_title,
             user=user,
             category=p_cat,
+            subcategory=sub_cat,
             brand=brand,
             product_weight=product_weight,
             short_description=short_description,
