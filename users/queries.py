@@ -79,6 +79,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(brand__iexact=search) |
                 Q(gender__iexact=search) |
                 Q(category__name__icontains=search) |
+                Q(subcategory__name__icontains=search) |
                 Q(short_description__icontains=search) |
                 Q(options__price__icontains=search)
             )
