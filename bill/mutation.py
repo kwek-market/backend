@@ -79,12 +79,82 @@ class BillingAddressUpdate(graphene.Mutation):
     message = graphene.String()
 
     class Arugments:
-        pass
+        address_id = graphene.String(required=True)
+        full_name = graphene.String()
+        contact = graphene.String()
+        address = graphene.String()
+        state = graphene.String()
+        city = graphene.String()
 
     @staticmethod
-    def mutate(self, info):
-        pass
-    pass
+    def mutate(self, info, address_id, full_name=None, contact=None, address=None, state=None, city=None):
+        billing_address= Billing.objects.get(id=address_id)
+        if billing_address:
+            if full_name:
+                fullname = full_name
+            else:
+                fullname = billing_address.full_name
+            if contact:
+                new_contact = contact
+            else:
+                new_contact = billing_address.contact
+            if address:
+                new_address = address
+            else:
+                new_address = billing_address.address
+            if state:
+                new_state = state
+            else:
+                new_state = billing_address.state
+            if city:
+                new_city = city
+            else:
+                new_city = billing_address.city
+            try:
+                billing = Billing.objects.filter(id=address_id).update(
+                    full_name=fullname,
+                    contact=new_contact,
+                    address=new_address,
+                    state=new_state,
+                    city=new_city
+                )
+                return BillingAddressUpdate(
+                    status=True,
+                    message="Address updated successfully"
+                )
+            except Exception as e:
+                return {
+                    "status":False,
+                    "message": e
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid address"
+            }
+
+class BillingAddressDelete(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        address_id=graphene.String(required=True)
+    
+    @staticmethod
+    def mutate(self, info, address_id):
+        address = Billing.objects.filter(id=address_id)
+
+        if address.exists():
+            address.delete()
+            return BillingAddressDelete(
+                status= True,
+                message= 'Address deleted successfully'
+            )
+        else:
+            return {
+                "status": False,
+                "message": "Invalid address"
+            }
 class PickUpLocation(graphene.Mutation):
     location = graphene.Field(PickupType)
     status = graphene.Boolean()
@@ -121,6 +191,87 @@ class PickUpLocation(graphene.Mutation):
                     "message": e
                 }
 
+class PickupLocationUpdate(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arugments:
+        address_id = graphene.String(required=True)
+        name = graphene.String()
+        contact = graphene.String()
+        address = graphene.String()
+        state = graphene.String()
+        city = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, address_id, name=None, contact=None, address=None, state=None, city=None):
+        billing_address= Billing.objects.get(id=address_id)
+        if billing_address:
+            if name:
+                new_name = name
+            else:
+                new_name = billing_address.name
+            if contact:
+                new_contact = contact
+            else:
+                new_contact = billing_address.contact
+            if address:
+                new_address = address
+            else:
+                new_address = billing_address.address
+            if state:
+                new_state = state
+            else:
+                new_state = billing_address.state
+            if city:
+                new_city = city
+            else:
+                new_city = billing_address.city
+            try:
+                billing = Billing.objects.filter(id=address_id).update(
+                    name=new_name,
+                    contact=new_contact,
+                    address=new_address,
+                    state=new_state,
+                    city=new_city
+                )
+                return PickupLocationUpdate(
+                    status=True,
+                    message="Address updated successfully"
+                )
+            except Exception as e:
+                return {
+                    "status":False,
+                    "message": e
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid address"
+            }
+
+class PickupLocationDelete(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        address_id=graphene.String(required=True)
+    
+    @staticmethod
+    def mutate(self, info, address_id):
+        address = Billing.objects.filter(id=address_id)
+
+        if address.exists():
+            address.delete()
+            return PickupLocationDelete(
+                status= True,
+                message= 'Address deleted successfully'
+            )
+        else:
+            return {
+                "status": False,
+                "message": "Invalid address"
+            }
 class PaymentInitiate(graphene.Mutation):
     payment = graphene.Field(PaymentType)
     status = graphene.Boolean()
