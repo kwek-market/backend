@@ -159,7 +159,7 @@ class CreateProduct(graphene.Mutation):
         charge_five_percent_vat = graphene.Boolean(required=True)
         return_policy = graphene.String()
         warranty = graphene.String()
-        # product_options = graphene.List(graphene.String)
+        product_options = graphene.List(graphene.String)
         color = graphene.String()
         gender = graphene.String()
         keyword = graphene.List(graphene.String)
@@ -176,6 +176,7 @@ class CreateProduct(graphene.Mutation):
         keyword,
         subcategory,
         product_image_url,
+        product_options,
         brand="",
         product_weight="",
         short_description="",
@@ -212,6 +213,13 @@ class CreateProduct(graphene.Mutation):
 
         for url in product_image_url:
             ProductImage.objects.create(product=product, image_url=url)
+        for item in product_options:
+            option = eval(item)
+            keys = option.keys()
+            product_option = ProductOption.objects.create(product=product)
+            for key in keys:
+                product_option(key=option[key])
+                product_option.save()
         return CreateProduct(
             product=product,
             status=True,
