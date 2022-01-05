@@ -3,14 +3,14 @@ import secrets
 from django.db import models
 
 from users.models import ExtendUser
+from market.models import Cart, Product
 # Create your models here.
 
 
 class Billing(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
-    contact = models.CharField(max_length=13)
+    full_name = models.CharField(max_length=255)
+    contact = models.CharField(max_length=15)
     address = models.CharField(max_length=355)
     state = models.CharField(max_length=255)
     city = models.CharField(max_length=255)
@@ -18,18 +18,15 @@ class Billing(models.Model):
 
 
     def __str__(self) -> str:
-        return self.first_name
+        return self.full_name
 
     @property
     def location(self) -> str:
         return f"{self.address} {self.state} {self.city}"
 
 
-    @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
 
-class Pickups(models.Model):
+class Pickup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255)
     contact = models.CharField(max_length=13)
@@ -46,6 +43,7 @@ class Pickups(models.Model):
 
 
 class Payment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     amount = models.FloatField()
     ref = models.CharField(max_length=200)
     user_id = models.CharField(max_length=225, default=None)
@@ -72,6 +70,70 @@ class Payment(models.Model):
             if not object_with_similar_ref.exists():
                 self.ref = ref
         super().save(*args, **kwargs)
+
+
+
+class Coupon(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    code = models.CharField(max_length=7)
+    amount = models.PositiveIntegerField()
+
+    def save(self, *args, **kwargs):
+        while not self.code:
+            code = f"KW-{secrets.token_urlsafe(4)}"
+
+            object_with_similar_code = Coupon.objects.filter(code=code)
+            if not object_with_similar_code.exists():
+                self.code = code
+        super().save(*args, **kwargs)
     
-    def amount_value(self) -> int:
-        return self.amount*100
+    class Meta:
+        abstract = True
+
+class ProductCoupon(Coupon):
+    pass
+
+class OrderCoupon(Coupon):
+    pass
+
+class UsedCoupon(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    coupon_type = models.CharField(max_length=20)
+    user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        if self.coupon_type == "product":
+            coupon = models.ForeignKey(Product, on_delete=models.CASCADE)
+            self.coupon = coupon
+        elif self.coupon_type == "order":
+            coupon = models.ForeignKey(Order, on_delete=models.CASCADE)
+            self.coupon = coupon
+        super().save(*args, **kwargs)
+
+class Status(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    status = models.CharField(max_length=30, default="Order in Progress")
+class Order(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    user = models.OneToOneField(ExtendUser, on_delete=models.CASCADE)
+    order_id = models.CharField(max_length=30)
+    cart = models.OneToOneField(Cart, on_delete=models.CASCADE)
+    payment_method = models.CharField(max_length=30)
+    delivery_method = models.CharField(max_length=30)
+    delivery_status = models.OneToOneField(Status, on_delete=models.CASCADE)
+    closed = models.BooleanField(default=False)
+    ordercoupon = models.ForeignKey(OrderCoupon, on_delete=models.CASCADE, null=True)
+    productcoupon = models.ForeignKey(ProductCoupon, on_delete=models.CASCADE, null=True)
+    door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
+    pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
+
+
+    def save(self, *args, **kwargs):
+        while not self.order_id:
+            order_id = f"KWEK-{secrets.token_urlsafe(14)}"
+
+            object_with_similar_order_id = Order.objects.filter(order_id=order_id)
+            if not object_with_similar_order_id.exists():
+                self.order_id = order_id
+        
+        super().save(*args, **kwargs)

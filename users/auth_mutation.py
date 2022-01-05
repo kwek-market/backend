@@ -146,7 +146,6 @@ class LoginUser(graphene.Mutation):
                 token = jwt.encode(
                     payload, settings.SECRET_KEY, algorithm="HS256"
                 ).decode("utf-8")
-                print(token)
                 # token = get_token(user)
                 refresh_token = create_refresh_token(user)
                 verify_cart(ip, token)
