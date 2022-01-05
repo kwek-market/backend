@@ -152,18 +152,18 @@ class CreateProduct(graphene.Mutation):
         token = graphene.String(required=True)
         product_title = graphene.String(required=True)
         category = graphene.String(required=True)
-        subcategory = graphene.String()
-        brand = graphene.String()
+        subcategory = graphene.String(required=True)
         product_weight = graphene.String()
+        product_image_url = graphene.List(graphene.String, required=True)
         short_description = graphene.String()
         charge_five_percent_vat = graphene.Boolean(required=True)
         return_policy = graphene.String()
         warranty = graphene.String()
+        # product_options = graphene.List(graphene.String)
         color = graphene.String()
         gender = graphene.String()
         keyword = graphene.List(graphene.String)
-        clicks = graphene.Int()
-        promoted = graphene.Boolean()
+
 
     @staticmethod
     def mutate(
@@ -174,22 +174,20 @@ class CreateProduct(graphene.Mutation):
         category,
         charge_five_percent_vat,
         keyword,
-        subcategory=None,
+        subcategory,
+        product_image_url,
         brand="",
         product_weight="",
         short_description="",
         return_policy="",
         warranty="",
         color="",
-        gender="",
-        clicks=1,
-        promoted=False
+        gender=""
     ):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         p_cat = Category.objects.get(name=category)
-        if subcategory:
-            sub_cat = Category.objects.get(name=subcategory)
+        sub_cat = Category.objects.get(name=subcategory)
         
 
         for word in keyword:
@@ -209,16 +207,49 @@ class CreateProduct(graphene.Mutation):
             return_policy=return_policy,
             warranty=warranty,
             color=color,
-            gender=gender,
-            clicks=clicks,
-            promoted=promoted
+            gender=gender
         )
+
+        for url in product_image_url:
+            ProductImage.objects.create(product=product, image_url=url)
         return CreateProduct(
             product=product,
             status=True,
             message="Product added"
         )
 
+
+class ProductClick(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        product_id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, product_id):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.filter(email=email)
+        product = Product.objects.get(id=product_id)
+        if user.exists():
+            if product:
+                clicks = product.clicks + 1
+                Product.objects.filter(id=product.id).update(clicks=clicks)
+                return ProductClick(
+                    status = True,
+                    message = "Click added"
+                )
+            else:
+                return {
+                    "status": False,
+                    "message": "Invalid Product"
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid User"
+            }
 class UpdateProductMutation(graphene.Mutation):
     product = graphene.Field(ProductType)
 
@@ -439,25 +470,34 @@ class CreateCartItem(graphene.Mutation):
                 try:
                     user_cart = user.user_carts
                 except Exception:
-                    user_cart = Cart.objects.create(user_id=user)
+                    user_cart = Cart.objects.create(user=user)
                 
-                has_product = user_cart.product.filter(id=product_id)
+                has_product = Cart.objects.filter(user=user, cart_item__product=product)
 
                 if has_product:
-                    quantity = int(has_product.quantity) + 1
-                    Cart.objects.filter(id=user_cart.id, user_id=user).update(quantity=quantity)
-                try:
-                    cart_item = Cart.objects.create(product=product, user_id=user, quantity=quantity, price=price)
+                    cart_item = CartItem.objects.get(product=product)
+                    initial_price = cart_item.price/cart_item.quantity
+                    quantity = int(cart_item.quantity) + 1
+                    price = int(cart_item.price) + initial_price
+                    cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
                         message = "Added to cart"
                     )
-                except Exception as e:
-                    return {
-                        "status": False,
-                        "message": e
-                    }
+                else:
+                    try:
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart)
+                        return CreateCartItem(
+                            cart_item=cart_item,
+                            status = True,
+                            message = "Added to cart"
+                        )
+                    except Exception as e:
+                        return {
+                            "status": False,
+                            "message": e
+                        }
         elif ip_address:
             try:
                 user_cart = Cart.objects.filter(ip=ip_address)

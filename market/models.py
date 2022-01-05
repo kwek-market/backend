@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.deletion import CASCADE
 from users.models import ExtendUser as User
 import uuid
+from datetime import datetime
 
 # Create your models here.
 
@@ -45,6 +46,8 @@ class Product(models.Model):
     keyword = ArrayField(models.CharField(max_length=250))
     clicks = models.IntegerField(default=0, blank=False)
     promoted = models.BooleanField(default=False, blank=False)
+    date_created = models.DateTimeField(auto_now_add=True)
+
 
     def __str__(self):
         return self.product_title
@@ -113,18 +116,19 @@ class Newsletter(models.Model):
 
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
-    user_id = models.ForeignKey(User, related_name="user_carts", on_delete=models.CASCADE, null=True)
+    user = models.OneToOneField(User, related_name="user_carts", on_delete=models.CASCADE, null=True)
     ip = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CartItem(models.Model):
+    product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
     price = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.product.product_title} - {self.user_id.email}"
 
-    class Meta:
-        ordering = ("-created_at",)
 
 class Wishlist(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)

@@ -3,7 +3,7 @@ from graphene_django import DjangoObjectType
 from .models import (
     Billing,
     Payment,
-    Pickups
+    Pickup
 )
 
 
@@ -17,7 +17,7 @@ class BillingType(DjangoObjectType):
 
 class PickupType(DjangoObjectType):
     class Meta:
-        model = Pickups
+        model = Pickup
         fields = "__all__"
 
 class PaymentType(DjangoObjectType):

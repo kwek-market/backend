@@ -5,8 +5,12 @@ from django.conf import settings
 from users.models import ExtendUser
 from .models import (
     Billing,
+    OrderCoupon,
     Payment,
-    Pickups
+    Pickup,
+    Order,
+    ProductCoupon,
+    Status
 )
 from .object_types import (
     BillingType,
@@ -14,6 +18,7 @@ from .object_types import (
     PickupType
 )
 from .flutterwave import get_payment_url, verify_transaction
+from market.models import Cart
 
 
 class BillingAddress(graphene.Mutation):
@@ -22,8 +27,7 @@ class BillingAddress(graphene.Mutation):
     message = graphene.String()
     
     class Arguments:
-        first_name = graphene.String(required=True)
-        last_name = graphene.String(required=True)
+        full_name = graphene.String(required=True)
         contact = graphene.String(required=True)
         address = graphene.String(required=True)
         state = graphene.String(required=True)
@@ -31,15 +35,14 @@ class BillingAddress(graphene.Mutation):
         token = graphene.String()
     
     @staticmethod
-    def mutate(self, root, first_name, last_name, contact, address, state, city, token=None):
-        billing_address = Billing.objects.filter(full_name=f"{first_name} {last_name}", contact=contact, location=f"{address} {state} {city}")
+    def mutate(self, root, full_name, contact, address, state, city, token=None):
+        billing_address = Billing.objects.filter(full_name=full_name, contact=contact, address=address, state=state, city=city)
         if billing_address.exists():
             return BillingAddress(billing_address=billing_address, status=True, message="Address added")
         else:
             if token is None:
                 billing_address = Billing.objects.create(
-                    first_name=first_name,
-                    last_name=last_name,
+                    full_name=full_name,
                     contact=contact,
                     address=address,
                     state = state,
@@ -51,8 +54,7 @@ class BillingAddress(graphene.Mutation):
                 user = ExtendUser.objects.get(email=email)
                 if user:
                     billing_address = Billing.objects.create(
-                        first_name=first_name,
-                        last_name=last_name,
+                        full_name=full_name,
                         contact=contact,
                         address=address,
                         state = state,
@@ -72,7 +74,17 @@ class BillingAddress(graphene.Mutation):
                     "message": "Address not added"
                 }
 
+class BillingAddressUpdate(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
 
+    class Arugments:
+        pass
+
+    @staticmethod
+    def mutate(self, info):
+        pass
+    pass
 class PickUpLocation(graphene.Mutation):
     location = graphene.Field(PickupType)
     status = graphene.Boolean()
@@ -87,7 +99,7 @@ class PickUpLocation(graphene.Mutation):
     
     @staticmethod
     def mutate(self, root, name, contact, address, state, city):
-        location = Pickups.objects.filter(name=name)
+        location = Pickup.objects.filter(name=name)
         if location.exists():
             return {
                 "status": False,
@@ -95,7 +107,7 @@ class PickUpLocation(graphene.Mutation):
             }
         else:
             try:
-                location = Pickups.objects.create(
+                location = Pickup.objects.create(
                     name=name,
                     contact=contact,
                     address=address,
@@ -209,4 +221,108 @@ class PaymentVerification(graphene.Mutation):
             return {
                 "status": False,
                 "message": e
+            }
+
+class PlaceOrder(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    order_id = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        cart_id = graphene.String(required=True)
+        payment_method = graphene.String(required=True)
+        delivery_method = graphene.String(required=True)
+        address_id = graphene.String(required=True)
+        coupon_type = graphene.String()
+        coupon_id = graphene.String()
+    
+    @staticmethod
+    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, coupon_type=None, coupon_id=None):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        cart = Cart.objects.get(id=cart_id)
+        cart_owner = cart.user
+        if coupon_id and coupon_type:
+            if coupon_type == "product":
+                coupon = ProductCoupon.objects.get(id=coupon_id)
+            elif coupon_type == "order":
+                coupon = OrderCoupon.objects.get(id=coupon_id)
+        if delivery_method == "Door Step":
+            shipping_address = Billing.objects.get(id=address_id)
+        elif delivery_method == "Pickup":
+            shipping_address = Pickup.objects.get(id=address_id)
+        delivery_status = Status.objects.create()
+        if user:
+            if cart:
+                if user == cart_owner:
+                    try:
+                        if coupon_type == "product":
+                            order = Order.objects.create(
+                                user=user,
+                                cart=cart,
+                                payment_method=payment_method,
+                                delivery_method=delivery_method,
+                                delivery_status=delivery_status,
+                                productcoupon=coupon
+                            )
+                            order.save()
+                        elif delivery_method == "Pickup":
+                            order = Order.objects.create(
+                                user=user,
+                                cart=cart,
+                                payment_method=payment_method,
+                                delivery_method=delivery_method,
+                                delivery_status=delivery_status,
+                                ordercoupon=coupon
+                            )
+                            order.save()
+                        if delivery_method == "Door Step":
+                            order = Order.objects.create(
+                                user=user,
+                                cart=cart,
+                                payment_method=payment_method,
+                                delivery_method=delivery_method,
+                                delivery_status=delivery_status,
+                                door_step=shipping_address
+                            )
+
+                            order.save()
+                        elif delivery_method == "Pickup":
+                            order = Order.objects.create(
+                                user=user,
+                                cart=cart,
+                                payment_method=payment_method,
+                                delivery_method=delivery_method,
+                                delivery_status=delivery_status,
+                                pickup=shipping_address
+                            )
+
+                            order.save()
+                        return PlaceOrder(
+                            status=True,
+                            message="Order placed successfully",
+                            order_id=order.order_id
+                        )
+                    except Exception as e:
+                        return {
+                            "status": False,
+                            "message": e
+                        }
+                    pass
+                else:
+                    return {
+                        "status": False,
+                        "message": "User is not the owner of the cart"
+                    }
+
+            else:
+                return {
+                    "status": False,
+                    "message": "Cart does not exist"
+                }
+        else:
+            return {
+                "status": False,
+                "message": "User does not exist"
             }
