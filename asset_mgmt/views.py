@@ -44,7 +44,7 @@ class FileAssetView(View):
         return JsonResponse(resp)
 
 class PopulateCategory(View):
-    def post(self, request):
+    def get(self, request):
         for array in data:
             if Category.objects.filter(name=array[0]).exists():
                 pass
