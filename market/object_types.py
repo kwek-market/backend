@@ -13,7 +13,7 @@ class CategoryType(DjangoObjectType):
 class KeywordType(DjangoObjectType):
     class Meta:
         model = Keyword
-        fields = ("id", "keyword")
+        fields = ("id", "keyword") 
 
 
 class ProductType(DjangoObjectType):
