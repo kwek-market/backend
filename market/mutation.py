@@ -217,10 +217,14 @@ class CreateProduct(graphene.Mutation):
         for item in product_options:
             option = eval(item)
             keys = option.keys()
-            product_option = ProductOption.objects.create(product=product)
-            for key in keys:
-                product_option(key=option[key])
-                product_option.save()
+
+            size = "" if "size" not in keys else option["size"]
+            quantity = "" if "quantity" not in keys else option["quantity"]
+            price = "" if "price" not in keys else option["price"]
+            discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
+            option_total_price = "" if "option_total_price" not in keys else option["option_total_price"]
+            ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+            
         return CreateProduct(
             product=product,
             status=True,
