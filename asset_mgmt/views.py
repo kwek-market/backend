@@ -141,8 +141,6 @@ class PopulateProduct(View):
                 keyword = []
                 keyword.append(product["productTitle"])
                 keyword.append(product["brand"])
-                p_option = product["productOptions"]
-                keyword.append(p_option["size"])
                 for word in keyword:
                     if not Keyword.objects.filter(keyword=word).exists():
                         Keyword.objects.create(keyword=word)
