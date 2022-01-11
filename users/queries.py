@@ -33,6 +33,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
     orders = graphene.Field(OrderType, token=graphene.String(required=True))
+    rating_sort = graphene.Field(ProductType)
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -88,53 +89,62 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return wishlist_item
     
     def resolve_products(root, info, search=None, keyword=None, rating=None, clicks=None, sales=None):
-        if search or keyword or rating or clicks or sales:
-            filtered_products = []
-            if search:
-                filter = (
-                    Q(product_title__icontains=search) |
-                    Q(color__iexact=search) |
-                    Q(brand__iexact=search) |
-                    Q(gender__iexact=search) |
-                    Q(category__name__icontains=search) |
-                    Q(subcategory__name__icontains=search) |
-                    Q(short_description__icontains=search) |
-                    Q(options__price__icontains=int(search))
-                )
+        # if search or keyword or rating or clicks or sales:
+        #     filtered_products = []
+        if search:
+            filter = (
+                Q(product_title__icontains=search) |
+                Q(color__iexact=search) |
+                Q(brand__iexact=search) |
+                Q(gender__iexact=search) |
+                Q(category__name__icontains=search) |
+                Q(subcategory__name__icontains=search) |
+                Q(short_description__icontains=search) |
+                Q(options__price__icontains=search)
+            )
 
-                products = Product.objects.filter(filter)
-                filtered_products.append(products)
-                
-            if rating:
-                rate = rating
-                products_included = []
-                while rate <= 5:
-                    products = Product.objects.filter(product_rating__rating__exact=rate)
-                    for product in products:
-                        products_included.append(product)
-                    rate += 1
-                filtered_products.append(products_included)
-
-            if keyword:
-                filter = (
-                    Q(keyword__overlap=keyword)
-                )
-
-                products = Product.objects.filter(filter)
-                filtered_products.append(products)
+            products = Product.objects.filter(filter)
+            return products
+            # for product in products:
+            #     filtered_products.append(products)
             
-            if clicks:
-                clicks = Product.objects.all()
-                sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
-                filtered_products.append(sort)
-            
-            if sales:
-                sales = Product.objects.all()
-                sort = sorted(sales, key=attrgetter("sales"), reverse=True)
-                filtered_products.append(sort)
+        if rating:
+            rate = rating
+            products_included = []
+            # if rating > 5:
+            #     clicks = Product.objects.all()
+            #     sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
+            while rate <= 5:
+                products = Product.objects.filter(product_rating__rating__exact=rate)
+                for product in products:
+                    products_included.append(product)
+                rate += 1
+            return products_included
+            # filtered_products.append(products_included)
 
-            return filtered_products
+        if keyword:
+            filter = (
+                Q(keyword__overlap=keyword)
+            )
+
+            products = Product.objects.filter(filter)
+            return products
+            # filtered_products.append(products)
         
+        if clicks:
+            clicks = Product.objects.all()
+            sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
+            return sort
+            # filtered_products.append(sort)
+        
+        if sales:
+            sales = Product.objects.all()
+            sort = sorted(sales, key=attrgetter("sales"), reverse=True)
+            return sort
+            # filtered_products.append(sort)
+
+        # return filtered_products
+        # else:
         return Product.objects.all()
     
     def resolve_review(root, info, review_id):
