@@ -1,7 +1,7 @@
 import uuid
 import secrets
 from django.db import models
-
+from django.contrib.postgres.fields import ArrayField
 from users.models import ExtendUser
 from market.models import Cart, Product
 # Create your models here.
@@ -110,17 +110,20 @@ class UsedCoupon(models.Model):
             self.coupon = coupon
         super().save(*args, **kwargs)
 
-class Status(models.Model):
+class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    status = models.CharField(max_length=30, default="Order in Progress")
+    progress = models.CharField(max_length=30, default="Order Placed")
+    order = models.OneToOneField("Order", on_delete=models.CASCADE)
+    
+
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField(ExtendUser, on_delete=models.CASCADE)
     order_id = models.CharField(max_length=30)
-    cart = models.OneToOneField(Cart, on_delete=models.CASCADE)
+    cart_items = ArrayField(models.CharField(max_length=225), default=None)
     payment_method = models.CharField(max_length=30)
     delivery_method = models.CharField(max_length=30)
-    delivery_status = models.OneToOneField(Status, on_delete=models.CASCADE)
+    delivery_status = models.CharField(max_length=30, default="Order in progress")
     closed = models.BooleanField(default=False)
     ordercoupon = models.ForeignKey(OrderCoupon, on_delete=models.CASCADE, null=True)
     productcoupon = models.ForeignKey(ProductCoupon, on_delete=models.CASCADE, null=True)

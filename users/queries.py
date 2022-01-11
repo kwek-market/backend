@@ -9,6 +9,7 @@ from market.object_types import *
 from users.models import ExtendUser, SellerProfile
 from django.db.models import Q
 from bill.object_types import *
+from operator import attrgetter
 
 
 class Query(UserQuery, MeQuery, graphene.ObjectType):
@@ -18,8 +19,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     categories = graphene.List(CategoryType)
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     subcategories = graphene.List(CategoryType)
+    least_subcategories = graphene.List(CategoryType)
     product = graphene.relay.Node.Field(ProductType)
-    products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String))
+    products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     user_cart = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
@@ -30,6 +32,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
+    orders = graphene.Field(OrderType, token=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
@@ -45,14 +48,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return Category.objects.get(id=id)
 
     def resolve_categories(root, info):
-        categories = Category.objects.all()
-        cat_list=[]
+        cat_list=Category.objects.filter(parent=None)
 
-        for category in categories:
-            if category.parent:
-                continue
-            else:
-                cat_list.append(category)
         return cat_list
 
     def resolve_subcategories(root, info):
@@ -63,17 +60,23 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             if category.parent:
                 cat_list.append(category)
         return cat_list
+    
+    def resolve_least_subcategories(root, info):
+        cat_list=Category.objects.filter(child=None)
+        return cat_list
 
     def resolve_user_cart(root, info, token=None, ip=None):
         if token is not None:
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
             if user:
-                cart = Cart.objects.filter(user_id=user)
-                return cart
+                cart = Cart.objects.get(user=user)
+                cart_items=CartItem.objects.filter(cart=cart)
+                return cart_items
         elif ip is not None:
             cart = Cart.objects.filter(ip=ip)
-            return cart
+            cart_items = CartItem.objects.filter(cart=cart)
+            return cart_items
 
     def resolve_wishlists(root, info, token):
         wishlist_item = Wishlist.objects.select_related("user")
@@ -84,37 +87,53 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             wishlist_item = wishlist_item.filter(Q(user_id__full_name__icontains=name) | Q(user_id__full_name__iexact=name)).distinct()
         return wishlist_item
     
-    def resolve_products(root, info, search=None, keyword=None, rating=None):
-        if search:
-            filter = (
-                Q(product_title__icontains=search) |
-                Q(color__iexact=search) |
-                Q(brand__iexact=search) |
-                Q(gender__iexact=search) |
-                Q(category__name__icontains=search) |
-                Q(subcategory__name__icontains=search) |
-                Q(short_description__icontains=search) |
-                Q(options__price__icontains=search)
-            )
+    def resolve_products(root, info, search=None, keyword=None, rating=None, clicks=None, sales=None):
+        if search or keyword or rating or clicks or sales:
+            filtered_products = []
+            if search:
+                filter = (
+                    Q(product_title__icontains=search) |
+                    Q(color__iexact=search) |
+                    Q(brand__iexact=search) |
+                    Q(gender__iexact=search) |
+                    Q(category__name__icontains=search) |
+                    Q(subcategory__name__icontains=search) |
+                    Q(short_description__icontains=search) |
+                    Q(options__price__icontains=int(search))
+                )
 
-            return Product.objects.filter(filter)
+                products = Product.objects.filter(filter)
+                filtered_products.append(products)
+                
+            if rating:
+                rate = rating
+                products_included = []
+                while rate <= 5:
+                    products = Product.objects.filter(product_rating__rating__exact=rate)
+                    for product in products:
+                        products_included.append(product)
+                    rate += 1
+                filtered_products.append(products_included)
+
+            if keyword:
+                filter = (
+                    Q(keyword__overlap=keyword)
+                )
+
+                products = Product.objects.filter(filter)
+                filtered_products.append(products)
             
-        if rating:
-            rate = rating
-            products_included = []
-            while rate <= 5:
-                products = Product.objects.filter(product_rating__rating__exact=rate)
-                for product in products:
-                    products_included.append(product)
-                rate += 1
-            return products_included
+            if clicks:
+                clicks = Product.objects.all()
+                sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
+                filtered_products.append(sort)
+            
+            if sales:
+                sales = Product.objects.all()
+                sort = sorted(sales, key=attrgetter("sales"), reverse=True)
+                filtered_products.append(sort)
 
-        if keyword:
-            filter = (
-                Q(keyword__overlap=keyword)
-            )
-
-            return Product.objects.filter(filter)
+            return filtered_products
         
         return Product.objects.all()
     
@@ -140,3 +159,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         location = Pickup.objects.get(id=location_id)
 
         return location
+    
+    def resolve_orders(root, info, token):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        user_orders = Order.objects.filter(user=user)
+
+        return user_orders
