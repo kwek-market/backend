@@ -10,7 +10,6 @@ from django.http import (
     HttpResponse,
     HttpResponseNotModified,
 )
-from rest_framework.views import APIView
 
 import mimetypes
 from PIL import Image
@@ -130,7 +129,7 @@ def serve(request, path, document_root=None, show_indexes=False):
     return response
 
 
-class PopulateProduct(APIView):
+class PopulateProduct(View):
     def post(self, request):
         category = Category.objects.filter(parent=None)
         subcategory = Category.objects.filter(child=None)
