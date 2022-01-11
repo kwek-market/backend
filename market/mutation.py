@@ -188,8 +188,8 @@ class CreateProduct(graphene.Mutation):
     ):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
-        p_cat = Category.objects.get(name=category)
-        sub_cat = Category.objects.get(name=subcategory)
+        p_cat = Category.objects.get(id=category)
+        sub_cat = Category.objects.get(id=subcategory)
         
 
         for word in keyword:
