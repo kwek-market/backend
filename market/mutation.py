@@ -153,6 +153,7 @@ class CreateProduct(graphene.Mutation):
         product_title = graphene.String(required=True)
         category = graphene.String(required=True)
         subcategory = graphene.String(required=True)
+        brand = graphene.String()
         product_weight = graphene.String()
         product_image_url = graphene.List(graphene.String, required=True)
         short_description = graphene.String()
@@ -515,20 +516,29 @@ class CreateCartItem(graphene.Mutation):
             has_product = user_cart.product.filter(id=product_id)
 
             if has_product:
-                quantity = int(has_product.quantity) + 1
-                Cart.objects.filter(id=user_cart.id, ip=ip_address).update(quantity=quantity)
-            try:
-                cart_item = Cart.objects.create(product=product, ip=ip_address, quantity=quantity, price=price)
+                cart_item = CartItem.objects.get(product=product)
+                initial_price = cart_item.price/cart_item.quantity
+                quantity = int(cart_item.quantity) + 1
+                price = int(cart_item.price) + initial_price
+                cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
                 return CreateCartItem(
                     cart_item=cart_item,
                     status = True,
                     message = "Added to cart"
                 )
-            except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+            else:
+                try:
+                    cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart)
+                    return CreateCartItem(
+                        cart_item=cart_item,
+                        status = True,
+                        message = "Added to cart"
+                    )
+                except Exception as e:
+                    return {
+                        "status": False,
+                        "message": e
+                    }
         else:
             return {
                 "status": False,

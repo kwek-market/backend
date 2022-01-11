@@ -1,3 +1,4 @@
+from json.decoder import JSONDecodeError
 from django.shortcuts import render
 from django.views import View
 from django.http import JsonResponse
@@ -9,6 +10,7 @@ from django.http import (
     HttpResponse,
     HttpResponseNotModified,
 )
+from rest_framework.views import APIView
 
 import mimetypes
 from PIL import Image
@@ -17,11 +19,19 @@ from django.views.static import directory_index, was_modified_since
 from django.utils._os import safe_join
 from pathlib import Path
 from kwek.vendor_array import data
-from market.models import Category
+from market.models import (
+    Category, Product, ProductImage, ProductOption, Keyword
+)
+from users.models import ExtendUser
 import posixpath
+import json
+import random
+
 
 # Create your views here.
-
+with open("asset_mgmt/kwek.json", "r") as file:
+    products = json.load(file)
+    
 allowed_imgs = ["jpg", "png", "jpeg", "svg"]
 allowed_files = ["pdf", "docx"]
 
@@ -118,3 +128,69 @@ def serve(request, path, document_root=None, show_indexes=False):
     if encoding:
         response["Content-Encoding"] = encoding
     return response
+
+
+class PopulateProduct(APIView):
+    def post(self, request):
+        category = Category.objects.filter(parent=None)
+        subcategory = Category.objects.filter(child=None)
+        user = ExtendUser.objects.filter(is_seller=True)
+        for product in products:
+            if Product.objects.filter(product_title=product["productTitle"]).exists():
+                continue
+            else:
+                keyword = [product["productTitle"], product["brand"], product["productOptions"]["size"]]
+                for word in keyword:
+                    if not Keyword.objects.filter(keyword=word).exists():
+                        Keyword.objects.create(keyword=word)
+                created_product = Product.objects.create(
+                    user=random.choice(user),
+                    brand=product["brand"],
+                    category=random.choice(category),
+                    subcategory=random.choice(subcategory),
+                    charge_five_percent_vat=product["chargeFivePercentVat"],
+                    gender=product["gender"],
+                    keyword=keyword,
+                    product_title=product["productTitle"],
+                    product_weight=product["productWeight"],
+                    return_policy=product["returnPolicy"],
+                    short_description=product["shortDescription"],
+                    warranty=product["warranty"],
+                    color=product["color"]
+                )
+                for option in product["productOptions"]:
+                    ProductOption.objects.create(
+                        product=created_product,
+                        size=option["size"],
+                        quantity=option["quantity"],
+                        price=option["price"],
+                        discounted_price=option["discountedPrice"],
+                        option_total_price=option["price"]-option["discountedPrice"]
+                    )
+                ProductImage.objects.create(
+                    product=created_product,
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                )
+                ProductImage.objects.create(
+                    product=created_product,
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                )
+                ProductImage.objects.create(
+                    product=created_product,
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                )
+                ProductImage.objects.create(
+                    product=created_product,
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                )
+                ProductImage.objects.create(
+                    product=created_product,
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                )
+
+        return JsonResponse( {
+            "status": True,
+            "message":"Products populated"
+        }
+        )
+        pass

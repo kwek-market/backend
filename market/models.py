@@ -47,6 +47,7 @@ class Product(models.Model):
     clicks = models.IntegerField(default=0, blank=False)
     promoted = models.BooleanField(default=False, blank=False)
     date_created = models.DateTimeField(auto_now_add=True)
+    sales = models.PositiveBigIntegerField(default=0)
 
 
     def __str__(self):
@@ -64,7 +65,7 @@ class ProductImage(models.Model):
 
 class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.OneToOneField(Product, related_name="options", on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, related_name="options", on_delete=models.CASCADE, null=True)
     size = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
@@ -122,7 +123,7 @@ class Cart(models.Model):
 
 class CartItem(models.Model):
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
+    quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField()
     cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
 

@@ -1,6 +1,8 @@
 import graphene
 from graphene.relay.connection import Connection
 from graphene_django import DjangoObjectType
+
+from bill.models import Order
 from .models import *
 
 
@@ -73,3 +75,7 @@ class CartType(DjangoObjectType):
 class WishlistType(DjangoObjectType):
     class Meta:
         model = Wishlist
+
+class OrderType(DjangoObjectType):
+    class Meta:
+        model=Order
