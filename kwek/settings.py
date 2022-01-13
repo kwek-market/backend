@@ -86,7 +86,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "kwek.wsgi.application"
-ASGI_APPLICATION = "kwek.asgi.application"
+# ASGI_APPLICATION = "kwek.asgi.application"
 
 
 # Database
