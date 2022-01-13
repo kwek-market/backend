@@ -20,7 +20,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     subcategories = graphene.List(CategoryType)
     least_subcategories = graphene.List(CategoryType)
-    product = graphene.relay.Node.Field(ProductType)
+    product = graphene.Field(ProductType, id=graphene.String(required=True))
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     user_cart = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
@@ -87,6 +87,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if name:
             wishlist_item = wishlist_item.filter(Q(user_id__full_name__icontains=name) | Q(user_id__full_name__iexact=name)).distinct()
         return wishlist_item
+    
+    def resolve_product(root, info, id):
+        product = Product.objects.get(id=id)
+
+        return product
     
     def resolve_products(root, info, search=None, keyword=None, rating=None, clicks=None, sales=None):
         # if search or keyword or rating or clicks or sales:
