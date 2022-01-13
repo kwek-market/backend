@@ -51,8 +51,8 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
-    "notifications",
-    "channels",
+    # "notifications",
+    # "channels",
 ]
 
 MIDDLEWARE = [
