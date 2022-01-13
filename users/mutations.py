@@ -1,5 +1,6 @@
 import graphene
 from users.auth_mutation import (
+    StoreBanner,
     TestToken,
     AccountNameRetrieval,
     SellerVerification,
@@ -79,3 +80,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     clicks_update = ProductClick.Field()
     pickup_location_update = PickupLocationUpdate.Field()
     pickup_location_delete = PickupLocationDelete.Field()
+    store_banner = StoreBanner.Field()

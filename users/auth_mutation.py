@@ -663,3 +663,37 @@ class StoreLocationUpdate(graphene.Mutation):
             return StoreLocationUpdate(status=True, message="Update Successful")
         except Exception as e:
             return StoreLocationUpdate(status=False, message=e)
+
+class StoreBanner(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        image_url = graphene.String(required=True)
+        store_description = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, token, image_url, store_description=None):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        user = ExtendUser.objects.get(email=email)
+        if user.is_seller:
+            seller = SellerProfile.objects.filter(user=user)
+            if store_description:
+                seller.update(store_banner_url=image_url, store_description=store_description)
+                return StoreBanner(
+                    status=True,
+                    message="Banner and Description added Successfully"
+                )
+            else:
+                seller.update(store_banner_url=image_url)
+                return StoreBanner(
+                    status=True,
+                    message="Banner added Successfully"
+                )
+            
+        else:
+            return {
+                "status": False,
+                "message": "User is not a seller"
+            }
