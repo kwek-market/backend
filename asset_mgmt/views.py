@@ -130,7 +130,7 @@ def serve(request, path, document_root=None, show_indexes=False):
 
 
 class PopulateProduct(View):
-    def post(self, request):
+    def get(self, request):
         category = Category.objects.filter(parent=None)
         subcategory = Category.objects.filter(child=None)
         user = ExtendUser.objects.filter(is_seller=True)

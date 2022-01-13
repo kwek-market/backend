@@ -36,6 +36,7 @@ class CreateUser(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, password1, password2, email, full_name):
+        email = email.lower()
         user = get_user_model()(
             username=email,
             email=email,
@@ -120,6 +121,7 @@ class LoginUser(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, email, password, ip):
+        email = email.lower()
         user = authenticate(username=email, password=password)
         error_message = "Invalid login credentials"
         success_message = "You logged in successfully."
