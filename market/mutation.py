@@ -444,7 +444,7 @@ class WishListMutation(graphene.Mutation):
             try:
                 user_wish = user.user_wish
             except Exception:
-                user_wish = Wishlist.objects.create(user_id=user.id)
+                user_wish = Wishlist.objects.create(user=user)
 
             has_product = user_wish.products.filter(id=product_id)
 
