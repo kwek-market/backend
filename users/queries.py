@@ -23,7 +23,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     product = graphene.Field(ProductType, id=graphene.String(required=True))
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
-    user_cart = graphene.List(CartType, token=graphene.String(), ip=graphene.String())
+    user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))

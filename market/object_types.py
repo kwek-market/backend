@@ -72,6 +72,9 @@ class CartType(DjangoObjectType):
     class Meta:
         model = Cart
 
+class CartItemType(DjangoObjectType):
+    class Meta:
+        models = CartItem
 class WishlistType(DjangoObjectType):
     class Meta:
         model = Wishlist
