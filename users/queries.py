@@ -71,8 +71,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
             if user:
-                cart = Cart.objects.get(user=user)
-                cart_items=CartItem.objects.filter(cart=cart)
+                cart = Cart.objects.filter(user=user)
+                if cart:
+                    cart_items=CartItem.objects.filter(cart=cart)
+                else:
+                    cart_items=[]
                 return cart_items
         elif ip is not None:
             cart = Cart.objects.filter(ip=ip)
@@ -107,7 +110,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(options__price__icontains=search)
             )
 
-            products = Product.objects.filter(filter)
+            products = Product.objects.filter(filter).distinct()
             return products
             # for product in products:
             #     filtered_products.append(products)
