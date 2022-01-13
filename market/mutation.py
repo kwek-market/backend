@@ -498,7 +498,7 @@ class CreateCartItem(graphene.Mutation):
                     )
                 else:
                     try:
-                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart)
+                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.option_total_price, cart=user_cart)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -562,7 +562,7 @@ class DeleteCart(graphene.Mutation):
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
             try:
-                Cart.objects.filter(id=cart_id, user_id=user).delete()
+                Cart.objects.filter(id=cart_id, user=user).delete()
 
                 return DeleteCart(
                     status = True,
