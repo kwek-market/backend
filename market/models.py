@@ -122,6 +122,7 @@ class Cart(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class CartItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField()
@@ -137,5 +138,6 @@ class Wishlist(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class WishListItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="products_wished", on_delete=models.CASCADE)
     wishlist = models.ForeignKey(Wishlist, related_name="wishlist_item", on_delete=models.CASCADE)
