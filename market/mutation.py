@@ -468,14 +468,12 @@ class CreateCartItem(graphene.Mutation):
     class Arguments:
         token = graphene.String()
         ip_address = graphene.String()
-        product_id = graphene.String(required=True)
-        quantity = graphene.Int()
-        price = graphene.String()
+        product_option_id = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, product_id, price, quantity, token=None, ip_address=None):
-        product = Product.objects.get(id=product_id)
-        price = price
+    def mutate(self, info, product_option_id, token=None, ip_address=None):
+        option = ProductOption.objects.get(id=product_option_id)
+        product = Product.objects.get(options__id=product_option_id)
         if token:
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
@@ -485,10 +483,10 @@ class CreateCartItem(graphene.Mutation):
                 except Exception:
                     user_cart = Cart.objects.create(user=user)
                 
-                has_product = Cart.objects.filter(user=user, cart_item__product=product)
+                has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option)
 
                 if has_product:
-                    cart_item = CartItem.objects.get(product=product)
+                    cart_item = CartItem.objects.get(product=product, product__options=option)
                     initial_price = cart_item.price/cart_item.quantity
                     quantity = int(cart_item.quantity) + 1
                     price = int(cart_item.price) + initial_price
@@ -500,7 +498,7 @@ class CreateCartItem(graphene.Mutation):
                     )
                 else:
                     try:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart)
+                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -517,7 +515,7 @@ class CreateCartItem(graphene.Mutation):
             except Exception:
                 user_cart = Cart.objects.create(ip=ip_address)
             
-            has_product = user_cart.product.filter(id=product_id)
+            has_product = user_cart.product.filter(id=product.id)
 
             if has_product:
                 cart_item = CartItem.objects.get(product=product)
@@ -532,7 +530,7 @@ class CreateCartItem(graphene.Mutation):
                 )
             else:
                 try:
-                    cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart)
+                    cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
@@ -609,11 +607,10 @@ class DeleteCartItem(graphene.Mutation):
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
             try:
-                cart = Cart.objects.filter(id=cart_id, user_id=user)
-                for item in cart:
-                    if item.product.id == item_id:
-                        cart.product.remove(item)
-
+                cart = Cart.objects.get(id=cart_id, user=user)
+                cart_item = CartItem.objects.get(id=item_id)
+                if cart_item:
+                    CartItem.objects.filter(id=item_id, cart=cart).delete()
                 return DeleteCart(
                     status = True,
                     message = "Deleted successfully"
