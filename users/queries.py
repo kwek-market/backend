@@ -71,7 +71,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
             user = ExtendUser.objects.get(email=email)
             if user:
-                cart = Cart.objects.filter(user=user)
+                cart = Cart.objects.get(user=user)
                 if cart:
                     cart_items=CartItem.objects.filter(cart=cart)
                 else:
