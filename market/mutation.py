@@ -442,16 +442,16 @@ class WishListMutation(graphene.Mutation):
                 }
 
             try:
-                user_wish = user.user_wish
+                user_wish = Wishlist.objects.get(user=user)
             except Exception:
                 user_wish = Wishlist.objects.create(user=user)
 
-            has_product = user_wish.products.filter(id=product_id)
+            has_product = Wishlist.objects.filter(user=user, wishlist_item__product=product)
 
             if has_product:
-                user_wish.products.remove(product)
+                WishListItem.objects.filter(product=product).delete()
             else:
-                user_wish.products.add(product)
+                WishListItem.objects.create(wishlist=user_wish, product=product)
             return WishListMutation(
                 status = True,
                 message = "Successful"

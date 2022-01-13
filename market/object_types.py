@@ -79,6 +79,9 @@ class WishlistType(DjangoObjectType):
     class Meta:
         model = Wishlist
 
+class WishlistItemType(DjangoObjectType):
+    class Meta:
+        model = WishListItem
 class OrderType(DjangoObjectType):
     class Meta:
         model=Order

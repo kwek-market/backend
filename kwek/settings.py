@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
+    "notifications",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -84,6 +86,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "kwek.wsgi.application"
+ASGI_APPLICATION = "kwek.asgi.application"
 
 
 # Database

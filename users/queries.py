@@ -24,7 +24,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
-    wishlists = graphene.List(WishlistType, token=graphene.String(required=True))
+    wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))
     billing_addresses = DjangoListField(BillingType)
@@ -80,13 +80,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return cart_items
 
     def resolve_wishlists(root, info, token):
-        wishlist_item = Wishlist.objects.select_related("user")
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
-        name = user.full_name
-        if name:
-            wishlist_item = wishlist_item.filter(Q(user_id__full_name__icontains=name) | Q(user_id__full_name__iexact=name)).distinct()
-        return wishlist_item
+        if user:
+            wishlist = Wishlist.objects.get(user=user)
+            wishlist_item = WishListItem.objects.filter(wishlist=wishlist)
+            return wishlist_item
     
     def resolve_product(root, info, id):
         product = Product.objects.get(id=id)
