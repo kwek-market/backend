@@ -8,6 +8,7 @@ from django.conf import settings
 import datetime
 import requests
 import json
+from .models import ExtendUser, SellerProfile
 
 
 def user_loggedIN(token):
@@ -54,15 +55,15 @@ def expire_token(token):
 
 def send_confirmation_email(email):
     username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN,"Kwek Market"
+    f_user = ExtendUser.objects.get(email=email)
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/email_verification/{}".format(DOMAIN, token_path)
     payload = {
-        "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
-        "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "firstCorReset",
-        "title": 'Account Verification',"small_text_detail": "You have to verify your new E-mail to activate your account",
-        "link": link,"link_keyword": "Verify"
+        "email": email,"name": f_user.full_name,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
+        "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "email_verification",
+        "title": 'Verification Email', "link": link
             }
 
     try:
@@ -86,7 +87,7 @@ def send_password_reset_email(email):
     link = "{}/change_password/{}".format(DOMAIN, token_path)
     payload = {
         "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
-        "from_email": settings.KWEK_EMAIL,"subject": 'Password Reset',"event": "firstCorReset",
+        "from_email": settings.KWEK_EMAIL,"subject": 'Password Reset',"event": "forgot_password",
         "title": 'Password Reset',"small_text_detail": "You have requested to change your password",
         "link": link,"link_keyword": "Change Password"
             }
