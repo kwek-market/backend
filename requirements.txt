@@ -33,3 +33,4 @@ psycopg2-binary
 pillow==8.4.0
 python-decouple==3.5
 channels==3.0.4
+pusher==3.1.0

@@ -26,6 +26,7 @@ urlpatterns = [
     path("devadmin/", admin.site.urls),
     path("", include("users.urls")),
     path("", include("kwek_auth.urls")),
+    path("market/", include("market.urls")),
     path("asset/", include("asset_mgmt.urls")),
     path("v1/kwekql", csrf_exempt(GraphQLView.as_view())),
     path("v2/graphql", csrf_exempt(GraphQLView.as_view(graphiql=True))),

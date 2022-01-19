@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<head>
+  <title>Pusher Test</title>
+  <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+  <script>
+
+    // Enable pusher logging - don't include this in production
+    Pusher.logToConsole = true;
+
+
+    // bba1486f3390745bca34 this is a key we will use for now, for both frontend and backend to communicate
+    // mt1 also we will use this for cluster
+
+    var pusher = new Pusher('bba1486f3390745bca34', {
+      cluster: 'mt1'
+    });
+
+    var channel = pusher.subscribe('my-channel');
+    channel.bind('my-channel', function(data) {
+    //   alert(JSON.stringify(data));
+    document.getElementById("data").innerHTML += JSON.stringify(data.message)
+    });
+  </script>
+</head>
+<body>
+  <h1>Pusher Test</h1>
+  <p>
+    Try publishing an event to channel <code>my-channel</code>
+    with event name <code>my-event</code>.
+  </p>
+  <p id="data"></p>
+</body>
