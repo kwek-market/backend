@@ -53,7 +53,7 @@ class CreateUser(graphene.Mutation):
                 message=validate_passwords(password1, password2)["message"],
             )
         else:
-            sen_m = send_confirmation_email(email)
+            sen_m = send_confirmation_email(email, full_name)
             if sen_m["status"] == True:
                 user.set_password(password1)
                 user.save()
@@ -79,7 +79,8 @@ class ResendVerification(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, email):
-        sen_m = send_confirmation_email(email)
+        f_user = ExtendUser.objects.get(email=email)
+        sen_m = send_confirmation_email(email, f_user.full_name)
         if sen_m["status"] == True:
             return ResendVerification(
                 status=True,
