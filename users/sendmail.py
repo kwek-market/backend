@@ -53,15 +53,14 @@ def expire_token(token):
         return {"status": False, "token": token, "message": "Invalid Token"}
 
 
-def send_confirmation_email(email):
+def send_confirmation_email(email,full_name):
     username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.BACKEND_DOMAIN,"Kwek Market"
-    f_user = ExtendUser.objects.get(email=email)
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/email_verification/{}".format(DOMAIN, token_path)
     payload = {
-        "email": email,"name": f_user.full_name,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
+        "email": email,"name": full_name,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
         "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "email_verification",
         "title": 'Verification Email', "link": link
             }
