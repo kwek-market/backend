@@ -1,16 +1,20 @@
+from math import prod
 import graphene
-from graphql import GraphQLError
 import jwt
 
 from django.conf import settings
+from market.pusher import push_to_client
+from notifications.models import Message, Notification
 from users.models import ExtendUser
 from .models import *
 from .object_types import *
-from graphene import List, String
-from users.data import return_category_data
-from users.queries import Query
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 
+
+
+sched = BackgroundScheduler(daemon=True)
 # =====================================================================================================================
 # Product Input Arguments
 class ProductInput(graphene.InputObjectType):
@@ -160,7 +164,7 @@ class CreateProduct(graphene.Mutation):
         charge_five_percent_vat = graphene.Boolean(required=True)
         return_policy = graphene.String()
         warranty = graphene.String()
-        product_options = graphene.List(graphene.String)
+        product_options = graphene.List(graphene.String, required=True)
         color = graphene.String()
         gender = graphene.String()
         keyword = graphene.List(graphene.String)
@@ -224,7 +228,19 @@ class CreateProduct(graphene.Mutation):
             discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
             option_total_price = "" if "option_total_price" not in keys else option["option_total_price"]
             ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
-            
+        
+        if Notification.objects.filter(user=product.user).exists():
+            notification = Notification.objects.get(user=product.user)
+        else:
+            notification = Notification.objects.create(
+                user=product.user
+            )
+        notification_message = Message.objects.create(
+            notification=notification,
+            message=f"A new product {product.product_title}, has been added to your store.",
+            subject="New Product"
+        )
+        push_to_client(product.user.id, notification_message)
         return CreateProduct(
             product=product,
             status=True,
@@ -359,6 +375,18 @@ class Reviews(graphene.Mutation):
                     rating=rating,
                     review=review
                 )
+                if Notification.objects.filter(user=product.user).exists():
+                    notification = Notification.objects.get(user=product.user)
+                else:
+                    notification = Notification.objects.create(
+                        user=product.user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"A review has been added to your product {product.product_title}",
+                    subject="New Review"
+                )
+                push_to_client(product.user.id, notification_message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -370,6 +398,18 @@ class Reviews(graphene.Mutation):
                     product=product,
                     review=review
                 )
+                if Notification.objects.filter(user=product.user).exists():
+                    notification = Notification.objects.get(user=product.user)
+                else:
+                    notification = Notification.objects.create(
+                        user=product.user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"A review has been added to your product {product.product_title}",
+                    subject="New Review"
+                )
+                push_to_client(product.user.id, notification_message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -381,6 +421,18 @@ class Reviews(graphene.Mutation):
                     product=product,
                     rating=rating
                 )
+                if Notification.objects.filter(user=product.user).exists():
+                    notification = Notification.objects.get(user=product.user)
+                else:
+                    notification = Notification.objects.create(
+                        user=product.user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"A review has been added to your product {product.product_title}",
+                    subject="New Review"
+                )
+                push_to_client(product.user.id, notification_message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -592,6 +644,65 @@ class DeleteCart(graphene.Mutation):
                 "message": "Invalid user"
             }
 # =====================================================================================================================
+
+class DecreaseCartItemQuantity(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    cart_item = graphene.Field(CartItemType)
+    class Arguments:
+        cart_id = graphene.String(required=True)
+        token = graphene.String()
+        ip = graphene.String()
+        item_id = graphene.String(required=True)
+
+    def mutate(self, info, cart_id, item_id,token=None, ip=None):
+        if token:
+            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+            user = ExtendUser.objects.get(email=email)
+            try:
+                cart = Cart.objects.get(id=cart_id, user=user)
+                if CartItem.objects.filter(id=item_id, cart=cart).exists():
+                    cart_item = CartItem.objects.get(id=item_id, cart=cart)
+                    quantity = cart_item.quantity-1
+                    if quantity < 1:
+                        CartItem.objects.filter(id=item_id).delete()
+                    else:
+                        CartItem.objects.filter(id=item_id).update(quantity=quantity)
+                return DeleteCart(
+                    status = True,
+                    message = "Quantity reduced successfully"
+                )
+            except Exception as e:
+                return {
+                    "status": False,
+                    "message": e
+                }
+        elif ip:
+            try:
+                cart = Cart.objects.get(id=cart_id, ip=ip)
+                if CartItem.objects.filter(id=item_id, cart=cart).exists():
+                    cart_item = CartItem.objects.get(id=item_id, cart=cart)
+                    quantity = cart_item.quantity-1
+                    if quantity < 1:
+                        CartItem.objects.filter(id=item_id).delete()
+                    else:
+                        CartItem.objects.filter(id=item_id).update(quantity=quantity)
+                return DeleteCart(
+                    status = True,
+                    message = "Quantity reduced successfully"
+                )
+            except Exception as e:
+                return {
+                    "status": False,
+                    "message": e
+                }
+        else:
+            return {
+                "status": False,
+                "message": "Invalid user"
+            }
+
+# =====================================================================================================================
 class DeleteCartItem(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
@@ -655,3 +766,90 @@ def verify_cart(ip, token):
         Cart.objects.filter(id=cart.id, ip=ip).delete()
     pass
 # =====================================================================================================================
+
+
+class PromoteProduct(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    product = graphene.Field(ProductType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        product_id = graphene.String(required=True)
+        amount = graphene.Float(required=True)
+        days = graphene.Int(required=True)
+    
+    @staticmethod
+    def mutate(self, info, token, product_id, amount, days):
+        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+        if ExtendUser.objects.filter(email=email).exists():
+            user = ExtendUser.objects.get(email=email)
+            if Product.objects.filter(id=product_id).exists():
+                product = Product.objects.get(id=product_id)
+                if product.user == user:
+                    if product.promoted:
+                        try:
+                            from datetime import timedelta
+                            new_end_date = product.promo.end_date + timedelta(days=days)
+                            ProductPromotion.objects.filter(product=product).update(end_date=new_end_date)
+                            return PromoteProduct(
+                                status=True,
+                                message="Promotion extended",
+                                product=product
+                            )
+                        except Exception as e:
+                            return {
+                                "status": False,
+                                "message": e
+                            }
+                    else:
+                        try:
+                            ProductPromotion.objects.create(
+                                product=product,
+                                days=days,
+                                amount=amount
+                            )
+                            return PromoteProduct(
+                                status=True,
+                                message="Product promoted",
+                                product=product
+                            )
+                        except Exception as e:
+                            return {
+                                "status": False,
+                                "message": e
+                            }
+                else:
+                    return {
+                        "status": False,
+                        "message": "Product does not belong to this user"
+                    }
+            else:
+                return {
+                    "status": False,
+                    "message": "Product does not exist"
+                }
+                
+        else:
+            return {
+                "status": False,
+                "message": "Invalid user"
+            }
+
+
+
+def unpromote():
+    from datetime import timedelta, datetime
+    all_products = Product.objects.all()
+    for product in all_products:
+        if product.promoted:
+            now = datetime.now()
+            if (product.promo.start_date + now) >= product.promo.end_date:
+                Product.objects.filter(id=product.id).update(promoted=False)
+    
+# trigger = CronTrigger(
+#     year="*", month="*", day="*", hour="8", minute="0", second="0"
+# )
+sched.add_job(unpromote, 'interval', minutes=20)
+sched.start()
+

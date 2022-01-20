@@ -19,3 +19,5 @@ Things to work on:
 12. product options should be a list of string objects
 13. edit and delete billing address
 14. create endpoint to popuplate dummy products
+
+

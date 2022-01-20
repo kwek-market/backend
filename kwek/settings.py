@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -84,7 +85,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "kwek.wsgi.application"
-# ASGI_APPLICATION = "kwek.asgi.application"
 
 
 # Database
@@ -241,5 +241,3 @@ CORS_ALLOW_HEADERS = [
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
 
-# PAYSTACK_SECRET_KEY = config("PAYSTACK_SECRET_KEY")
-# PAYSTACK_PUBLIC_KEY = config("PAYSTACK_PUBLIC_KEY")

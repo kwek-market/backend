@@ -2,6 +2,8 @@ import graphene
 import jwt
 
 from django.conf import settings
+from market.pusher import push_to_client
+from notifications.models import Message, Notification
 from users.models import ExtendUser
 from .models import (
     Billing,
@@ -18,7 +20,7 @@ from .object_types import (
     PickupType
 )
 from .flutterwave import get_payment_url, verify_transaction
-from market.models import Cart, CartItem, Product
+from market.models import Cart, CartItem, ProductOption
 
 
 class BillingAddress(graphene.Mutation):
@@ -207,30 +209,30 @@ class PickupLocationUpdate(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, address_id, name=None, contact=None, address=None, state=None, city=None):
-        billing_address= Billing.objects.get(id=address_id)
-        if billing_address:
+        if Pickup.objects.filter(id=address_id).exists():
+            pickup_address= Pickup.objects.get(id=address_id)
             if name:
                 new_name = name
             else:
-                new_name = billing_address.name
+                new_name = pickup_address.name
             if contact:
                 new_contact = contact
             else:
-                new_contact = billing_address.contact
+                new_contact = pickup_address.contact
             if address:
                 new_address = address
             else:
-                new_address = billing_address.address
+                new_address = pickup_address.address
             if state:
                 new_state = state
             else:
-                new_state = billing_address.state
+                new_state = pickup_address.state
             if city:
                 new_city = city
             else:
-                new_city = billing_address.city
+                new_city = pickup_address.city
             try:
-                billing = Billing.objects.filter(id=address_id).update(
+                pickup = Pickup.objects.filter(id=address_id).update(
                     name=new_name,
                     contact=new_contact,
                     address=new_address,
@@ -387,11 +389,12 @@ class PlaceOrder(graphene.Mutation):
         payment_method = graphene.String(required=True)
         delivery_method = graphene.String(required=True)
         address_id = graphene.String(required=True)
+        product_options_id = graphene.List(graphene.String, required=True)
         coupon_type = graphene.String()
         coupon_id = graphene.String()
     
     @staticmethod
-    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, coupon_type=None, coupon_id=None):
+    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_type=None, coupon_id=None):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         cart = Cart.objects.get(id=cart_id)
@@ -402,9 +405,9 @@ class PlaceOrder(graphene.Mutation):
                 coupon = ProductCoupon.objects.get(id=coupon_id)
             elif coupon_type == "order":
                 coupon = OrderCoupon.objects.get(id=coupon_id)
-        if delivery_method == "Door Step":
+        if delivery_method == "door step":
             shipping_address = Billing.objects.get(id=address_id)
-        elif delivery_method == "Pickup":
+        elif delivery_method == "pickup":
             shipping_address = Pickup.objects.get(id=address_id)
         if user:
             if cart:
@@ -419,7 +422,7 @@ class PlaceOrder(graphene.Mutation):
                                 productcoupon=coupon
                             )
                             order.save()
-                        elif delivery_method == "Pickup":
+                        elif coupon_type == "order":
                             order = Order.objects.create(
                                 user=user,
                                 cart_items=cart_items,
@@ -428,7 +431,7 @@ class PlaceOrder(graphene.Mutation):
                                 ordercoupon=coupon
                             )
                             order.save()
-                        if delivery_method == "Door Step":
+                        if delivery_method == "door step":
                             order = Order.objects.create(
                                 user=user,
                                 cart_items=cart_items,
@@ -438,7 +441,7 @@ class PlaceOrder(graphene.Mutation):
                             )
 
                             order.save()
-                        elif delivery_method == "Pickup":
+                        elif delivery_method == "pickup":
                             order = Order.objects.create(
                                 user=user,
                                 cart_items=cart_items,
@@ -449,13 +452,29 @@ class PlaceOrder(graphene.Mutation):
 
                             order.save()
                         OrderProgress.objects.create(order=order)
-                        # for cart_item in cart_items:
-                        #     cart_item_quantity = cart_item.quantity
-                        #     cart_item_product = cart_item.product
-                        #     cart_item_size = cart_item.product.options.size
-                        #     cart_item_color = cart_item.product.color
-                        #     cart_item_brand = cart_item.product.brand
-                        #     checked_product = Product.objects.filter()
+                        for cart_item in cart_items:
+                            cart_item_quantity = cart_item.quantity
+                            for id in product_options_id:
+                                if id == cart_item.product.options.id:
+                                    product = ProductOption.objects.get(id=id)
+                                    product_quantity = product.quantity
+                                    new_quantity = product_quantity - cart_item_quantity
+                                    ProductOption.objects.filter(id=id).update(quantity=new_quantity)
+
+                        if Notification.objects.filter(user=user).exists():
+                            notification = Notification.objects.get(
+                                user=user
+                            )
+                        else:
+                            notification = Notification.objects.create(
+                                user=user
+                            )
+                        notification_message = Message.objects.create(
+                            notification=notification,
+                            message=f"Your order has been placed successfully",
+                            subject="Order placed"
+                        )
+                        push_to_client(user.id, notification_message)
 
                         return PlaceOrder(
                             status=True,
@@ -534,7 +553,22 @@ class UpdateDeliverystatus(graphene.Mutation):
         order = Order.objects.get(id=order_id)
         if order:
             Order.objects.filter(id=order_id).update(delivery_status=delivery_status)
-
+            order = Order.objects.get(id=order_id)
+            if order.delivery_status == "delivered":
+                if Notification.objects.filter(user=order.user).exists():
+                    notification = Notification.objects.get(
+                        user=order.user
+                    )
+                else:
+                    notification = Notification.objects.create(
+                        user=order.user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Your order has been delivered successfully",
+                    subject="Order completed"
+                )
+                push_to_client(order.user.id, notification_message)
             return UpdateDeliverystatus(
                 status=True,
                 message="Delivery status updated"
@@ -553,10 +587,23 @@ class CancelOrder(graphene.Mutation):
         order = Order.objects.get(id=order_id)
 
         if order:
-            if order.payment_method == "Pay on Delivery":
+            if order.payment_method == "pay on delivery":
                 Order.objects.filter(id=order_id).update()
-
+                if Notification.objects.filter(user=order.user).exists():
+                        notification = Notification.objects.get(
+                            user=order.user
+                        )
+                else:
+                    notification = Notification.objects.create(
+                        user=order.user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Your order has been cancelled successfully",
+                    subject="Cancel order"
+                )
+                push_to_client(order.user.id, notification_message)
                 return CancelOrder(
                     status=True,
-                    
+                    message="Order cancelled"
                 )

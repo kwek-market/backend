@@ -1,4 +1,5 @@
 import graphene
+from notifications.mutation import ReadNotification
 from users.auth_mutation import (
     StoreBanner,
     TestToken,
@@ -28,13 +29,18 @@ from bill.mutation import (
     BillingAddress,
     BillingAddressDelete,
     BillingAddressUpdate,
+    CancelOrder,
     PaymentInitiate,
     PickUpLocation,
     PaymentVerification,
     PickupLocationDelete,
     PickupLocationUpdate,
-    PlaceOrder
+    PlaceOrder,
+    TrackOrder,
+    UpdateDeliverystatus,
+    UpdateOrderProgress
 )
+from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
 
 class AuthMutation(graphene.ObjectType):
     pass
@@ -81,3 +87,12 @@ class Mutation(AuthMutation, graphene.ObjectType):
     pickup_location_update = PickupLocationUpdate.Field()
     pickup_location_delete = PickupLocationDelete.Field()
     store_banner = StoreBanner.Field()
+    track_order = TrackOrder.Field()
+    update_order_progress = UpdateOrderProgress.Field()
+    update_delivery_status = UpdateDeliverystatus.Field()
+    cancel_order = CancelOrder.Field()
+    read_notification = ReadNotification.Field()
+    create_invoice = CreateInvoice.Field()
+    fund_wallet = FundWallet.Field()
+    withdraw_from_wallet = WithdrawFromWallet.Field()
+    wallet_transaction_success = WalletTransactionSuccess.Field()

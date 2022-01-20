@@ -21,7 +21,7 @@ from kwek.vendor_array import data
 from market.models import (
     Category, Product, ProductImage, ProductOption, Keyword
 )
-from users.models import ExtendUser
+from users.models import ExtendUser, SellerProfile
 import posixpath
 import json
 import random
@@ -193,5 +193,39 @@ class PopulateProduct(View):
             "status": True,
             "message":"Products populated"
         }
+        )
+
+class PopulateSellers(View):
+    def post(self, request):
+        for i in range(5):
+            user = ExtendUser.objects.create(
+                email=f"admin{i}@kwek.com",
+                full_name=f"Kwek{i} Admin{i}",
+                phone_number=f"{i}{i+1}{i+2}{i+3}{i+4}{i+5}",
+                is_verified=True,
+                is_seller=True
+            )
+            SellerProfile.objects.create(
+                user=user,
+                first_name=f"Kwek{i}",
+                last_name=f"Admin{1}",
+                phone_number=f"{i}{i+1}{i+2}{i+3}{i+4}{i+5}",
+                shop_name = f"Kwekadmin{i} market",
+                shop_url=f"/kwekadmin{i}",
+                shop_address=f"@kwekmarket{i}",
+                state="Lagos",
+                city="Lagos",
+                lga="Unknown",
+                landmark="kwekmarket",
+                how_you_heard_about_us="Kwekofficial",
+                accepted_policy=True,
+                store_banner_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
+                seller_is_verified=True,
+                accepted_vendor_policy=True
+            )
+        
+        return JsonResponse(
+            status=True,
+            message="Sellers created successfully"
         )
         pass

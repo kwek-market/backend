@@ -44,8 +44,8 @@ class Product(models.Model):
     color = models.CharField(max_length=255, blank=True, null=True)
     gender = models.CharField(max_length=255, blank=True, null=True)
     keyword = ArrayField(models.CharField(max_length=250))
-    clicks = models.IntegerField(default=0, blank=False)
-    promoted = models.BooleanField(default=False, blank=False)
+    clicks = models.IntegerField(default=0)
+    promoted = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
     sales = models.PositiveBigIntegerField(default=0)
 
@@ -78,18 +78,24 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, null=True)
-    start_date = models.CharField(max_length=255, blank=False, null=True)
-    end_date = models.CharField(max_length=255, blank=False, null=True)
-    days = models.IntegerField(blank=False, null=True)
-    active = models.BooleanField(default=True, blank=False, null=True)
-    amount = models.FloatField(blank=False, null=True)
-    reach = models.IntegerField(default=0, blank=False, null=True)
-    link_clicks = models.IntegerField(default=0, blank=False, null=True)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE)
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField()
+    days = models.IntegerField()
+    active = models.BooleanField(default=True)
+    amount = models.FloatField()
+    reach = models.IntegerField(default=0)
+    link_clicks = models.IntegerField(default=0)
 
     def __str__(self):
         return self.keyword
 
+    def save(self, *args, **kwargs):
+        from datetime import timedelta
+        d = timedelta(days=self.days)
+        self.end_date = self.start_date + d
+
+        super().save(*args, **kwargs)
 
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
