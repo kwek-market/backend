@@ -13,7 +13,7 @@ pusher_client = pusher.Pusher(
 )
 
 
-def PushToClient(channel: str, data: dict):
+def push_to_client(channel: str, data: dict):
     pusher_client.trigger(channel, channel, data)
 
 

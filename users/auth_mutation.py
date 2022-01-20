@@ -4,6 +4,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from market.mutation import verify_cart
+from market.pusher import push_to_client
+from notifications.models import Message, Notification
 from .validate import validate_email, validate_passwords, validate_user_passwords
 from .sendmail import (
     send_confirmation_email,
@@ -152,6 +154,20 @@ class LoginUser(graphene.Mutation):
                 # token = get_token(user)
                 refresh_token = create_refresh_token(user)
                 verify_cart(ip, token)
+                if Notification.objects.filter(user=user).exists():
+                    notification = Notification.objects.get(
+                        user=user
+                    )
+                else:
+                    notification = Notification.objects.create(
+                        user=user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Login successful",
+                    subject="New Login"
+                )
+                push_to_client(user.id, notification_message)
                 return LoginUser(
                     user=user,
                     status=True,
@@ -269,6 +285,20 @@ class ChangePassword(graphene.Mutation):
                     user = ExtendUser.objects.get(email=username)
                     user.set_password(password1)
                     user.save()
+                    if Notification.objects.filter(user=user).exists():
+                        notification = Notification.objects.get(
+                            user=user
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=user
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"You have successfully changed your password.",
+                        subject="Password changed"
+                    )
+                    push_to_client(user.id, notification_message)
                     return ChangePassword(status=True, message="Password Change Successful")
             else:
                 return ChangePassword(status=False, message="Invalid Token")
@@ -337,6 +367,20 @@ class StartSelling(graphene.Mutation):
                 seller.save()
                 c_user.is_seller = True
                 c_user.save()
+                if Notification.objects.filter(user=c_user).exists():
+                    notification = Notification.objects.get(
+                        user=c_user
+                    )
+                else:
+                    notification = Notification.objects.create(
+                        user=c_user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"You have successfully created a seller's account",
+                    subject="Seller account"
+                )
+                push_to_client(c_user.id, notification_message)
                 return StartSelling(
                     status=True, message="Seller account created successfully"
                 )
@@ -500,6 +544,20 @@ class CompleteSellerVerification(graphene.Mutation):
             seller = SellerProfile.objects.get(user=userid)
             seller.seller_is_verified = True
             seller.save()
+            if Notification.objects.filter(user=c_user).exists():
+                notification = Notification.objects.get(
+                    user=c_user
+                )
+            else:
+                notification = Notification.objects.create(
+                    user=c_user
+                )
+            notification_message = Message.objects.create(
+                notification=notification,
+                message=f"Login successful",
+                subject="New Login"
+            )
+            push_to_client(c_user.id, notification_message)
             return CompleteSellerVerification(status=True, message="Successful")
         except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
@@ -557,6 +615,20 @@ class UserAccountUpdate(graphene.Mutation):
             if c_user.id == f_id:
                 tu = u_update(email)
                 if tu == True:
+                    if Notification.objects.filter(user=c_user).exists():
+                        notification = Notification.objects.get(
+                            user=f_user
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=f_user
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"Your account has been updated successfully",
+                        subject="Account update"
+                    )
+                    push_to_client(f_user.id, notification_message)
                     return UserAccountUpdate(
                         status=True, message="Update Successful", token=token
                     )
@@ -572,6 +644,20 @@ class UserAccountUpdate(graphene.Mutation):
             ).decode("utf-8")
             tu = u_update(email)
             if tu == True:
+                if Notification.objects.filter(user=c_user).exists():
+                    notification = Notification.objects.get(
+                        user=c_user
+                    )
+                else:
+                    notification = Notification.objects.create(
+                        user=c_user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Your account has been updated successfully",
+                    subject="Account update"
+                )
+                push_to_client(c_user.id, notification_message)
                 return UserAccountUpdate(
                     status=True, message="Update Successful", token=n_token
                 )
@@ -604,6 +690,20 @@ class UserPasswordUpdate(graphene.Mutation):
                 if matchcheck:
                     c_user.set_password(new_password)
                     c_user.save()
+                    if Notification.objects.filter(user=c_user).exists():
+                        notification = Notification.objects.get(
+                            user=c_user
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=c_user
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"Your password was reset successfully",
+                        subject="Password reset"
+                    )
+                    push_to_client(c_user.id, notification_message)
                     return UserPasswordUpdate(
                         status=True, message="Password Change Successful"
                     )
@@ -636,6 +736,20 @@ class StoreUpdate(graphene.Mutation):
                 store_description,
             )
             seller.save()
+            if Notification.objects.filter(user=c_user).exists():
+                notification = Notification.objects.get(
+                    user=c_user
+                )
+            else:
+                notification = Notification.objects.create(
+                    user=c_user
+                )
+            notification_message = Message.objects.create(
+                notification=notification,
+                message=f"Your store info has been updated successfully",
+                subject="Store Update"
+            )
+            push_to_client(c_user.id, notification_message)
             return StoreUpdate(status=True, message="Update Successful")
         except Exception as e:
             return StoreUpdate(status=False, message=e)
