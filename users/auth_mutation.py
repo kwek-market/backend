@@ -132,7 +132,7 @@ class LoginUser(graphene.Mutation):
 
         if user:
             if user.is_verified:
-
+                cuser = ExtendUser.objects.get(email=email)
                 ct = int(("{}".format(time.time())).split(".")[0])
                 payload = {
                     user.USERNAME_FIELD: email,
@@ -167,7 +167,7 @@ class LoginUser(graphene.Mutation):
                     message=f"Login successful",
                     subject="New Login"
                 )
-                push_to_client(user.id, notification_message)
+                push_to_client(cuser.id, notification_message)
                 return LoginUser(
                     user=user,
                     status=True,
