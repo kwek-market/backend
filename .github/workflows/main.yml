@@ -37,21 +37,21 @@ jobs:
       - name: Exec remote commands via SSH
         uses: appleboy/ssh-action@master
         with:
+          # host: ${{ secrets.KWEK_HOST }}
+          # username: ${{ secrets.USERNAME }}
+          # password: ${{ secrets.PASSWORD }}
           host: premium219.web-hosting.com
           # port: 2083
-          # port: ${{ secrets.PORT }}
-          # password: ${{ secrets.PASSWORD }}
-          # username: ${{ secrets.USERNAME }}
           port: ${{ secrets.PORT }}
-          password: uZOKTPXdDXKo
-          username: kwekxbyu
+          password: ${{ secrets.PASSWORD }}
+          username: ${{ secrets.USERNAME }}
           script: |
             source /home/kwekxbyu/virtualenv/kwek/3.8/bin/activate && cd /home/kwekxbyu/kwek
             git pull upstream prod
             pip install --upgrade pip
             pip install -r requirements.txt
             python manage.py makemigrations
-            python manage.py makemigrations bill kwek kwek_auth market notifications users walle
+            python manage.py makemigrations bill kwek kwek_auth market notifications users wallet
             python manage.py migrate
             python manage.py collectstatic --noinput
-            python passenger_wsgi.py 
+            python passenger_wsgi.py
