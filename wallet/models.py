@@ -19,17 +19,17 @@ class PurchasedItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     invoice = models.ForeignKey("Invoice", on_delete=models.CASCADE, related_name="purchased_item")
     item = models.CharField(max_length=225)
-    description = models.TextField()
-    quantity = models.PositiveBigIntegerField()
-    unit_cost = models.PositiveBigIntegerField()
-    total = models.PositiveBigIntegerField()
+    description = models.TextField(default="")
+    quantity = models.PositiveBigIntegerField(default=1)
+    unit_cost = models.PositiveBigIntegerField(blank=False)
+    total = models.PositiveBigIntegerField(blank=False)
 
 
 class Invoice(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     store = models.ForeignKey(StoreDetail, on_delete=models.CASCADE)
     customer_name = models.CharField(max_length=225)
-    customer_email = models.EmailField()
+    customer_email = models.EmailField(default="")
     customer_address = models.CharField(max_length=225)
     delivery_fee = models.PositiveBigIntegerField()
     subtotal = models.PositiveBigIntegerField()

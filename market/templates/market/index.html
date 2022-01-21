@@ -15,10 +15,10 @@
       cluster: 'mt1'
     });
 
-    var channel = pusher.subscribe("'my-channel'");
-    channel.bind("'my-channel'", function(data) {
+    var channel = pusher.subscribe('my-channel');
+    channel.bind('my-channel', function(data) {
     //   alert(JSON.stringify(data));
-    document.getElementById("data").innerHTML += JSON.stringify(data.message)
+    document.getElementById("data").innerHTML += JSON.stringify(data)
     });
   </script>
 </head>
