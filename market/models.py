@@ -1,3 +1,4 @@
+from pickle import FALSE
 from django.db import models
 from typing import Any
 import time
@@ -80,8 +81,8 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE)
-    start_date = models.DateTimeField(auto_now_add=True)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=FALSE)
+    start_date = models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now)
     end_date = models.DateTimeField(default=django.utils.timezone.now)
     days = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
