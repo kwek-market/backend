@@ -132,7 +132,6 @@ class LoginUser(graphene.Mutation):
 
         if user:
             if user.is_verified:
-                cuser = ExtendUser.objects.get(email=email)
                 ct = int(("{}".format(time.time())).split(".")[0])
                 payload = {
                     user.USERNAME_FIELD: email,
@@ -167,7 +166,10 @@ class LoginUser(graphene.Mutation):
                     message=f"Login successful",
                     subject="New Login"
                 )
-                push_to_client(cuser.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(user.id, notification_info)
                 return LoginUser(
                     user=user,
                     status=True,
@@ -298,7 +300,10 @@ class ChangePassword(graphene.Mutation):
                         message=f"You have successfully changed your password.",
                         subject="Password changed"
                     )
-                    push_to_client(user.id, notification_message)
+                    notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                    push_to_client(user.id, notification_info)
                     return ChangePassword(status=True, message="Password Change Successful")
             else:
                 return ChangePassword(status=False, message="Invalid Token")
@@ -380,7 +385,10 @@ class StartSelling(graphene.Mutation):
                     message=f"You have successfully created a seller's account",
                     subject="Seller account"
                 )
-                push_to_client(c_user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(c_user.id, notification_info)
                 return StartSelling(
                     status=True, message="Seller account created successfully"
                 )
@@ -557,7 +565,10 @@ class CompleteSellerVerification(graphene.Mutation):
                 message=f"Login successful",
                 subject="New Login"
             )
-            push_to_client(c_user.id, notification_message)
+            notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+            push_to_client(c_user.id, notification_info)
             return CompleteSellerVerification(status=True, message="Successful")
         except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
@@ -628,7 +639,10 @@ class UserAccountUpdate(graphene.Mutation):
                         message=f"Your account has been updated successfully",
                         subject="Account update"
                     )
-                    push_to_client(f_user.id, notification_message)
+                    notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                    push_to_client(f_user.id, notification_info)
                     return UserAccountUpdate(
                         status=True, message="Update Successful", token=token
                     )
@@ -657,7 +671,10 @@ class UserAccountUpdate(graphene.Mutation):
                     message=f"Your account has been updated successfully",
                     subject="Account update"
                 )
-                push_to_client(c_user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(c_user.id, notification_info)
                 return UserAccountUpdate(
                     status=True, message="Update Successful", token=n_token
                 )
@@ -703,7 +720,10 @@ class UserPasswordUpdate(graphene.Mutation):
                         message=f"Your password was reset successfully",
                         subject="Password reset"
                     )
-                    push_to_client(c_user.id, notification_message)
+                    notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                    push_to_client(c_user.id, notification_info)
                     return UserPasswordUpdate(
                         status=True, message="Password Change Successful"
                     )
@@ -749,7 +769,10 @@ class StoreUpdate(graphene.Mutation):
                 message=f"Your store info has been updated successfully",
                 subject="Store Update"
             )
-            push_to_client(c_user.id, notification_message)
+            notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+            push_to_client(c_user.id, notification_info)
             return StoreUpdate(status=True, message="Update Successful")
         except Exception as e:
             return StoreUpdate(status=False, message=e)

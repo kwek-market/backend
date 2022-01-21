@@ -153,7 +153,10 @@ class FundWallet(graphene.Mutation):
                         message=f"{amount} was added to your wallet successfully",
                         subject="Fund wallet"
                     )
-                    push_to_client(user.id, notification_message)
+                    notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                    push_to_client(user.id, notification_info)
 
                     return FundWallet(
                         status=True,
@@ -221,7 +224,10 @@ class WithdrawFromWallet(graphene.Mutation):
                             message=f"{amount} was withdrawn from your wallet successfully",
                             subject="Withdraw"
                         )
-                        push_to_client(user.id, notification_message)
+                        notification_info = {"notification":str(notification_message.notification.id),
+                        "message":notification_message.message, 
+                        "subject":notification_message.subject}
+                        push_to_client(user.id, notification_info)
 
                         return FundWallet(
                             status=True,

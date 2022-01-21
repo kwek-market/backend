@@ -10,8 +10,8 @@ from users.models import ExtendUser
 class StoreDetail(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField(ExtendUser, on_delete=models.CASCADE)
-    store_name = models.CharField(max_length=225, unique=True, error_messages="Store with name already exists")
-    email = models.EmailField(unique=True, error_messages="Store with email already exists")
+    store_name = models.CharField(max_length=225, unique=True, error_messages={"unique":"Store with name already exists"})
+    email = models.EmailField(unique=True, error_messages={"unique":"Store with email already exists"})
     address = models.CharField(max_length=225)
 
 

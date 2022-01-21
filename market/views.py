@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from .pusher import PushToClient, SendEmailNotification
+from .pusher import push_to_client, SendEmailNotification
 
 # Create your views here.
 
@@ -9,9 +9,9 @@ def pusher_test(request):
 
 def trigger_push(request):
     for i in range(100):
-        PushToClient('my-channel',{'message': 'hello world, count {}'.format(i)})
+        push_to_client('my-channel',{'message': 'hello world, count {}'.format(i)})
         notification = SendEmailNotification("gregoflash05@gmail.com")
-        if i%10 == 0:
+        if i%20 == 0:
             notification.send_only_one_paragraph("Paragraph","This is the one paragraph")
             notification.send_html_content("Paragraph","<div>This is the html content with <a href='google.com'>this link</a></div>")
     return JsonResponse({"status": True,"message":"Notification Triggered"})

@@ -20,7 +20,6 @@ from operator import attrgetter
 class Query(UserQuery, MeQuery, graphene.ObjectType):
     user_data = graphene.Field(UserType, token=graphene.String())
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
-
     categories = graphene.List(CategoryType)
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     subcategories = graphene.List(CategoryType)
@@ -42,7 +41,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     rating_sort = graphene.Field(ProductType)
     user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
     get_seller_store_detail = graphene.List(StoreDetailType, token=graphene.String(required=True))
-    get_seller_invoices = graphene.List(InvoiceType, token=graphene.String)
+    get_seller_invoices = graphene.List(InvoiceType, token=graphene.String())
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
     get_seller_wallet_transactions = graphene.List(WalletTransactionType, token=graphene.String(required=True))
 

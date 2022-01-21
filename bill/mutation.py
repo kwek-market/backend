@@ -474,7 +474,10 @@ class PlaceOrder(graphene.Mutation):
                             message=f"Your order has been placed successfully",
                             subject="Order placed"
                         )
-                        push_to_client(user.id, notification_message)
+                        notification_info = {"notification":str(notification_message.notification.id),
+                        "message":notification_message.message, 
+                        "subject":notification_message.subject}
+                        push_to_client(user.id, notification_info)
 
                         return PlaceOrder(
                             status=True,
@@ -568,7 +571,10 @@ class UpdateDeliverystatus(graphene.Mutation):
                     message=f"Your order has been delivered successfully",
                     subject="Order completed"
                 )
-                push_to_client(order.user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                        "message":notification_message.message, 
+                        "subject":notification_message.subject}
+                push_to_client(order.user.id, notification_info)
             return UpdateDeliverystatus(
                 status=True,
                 message="Delivery status updated"
@@ -602,7 +608,10 @@ class CancelOrder(graphene.Mutation):
                     message=f"Your order has been cancelled successfully",
                     subject="Cancel order"
                 )
-                push_to_client(order.user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(order.user.id, notification_info)
                 return CancelOrder(
                     status=True,
                     message="Order cancelled"

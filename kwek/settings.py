@@ -45,13 +45,17 @@ INSTALLED_APPS = [
     "asset_mgmt",
     "bill",
     "users",
+    "notifications",
+    "wallet",
+
+
     "graphene_django",
     "django_filters",
     "graphql_jwt.refresh_token.apps.RefreshTokenConfig",
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
-    "notifications",
+    
 ]
 
 MIDDLEWARE = [

@@ -51,7 +51,7 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             python manage.py makemigrations
-            python manage.py makemigrations kwek_auth users market bill
+            python manage.py makemigrations bill kwek kwek_auth market notifications users walle
             python manage.py migrate
             python manage.py collectstatic --noinput
             python passenger_wsgi.py 

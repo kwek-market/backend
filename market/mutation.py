@@ -240,7 +240,10 @@ class CreateProduct(graphene.Mutation):
             message=f"A new product {product.product_title}, has been added to your store.",
             subject="New Product"
         )
-        push_to_client(product.user.id, notification_message)
+        notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+        push_to_client(product.user.id, notification_info)
         return CreateProduct(
             product=product,
             status=True,
@@ -386,7 +389,10 @@ class Reviews(graphene.Mutation):
                     message=f"A review has been added to your product {product.product_title}",
                     subject="New Review"
                 )
-                push_to_client(product.user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(product.user.id, notification_info)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -409,7 +415,10 @@ class Reviews(graphene.Mutation):
                     message=f"A review has been added to your product {product.product_title}",
                     subject="New Review"
                 )
-                push_to_client(product.user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(product.user.id, notification_info)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -432,7 +441,10 @@ class Reviews(graphene.Mutation):
                     message=f"A review has been added to your product {product.product_title}",
                     subject="New Review"
                 )
-                push_to_client(product.user.id, notification_message)
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(product.user.id, notification_info)
                 return Reviews(
                     product_review=product_review,
                     status=True,
