@@ -96,3 +96,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     fund_wallet = FundWallet.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
+    decrease_cart_item_quantity = DecreaseCartItemQuantity.Field()

@@ -1,4 +1,3 @@
-from os import stat
 import graphene
 import jwt
 
@@ -39,6 +38,7 @@ class CreateInvoice(graphene.Mutation):
         token = graphene.String(required=True)
         customer_name = graphene.String(required=True)
         customer_email = graphene.String(required=True)
+        customer_address = graphene.String(required=True)
         purchased_item = graphene.List(graphene.String, required=True)
         delivery_fee = graphene.Int(required=True)
         subtotal = graphene.Int(required=True)
@@ -77,6 +77,7 @@ class CreateInvoice(graphene.Mutation):
         if user:
             try:
                 invoice = Invoice.objects.create(
+                    store=store,
                     customer_name=customer_name,
                     customer_email=customer_email,
                     customer_address=customer_address,

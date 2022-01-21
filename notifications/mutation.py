@@ -1,4 +1,3 @@
-from asyncio import FastChildWatcher
 import graphene
 import jwt
 
@@ -17,7 +16,7 @@ class ReadNotification(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         message_id = graphene.String(required=True)
-        notificatin_id = graphene.String(required=True)
+        notification_id = graphene.String(required=True)
     
     @staticmethod
     def mutate(self, info, token, message_id, notification_id):

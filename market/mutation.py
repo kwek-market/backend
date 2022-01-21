@@ -676,14 +676,25 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                 if CartItem.objects.filter(id=item_id, cart=cart).exists():
                     cart_item = CartItem.objects.get(id=item_id, cart=cart)
                     quantity = cart_item.quantity-1
+                    initial_price = cart_item.price/cart_item.quantity
+                    price = cart_item.price - initial_price
                     if quantity < 1:
+                        print("quantity", quantity)
                         CartItem.objects.filter(id=item_id).delete()
                     else:
-                        CartItem.objects.filter(id=item_id).update(quantity=quantity)
-                return DeleteCart(
-                    status = True,
-                    message = "Quantity reduced successfully"
-                )
+                        print("price",  price)
+                        CartItem.objects.filter(id=item_id).update(quantity=quantity, price=price)
+                    new_cart = CartItem.objects.get(id=item_id, cart=cart)
+                    return DecreaseCartItemQuantity(
+                        status = True,
+                        message = "Quantity reduced successfully",
+                        cart_item = new_cart
+                    )
+                else:
+                    return {
+                        "status": False,
+                        "message": "Cart Item does not exist"
+                    }
             except Exception as e:
                 return {
                     "status": False,

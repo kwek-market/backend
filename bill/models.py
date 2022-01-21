@@ -118,7 +118,7 @@ class OrderProgress(models.Model):
 
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.OneToOneField(ExtendUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE)
     order_id = models.CharField(max_length=30)
     cart_items = ArrayField(models.CharField(max_length=225), default=None)
     payment_method = models.CharField(max_length=30)
@@ -130,7 +130,6 @@ class Order(models.Model):
     door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
     pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
 
-
     def save(self, *args, **kwargs):
         while not self.order_id:
             order_id = f"KWEK-{secrets.token_urlsafe(14)}"
@@ -140,3 +139,6 @@ class Order(models.Model):
                 self.order_id = order_id
         
         super().save(*args, **kwargs)
+    
+    def __str__(self) -> str:
+        return self.order_id
