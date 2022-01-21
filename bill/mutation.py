@@ -400,6 +400,9 @@ class PlaceOrder(graphene.Mutation):
         cart = Cart.objects.get(id=cart_id)
         cart_owner = cart.user
         cart_items = CartItem.objects.filter(cart=cart)
+        cart_items_id =[]
+        for item in cart_items:
+            cart_items_id.append(item.id)
         if coupon_id and coupon_type:
             if coupon_type == "product":
                 coupon = ProductCoupon.objects.get(id=coupon_id)
@@ -413,53 +416,36 @@ class PlaceOrder(graphene.Mutation):
             if cart:
                 if user == cart_owner:
                     try:
+                        order = Order.objects.create(
+                            user=user,
+                            cart_items=cart_items_id,
+                            payment_method=payment_method,
+                            delivery_method=delivery_method
+                        )
                         if coupon_type == "product":
-                            order = Order.objects.create(
-                                user=user,
-                                cart_items=cart_items,
-                                payment_method=payment_method,
-                                delivery_method=delivery_method,
+                            Order.objects.filter(id=order.id).update(
                                 productcoupon=coupon
                             )
-                            order.save()
                         elif coupon_type == "order":
-                            order = Order.objects.create(
-                                user=user,
-                                cart_items=cart_items,
-                                payment_method=payment_method,
-                                delivery_method=delivery_method,
+                            Order.objects.filter(id=order.id).update(
                                 ordercoupon=coupon
                             )
-                            order.save()
                         if delivery_method == "door step":
-                            order = Order.objects.create(
-                                user=user,
-                                cart_items=cart_items,
-                                payment_method=payment_method,
-                                delivery_method=delivery_method,
+                            Order.objects.filter(id=order.id).update(
                                 door_step=shipping_address
                             )
-
-                            order.save()
                         elif delivery_method == "pickup":
-                            order = Order.objects.create(
-                                user=user,
-                                cart_items=cart_items,
-                                payment_method=payment_method,
-                                delivery_method=delivery_method,
+                            Order.objects.filter(id=order.id).update(
                                 pickup=shipping_address
                             )
-
-                            order.save()
                         OrderProgress.objects.create(order=order)
                         for cart_item in cart_items:
                             cart_item_quantity = cart_item.quantity
                             for id in product_options_id:
-                                if id == cart_item.product.options.id:
-                                    product = ProductOption.objects.get(id=id)
-                                    product_quantity = product.quantity
-                                    new_quantity = product_quantity - cart_item_quantity
-                                    ProductOption.objects.filter(id=id).update(quantity=new_quantity)
+                                product = ProductOption.objects.get(id=id)
+                                product_quantity = product.quantity
+                                new_quantity = int(product_quantity) - int(cart_item_quantity)
+                                ProductOption.objects.filter(id=id).update(quantity=new_quantity)
 
                         if Notification.objects.filter(user=user).exists():
                             notification = Notification.objects.get(
@@ -474,6 +460,7 @@ class PlaceOrder(graphene.Mutation):
                             message=f"Your order has been placed successfully",
                             subject="Order placed"
                         )
+                        # print(notification_message.message)
                         notification_info = {"notification":str(notification_message.notification.id),
                         "message":notification_message.message, 
                         "subject":notification_message.subject}
