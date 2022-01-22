@@ -1,3 +1,4 @@
+from typing_extensions import Required
 import graphene
 import jwt
 
@@ -287,9 +288,10 @@ class PaymentInitiate(graphene.Mutation):
         token = graphene.String(required=True)
         description = graphene.String(required=True)
         currency = graphene.String()
+        redirect_url = graphene.String(required=True)
     
     @staticmethod
-    def mutate(self, info, amount, token, description, currency=None):
+    def mutate(self, info, amount, token, description, redirect_url, currency=None):
         email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
         user = ExtendUser.objects.get(email=email)
         if user:
@@ -315,7 +317,7 @@ class PaymentInitiate(graphene.Mutation):
                         payment.ref,
                         float(amount),
                         payment.currency,
-                        payment.redirect_url,
+                        redirect_url,
                         payment.description
                     )
                     if link["status"]==True:
