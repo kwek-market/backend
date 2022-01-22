@@ -1,5 +1,8 @@
+from pickle import FALSE
 from django.db import models
 from typing import Any
+import time
+import django
 from django.contrib.postgres.fields import ArrayField
 from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
@@ -78,12 +81,12 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=FALSE)
     start_date = models.DateTimeField(auto_now_add=True)
-    end_date = models.DateTimeField()
-    days = models.IntegerField()
+    end_date = models.DateTimeField(default=django.utils.timezone.now)
+    days = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
-    amount = models.FloatField()
+    amount = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
     link_clicks = models.IntegerField(default=0)
 
@@ -132,7 +135,7 @@ class CartItem(models.Model):
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
     product_option_id = models.CharField(max_length=225, default="lucky_cart")
     quantity = models.PositiveBigIntegerField(default=1)
-    price = models.FloatField()
+    price = models.FloatField(blank=False)
     cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
 
     def __str__(self):

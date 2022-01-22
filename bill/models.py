@@ -44,10 +44,10 @@ class Pickup(models.Model):
 
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    amount = models.FloatField()
+    amount = models.FloatField(default=0)
     ref = models.CharField(max_length=200)
     user_id = models.CharField(max_length=225, default=None)
-    email = models.EmailField()
+    email = models.EmailField(blank=False)
     name = models.CharField(max_length=225, default="admin")
     phone = models.CharField(max_length=15, default="+1809384583")
     description = models.CharField(max_length=225, default="Purchase goods")
@@ -76,7 +76,7 @@ class Payment(models.Model):
 class Coupon(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     code = models.CharField(max_length=7)
-    amount = models.PositiveIntegerField()
+    amount = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         while not self.code:
