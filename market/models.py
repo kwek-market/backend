@@ -133,6 +133,7 @@ class Cart(models.Model):
 class CartItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
+    product_option_id = models.CharField(max_length=225, default="lucky_cart")
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField(blank=False)
     cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)

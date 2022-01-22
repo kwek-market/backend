@@ -165,8 +165,7 @@ class PopulateProduct(View):
                         size=option["size"],
                         quantity=option["quantity"],
                         price=option["price"],
-                        discounted_price=option["discountedPrice"],
-                        option_total_price=option["price"]-option["discountedPrice"]
+                        discounted_price=option["discountedPrice"]
                     )
                 ProductImage.objects.create(
                     product=created_product,

@@ -97,7 +97,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     cart_items=[]
                 return cart_items
         elif ip is not None:
-            cart = Cart.objects.filter(ip=ip)
+            cart = Cart.objects.get(ip=ip)
             cart_items = CartItem.objects.filter(cart=cart)
             return cart_items
 
