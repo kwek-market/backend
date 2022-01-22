@@ -107,10 +107,11 @@ def send_email_through_PHP(payload_dictionary):
         payload_dictionary), {'Content-Type': 'application/json'}
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
+        print(response.json())
         if response.json()["status"]:
             return True,response.json()['message']
         else:
-            return False
+            return False, "error occured"
     except Exception as e:
         return False,response.json()['message'] 
 

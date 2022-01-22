@@ -68,6 +68,14 @@ class NewsletterType(DjangoObjectType):
         model = Newsletter
         fields = "__all__"
 
+
+class ContactMessageType(DjangoObjectType):
+    class Meta:
+        model = ContactMessage
+        fields = "__all__"
+
+
+
 class CartType(DjangoObjectType):
     class Meta:
         model = Cart

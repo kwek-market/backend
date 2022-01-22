@@ -28,6 +28,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     seller_products = graphene.List(ProductType, token=graphene.String(required=True))
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
+    contact_us = DjangoListField(ContactMessageType)
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
@@ -172,6 +173,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         # return filtered_products
         # else:
         return Product.objects.all()
+
+    def resolve_contact_us(root, info):
+       return ContactMessage.objects.all().order_by('-sent_at')
     
     def resolve_review(root, info, review_id):
         review = Rating.objects.get(id=review_id)

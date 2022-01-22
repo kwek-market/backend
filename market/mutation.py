@@ -8,6 +8,7 @@ from notifications.models import Message, Notification
 from users.models import ExtendUser
 from .models import *
 from .object_types import *
+from .pusher import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -460,6 +461,7 @@ class Reviews(graphene.Mutation):
                 "status": False,
                 "message": "Invalid user"
             }
+
 # Subscriber Mutation
 class CreateSubscriber(graphene.Mutation):
     subscriber = graphene.Field(NewsletterType)
@@ -480,6 +482,45 @@ class CreateSubscriber(graphene.Mutation):
                                         status=True,
                                         message="Subscription Successful")
 # =====================================================================================================================
+
+class ContactUs(graphene.Mutation):
+    contact_message = graphene.Field(ContactMessageType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        email = graphene.String(required=True)
+        name = graphene.String(required=True)
+        message = graphene.String(required=True)
+    
+    @staticmethod
+    def mutate(root, info, email, name, message):
+        if ContactMessage.objects.filter(email=email, message=message).exists():
+            return ContactUs(
+                status=False, message="You have already sent this message")
+        else:
+            payload = {
+            "email": "gregoflash05@gmail.com",
+            "send_kwek_email": "",
+            "product_name": "Support Kwek Market",
+            "api_key": settings.PHPWEB,
+            "from_email": settings.KWEK_EMAIL,
+            "subject": "Contact us message from " + name,
+            "event": "notification",
+            "notification_title": "Contact us message from " + name,
+            "no_html_content": message,
+            "html_content": "",
+            }
+            try:
+                status,email_message = send_email_through_PHP(payload)
+                if status:
+                    contacting = ContactMessage(email=email, name=name, message=message)
+                    contacting.save()
+                    return ContactUs(contact_message=contacting,status=True, message="message successfully sent")
+                else:
+                    return ContactUs(status=False, message="Error Occured, Try again later")
+            except Exception as e:
+                return ContactUs(status=False, message=e)
 
 
 # Wishlist Mutation

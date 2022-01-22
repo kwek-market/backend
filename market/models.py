@@ -1,4 +1,5 @@
 from pickle import FALSE
+from typing_extensions import Required
 from django.db import models
 from typing import Any
 import time
@@ -120,6 +121,14 @@ class Rating(models.Model):
 class Newsletter(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(max_length=255, unique=True)
+
+    def __str__(self):
+        return str(self.email)
+class ContactMessage(models.Model):
+    email = models.EmailField(max_length=255)
+    name = models.CharField(max_length=255)
+    message = models.TextField(max_length=255, null=False)
+    sent_at = models.DateTimeField(default=django.utils.timezone.now)
 
     def __str__(self):
         return str(self.email)
