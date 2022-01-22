@@ -2,6 +2,7 @@ import graphene
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from market.models import Cart, Wishlist
 
 from market.mutation import verify_cart
 from market.pusher import push_to_client
@@ -57,6 +58,9 @@ class CreateUser(graphene.Mutation):
             if sen_m["status"] == True:
                 user.set_password(password1)
                 user.save()
+                Cart.objects.create(user=user)
+                Wishlist.objects.create(user=user)
+                Notification.objects.create(user=user)
                 return CreateUser(
                     status=True,
                     message="Successfully created account for, {}".format(

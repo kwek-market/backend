@@ -226,7 +226,7 @@ class CreateProduct(graphene.Mutation):
             quantity = "" if "quantity" not in keys else option["quantity"]
             price = "" if "price" not in keys else option["price"]
             discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
-            option_total_price = "" if "option_total_price" not in keys else option["option_total_price"]
+            option_total_price = 0.0
             ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
         
         if Notification.objects.filter(user=product.user).exists():
@@ -550,7 +550,7 @@ class CreateCartItem(graphene.Mutation):
                 has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option)
 
                 if has_product:
-                    cart_item = CartItem.objects.get(product=product, product__options=option)
+                    cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option)
                     initial_price = cart_item.price/cart_item.quantity
                     quantity = int(cart_item.quantity) + 1
                     price = int(cart_item.price) + initial_price
@@ -562,7 +562,10 @@ class CreateCartItem(graphene.Mutation):
                     )
                 else:
                     try:
-                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.option_total_price, cart=user_cart)
+                        if option.discounted_price:
+                            cart_item = CartItem.objects.create(product=product, quantity=1, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                        else:
+                            cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart, product_option_id=product_option_id)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -575,14 +578,15 @@ class CreateCartItem(graphene.Mutation):
                         }
         elif ip_address:
             try:
-                user_cart = Cart.objects.filter(ip=ip_address)
+                user_cart = Cart.objects.get(ip=ip_address)
             except Exception:
                 user_cart = Cart.objects.create(ip=ip_address)
-            
-            has_product = user_cart.product.filter(id=product.id)
+
+            has_product = Cart.objects.filter(ip=ip_address, cart_item__product=product, cart_item__product__options=option)
 
             if has_product:
-                cart_item = CartItem.objects.get(product=product)
+                
+                cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
                 initial_price = cart_item.price/cart_item.quantity
                 quantity = int(cart_item.quantity) + 1
                 price = int(cart_item.price) + initial_price
@@ -594,7 +598,10 @@ class CreateCartItem(graphene.Mutation):
                 )
             else:
                 try:
-                    cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart)
+                    if option.discounted_price:
+                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                    else:
+                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart, product_option_id=product_option_id)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,

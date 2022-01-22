@@ -465,7 +465,7 @@ class PlaceOrder(graphene.Mutation):
                         "message":notification_message.message, 
                         "subject":notification_message.subject}
                         push_to_client(user.id, notification_info)
-
+                        CartItem.objects.filter(cart=cart).delete()
                         return PlaceOrder(
                             status=True,
                             message="Order placed successfully",
@@ -476,7 +476,7 @@ class PlaceOrder(graphene.Mutation):
                             "status": False,
                             "message": e
                         }
-                    pass
+            
                 else:
                     return {
                         "status": False,
