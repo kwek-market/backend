@@ -5,6 +5,7 @@ from graphene_django.filter import DjangoFilterConnectionField
 from graphql_auth.schema import UserQuery, MeQuery
 from django.conf import settings
 from notifications.models import Message, Notification
+from graphql import GraphQLError
 
 from notifications.object_types import MessageType
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
@@ -12,6 +13,7 @@ from wallet.object_types import InvoiceType, StoreDetailType, WalletTransactionT
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import ExtendUser, SellerProfile
+from users.validate import authenticate_user
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
@@ -47,18 +49,22 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_wallet_transactions = graphene.List(WalletTransactionType, token=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        return ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        return auth["user"]
 
     def resolve_seller_data(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user = ExtendUser.objects.get(email=email)
-        userid = c_user.id
-        return SellerProfile.objects.get(user=userid)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        return SellerProfile.objects.get(user=auth["user"].id)
     
     def resolve_seller_products(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user.is_seller:
             if SellerProfile.objects.filter(user=user).exists():
                 seller_products = Product.objects.filter(user=user)
@@ -88,8 +94,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_user_cart(root, info, token=None, ip=None):
         if token is not None:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                raise GraphQLError(auth["message"])
+            user = auth["user"]
             if user:
                 cart = Cart.objects.get(user=user)
                 if cart:
@@ -103,8 +111,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return cart_items
 
     def resolve_wishlists(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user:
             wishlist = Wishlist.objects.get(user=user)
             wishlist_item = WishListItem.objects.filter(wishlist=wishlist)
@@ -187,8 +197,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return billing_address
     def resolve_user_billing_addresses(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         billing_addresses = []
         for address in Billing.objects.all():
             if address.user == user:
@@ -201,55 +213,66 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return location
     
     def resolve_orders(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         user_orders = Order.objects.filter(user=user)
 
         return user_orders
     
     def resolve_user_notifications(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         notification = Notification.objects.get(user=user)
         messages = Message.objects.filter(notification=notification)
 
         return messages
 
     def resolve_get_seller_store_detail(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
-
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user.is_seller:
             return StoreDetail.objects.get(user=user)
         else:
-            return "Not a seller"
+            raise GraphQLError("Not a seller")
 
     def resolve_get_seller_invoices(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user.is_seller:
             store = StoreDetail.objects.get(user=user)
             invoices = Invoice.objects.filter(store=store)
 
             return invoices
         else:
-            return "Not a seller"
+            raise GraphQLError("Not a seller")
     
     def resolve_get_seller_wallet(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user.is_seller:
             return Wallet.objects.get(owner=user)
         else:
-            return "Not a seller"
+            raise GraphQLError("Not a seller")
 
     def resolve_get_seller_wallet_transactions(root, info, token):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
         if user.is_seller:
             wallet = Wallet.objects.get(owner=user)
             transactions = WalletTransaction.objects.filter(wallet=wallet)
 
             return transactions
         else:
-            return "Not a seller"
+            raise GraphQLError("Not a seller")

@@ -20,6 +20,7 @@ from .object_types import (
 )
 
 from users.models import ExtendUser, SellerProfile
+from users.validate import authenticate_user
 
 
 
@@ -59,9 +60,10 @@ class CreateInvoice(graphene.Mutation):
         total,
         note=None
     ):
-
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return CreateInvoice(status=auth["status"],message=auth["message"])
+        user = auth["user"]
 
         if not StoreDetail.objects.filter(user=user).exists():
             seller = SellerProfile.objects.get(user=user)
@@ -104,15 +106,9 @@ class CreateInvoice(graphene.Mutation):
                     message="Invoice created"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return CreateInvoice(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid User"
-            }
+            return CreateInvoice(status=False,message="Invalid User")
 
 class FundWallet(graphene.Mutation):
     status = graphene.Boolean()
@@ -126,59 +122,49 @@ class FundWallet(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, remark, amount):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
-        if user:
-            if Wallet.objects.filter(owner=user).exists():
-                try:
-                    seller_wallet = Wallet.objects.get(owner=user)
-                    wallet = WalletTransaction.objects.create(
-                        wallet=seller_wallet,
-                        amount=amount,
-                        remark=remark,
-                        transaction_type="Funding"
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return FundWallet(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        if Wallet.objects.filter(owner=user).exists():
+            try:
+                seller_wallet = Wallet.objects.get(owner=user)
+                wallet = WalletTransaction.objects.create(
+                    wallet=seller_wallet,
+                    amount=amount,
+                    remark=remark,
+                    transaction_type="Funding"
+                )
+                balance = seller_wallet.balance
+                new_balance = balance + amount
+                Wallet.objects.filter(owner=user).update(balance=new_balance)
+                if Notification.objects.filter(user=user).exists():
+                    notification = Notification.objects.get(
+                        user=user
                     )
-                    balance = seller_wallet.balance
-                    new_balance = balance + amount
-                    Wallet.objects.filter(owner=user).update(balance=new_balance)
-                    if Notification.objects.filter(user=user).exists():
-                        notification = Notification.objects.get(
-                            user=user
-                        )
-                    else:
-                        notification = Notification.objects.create(
-                            user=user
-                        )
-                    notification_message = Message.objects.create(
-                        notification=notification,
-                        message=f"{amount} was added to your wallet successfully",
-                        subject="Fund wallet"
+                else:
+                    notification = Notification.objects.create(
+                        user=user
                     )
-                    notification_info = {"notification":str(notification_message.notification.id),
-                    "message":notification_message.message, 
-                    "subject":notification_message.subject}
-                    push_to_client(user.id, notification_info)
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"{amount} was added to your wallet successfully",
+                    subject="Fund wallet"
+                )
+                notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+                push_to_client(user.id, notification_info)
 
-                    return FundWallet(
-                        status=True,
-                        message="Wallet funded",
-                        wallet=wallet
-                    )
-                except Exception as e:
-                    return {
-                        "status": False,
-                        "message": e
-                    }
-            else:
-                return {
-                    "status": False,
-                    "message": "User has no wallet"
-                }
+                return FundWallet(
+                    status=True,
+                    message="Wallet funded",
+                    wallet=wallet
+                )
+            except Exception as e:
+                return FundWallet(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return FundWallet(status=False,message="User has no wallet")
 
 class WithdrawFromWallet(graphene.Mutation):
     status = graphene.Boolean()
@@ -191,8 +177,10 @@ class WithdrawFromWallet(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, remark, amount):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return WithdrawFromWallet(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         if user:
             if Wallet.objects.filter(owner=user).exists():
                 try:
@@ -236,20 +224,11 @@ class WithdrawFromWallet(graphene.Mutation):
                             wallet=wallet
                         )
                 except Exception as e:
-                    return {
-                        "status": False,
-                        "message": e
-                    }
+                    return WithdrawFromWallet(status=False,message=e)
             else:
-                return {
-                    "status": False,
-                    "message": "User has no wallet"
-                }
+                return WithdrawFromWallet(status=False,message="User has no wallet")
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return WithdrawFromWallet(status=False,message="Invalid user")
 
 
 class WalletTransactionSuccess(graphene.Mutation):
@@ -263,33 +242,28 @@ class WalletTransactionSuccess(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, wallet_transaction_id):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return WithdrawFromWallet(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        try:
+            seller_wallet = WalletTransaction.objects.filter(owner=user, transaction__id=wallet_transaction_id)
+            if seller_wallet.exists():
+                seller_wallet.update(status=True)
 
-        if user:
-            try:
-                seller_wallet = WalletTransaction.objects.filter(owner=user, transaction__id=wallet_transaction_id)
-                if seller_wallet.exists():
-                    seller_wallet.update(status=True)
-
-                    return WalletTransactionSuccess(
-                        status=True,
-                        message="Status updated",
-                        wallet=seller_wallet
-                    )
-                else:
-                    return {
-                        "status": False,
-                        "message": "Wallet transaction does not exist"
-                    }
-            except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
-        else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+                return WalletTransactionSuccess(
+                    status=True,
+                    message="Status updated",
+                    wallet=seller_wallet
+                )
+            else:
+                return WalletTransactionSuccess(
+                    status=False,
+                    message="Wallet transaction does not exist"
+                )
+        except Exception as e:
+            return WalletTransactionSuccess(
+                    status=False,
+                    message=e
+                )
 

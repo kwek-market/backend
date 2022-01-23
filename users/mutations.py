@@ -2,7 +2,6 @@ import graphene
 from notifications.mutation import ReadNotification
 from users.auth_mutation import (
     StoreBanner,
-    TestToken,
     AccountNameRetrieval,
     SellerVerification,
     CompleteSellerVerification,
@@ -56,7 +55,6 @@ class Mutation(AuthMutation, graphene.ObjectType):
     send_password_reset_email = SendPasswordResetEmail.Field()
     change_password = ChangePassword.Field()
     refresh_token = RefreshToken.Field()
-    test_token = TestToken.Field()
     start_selling = StartSelling.Field()
     account_name_retrieval = AccountNameRetrieval.Field()
     seller_verification = SellerVerification.Field()

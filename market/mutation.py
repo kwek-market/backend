@@ -1,6 +1,7 @@
 from math import prod
 import graphene
 import jwt
+from users.validate import authenticate_user
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -49,10 +50,7 @@ class AddCategory(graphene.Mutation):
     @staticmethod
     def mutate(self, info, name, parent=None):
         if Category.objects.filter(name=name).exists() and parent is None:
-            return {
-                "status": False,
-                "message": "Category already exists"
-            }
+            return AddCategory(status=False,message="Category already exists")
         else:
             try:
                 if parent is None:
@@ -72,15 +70,9 @@ class AddCategory(graphene.Mutation):
                             message="Subcategory added successfully"
                         )
                     else:
-                        return {
-                            "status": False,
-                            "message": "Parent category does not exist"
-                        }
+                        return AddCategory(status=False,message="Parent category does not exist")
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return AddCategory(status=False,message=e)
 
 class UpdateCategory(graphene.Mutation):
     message = graphene.String()
@@ -103,20 +95,11 @@ class UpdateCategory(graphene.Mutation):
                     category = Category.objects.filter(id=id).update(parent)
                     return UpdateCategory(category=category, status=True, message="Parent updated successfully")
                 else:
-                    return{
-                        "status": False,
-                        "message": "Invalid name or parent"
-                    }
+                    return UpdateCategory(status=False,message="Invalid name or parent")
             else:
-                return {
-                    "status": False,
-                    "message": "Invalid id"
-                }
+                return UpdateCategory(status=False,message="Invalid id")
         except Exception as e:
-            return {
-                "status": False,
-                "message": e
-            }
+            return UpdateCategory(status=False,message=e)
             
 
 class DeleteCategory(graphene.Mutation):
@@ -136,15 +119,9 @@ class DeleteCategory(graphene.Mutation):
                     message = "Deleted successfully"
                 )
             else:
-                return {
-                    "status": False,
-                    "message": "Invalid id"
-                }
+                return DeleteCategory(status=False,message="Invalid id")
         except Exception as e:
-            return {
-                "status": False,
-                "message": e
-            }
+            return DeleteCategory(status=False,message=e)
 # =====================================================================================================================
 
 # Product Mutations
@@ -191,8 +168,10 @@ class CreateProduct(graphene.Mutation):
         color="",
         gender=""
     ):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return CreateProduct(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         p_cat = Category.objects.get(id=category)
         sub_cat = Category.objects.get(id=subcategory)
         
@@ -262,8 +241,10 @@ class ProductClick(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token, product_id):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.filter(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return ProductClick(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         product = Product.objects.get(id=product_id)
         if user.exists():
             if product:
@@ -274,15 +255,9 @@ class ProductClick(graphene.Mutation):
                     message = "Click added"
                 )
             else:
-                return {
-                    "status": False,
-                    "message": "Invalid Product"
-                }
+                return ProductClick(status=False,message="Invalid Product")
         else:
-            return {
-                "status": False,
-                "message": "Invalid User"
-            }
+            return ProductClick(status=False,message="Invalid User")
 class UpdateProductMutation(graphene.Mutation):
     product = graphene.Field(ProductType)
 
@@ -324,8 +299,10 @@ class Reviews(graphene.Mutation):
         review_id=None,
         vote=None
     ):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return Reviews(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         
         if product_id is not None:
             product = Product.objects.get(id=product_id)
@@ -365,10 +342,7 @@ class Reviews(graphene.Mutation):
                         message="Downvoted successfully"
                     )
                 else:
-                    return {
-                        "status": False,
-                        "message": "Invalid Vote"
-                    }
+                    return Reviews(status=False,message="Invalid Vote")
             
         
         if user:
@@ -452,15 +426,9 @@ class Reviews(graphene.Mutation):
                     message="Rating added successfully"
                 )
             else:
-                return {
-                    "status": False,
-                    "message": "Invaid Product"
-                }
+                return Reviews(status=False,message="Invalid Product")
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return Reviews(status=False,message="Invalid user")
 
 # Subscriber Mutation
 class CreateSubscriber(graphene.Mutation):
@@ -534,17 +502,15 @@ class WishListMutation(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, product_id, token, is_check=False):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
-        
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return WishListMutation(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         if user:
             try:
                 product = Product.objects.get(id=product_id)
             except Product.DoesNotExist:
-                return {
-                    "status" : False,
-                    "message" : "Product with product_id does not exist"
-                }
+                return WishListMutation(status=False,message="Product with product_id does not exist")
 
             try:
                 user_wish = Wishlist.objects.get(user=user)
@@ -580,8 +546,10 @@ class CreateCartItem(graphene.Mutation):
         option = ProductOption.objects.get(id=product_option_id)
         product = Product.objects.get(options__id=product_option_id)
         if token:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return CreateCartItem(status=auth["status"],message=auth["message"])
+            user = auth["user"]
             if user:
                 try:
                     user_cart = user.user_carts
@@ -613,10 +581,7 @@ class CreateCartItem(graphene.Mutation):
                             message = "Added to cart"
                         )
                     except Exception as e:
-                        return {
-                            "status": False,
-                            "message": e
-                        }
+                        return CreateCartItem(status=False,message=e)
         elif ip_address:
             try:
                 user_cart = Cart.objects.get(ip=ip_address)
@@ -649,15 +614,9 @@ class CreateCartItem(graphene.Mutation):
                         message = "Added to cart"
                     )
                 except Exception as e:
-                    return {
-                        "status": False,
-                        "message": e
-                    }
+                    return CreateCartItem(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return CreateCartItem(status=False,message="Invalid user")
 
 # =====================================================================================================================
 class DeleteCart(graphene.Mutation):
@@ -671,8 +630,10 @@ class DeleteCart(graphene.Mutation):
 
     def mutate(self, info, cart_id, token=None, ip=None):
         if token:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return DeleteCart(status=auth["status"],message=auth["message"])
+            user = auth["user"]
             try:
                 Cart.objects.filter(id=cart_id, user=user).delete()
 
@@ -681,10 +642,7 @@ class DeleteCart(graphene.Mutation):
                     message = "Deleted successfully"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DeleteCart(status=False,message=e)
         elif ip:
             try:
                 Cart.objects.filter(id=cart_id, ip=ip).delete()
@@ -694,15 +652,9 @@ class DeleteCart(graphene.Mutation):
                     message = "Deleted successfully"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DeleteCart(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return DeleteCart(status=False,message="Invalid user")
 # =====================================================================================================================
 
 class DecreaseCartItemQuantity(graphene.Mutation):
@@ -717,8 +669,10 @@ class DecreaseCartItemQuantity(graphene.Mutation):
 
     def mutate(self, info, cart_id, item_id,token=None, ip=None):
         if token:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return DecreaseCartItemQuantity(status=auth["status"],message=auth["message"])
+            user = auth["user"]
             try:
                 cart = Cart.objects.get(id=cart_id, user=user)
                 if CartItem.objects.filter(id=item_id, cart=cart).exists():
@@ -739,15 +693,9 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                         cart_item = new_cart
                     )
                 else:
-                    return {
-                        "status": False,
-                        "message": "Cart Item does not exist"
-                    }
+                    return DecreaseCartItemQuantity(status=False,message="Cart Item does not exist")
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DecreaseCartItemQuantity(status=False,message=e)
         elif ip:
             try:
                 cart = Cart.objects.get(id=cart_id, ip=ip)
@@ -763,16 +711,9 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                     message = "Quantity reduced successfully"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DecreaseCartItemQuantity(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
-
+            return DecreaseCartItemQuantity(status=False,message="Invalid user")
 # =====================================================================================================================
 class DeleteCartItem(graphene.Mutation):
     status = graphene.Boolean()
@@ -786,8 +727,10 @@ class DeleteCartItem(graphene.Mutation):
 
     def mutate(self, info, cart_id, item_id,token=None, ip=None):
         if token:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return DeleteCartItem(status=auth["status"],message=auth["message"])
+            user = auth["user"]
             try:
                 cart = Cart.objects.get(id=cart_id, user=user)
                 cart_item = CartItem.objects.get(id=item_id)
@@ -798,28 +741,19 @@ class DeleteCartItem(graphene.Mutation):
                     message = "Deleted successfully"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DeleteCartItem(status=False,message=e)
         elif ip:
             try:
                 Cart.objects.filter(id=cart_id, ip=ip).delete()
 
-                return DeleteCart(
+                return DeleteCartItem(
                     status = True,
                     message = "Deleted successfully"
                 )
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return DeleteCartItem(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return DeleteCartItem(status=False,message="Invalid user")
 # =====================================================================================================================
 
 # Cart Migrate Function
@@ -852,60 +786,44 @@ class PromoteProduct(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, product_id, amount, days):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        if ExtendUser.objects.filter(email=email).exists():
-            user = ExtendUser.objects.get(email=email)
-            if Product.objects.filter(id=product_id).exists():
-                product = Product.objects.get(id=product_id)
-                if product.user == user:
-                    if product.promoted:
-                        try:
-                            from datetime import timedelta
-                            new_end_date = product.promo.end_date + timedelta(days=days)
-                            ProductPromotion.objects.filter(product=product).update(end_date=new_end_date)
-                            return PromoteProduct(
-                                status=True,
-                                message="Promotion extended",
-                                product=product
-                            )
-                        except Exception as e:
-                            return {
-                                "status": False,
-                                "message": e
-                            }
-                    else:
-                        try:
-                            ProductPromotion.objects.create(
-                                product=product,
-                                days=days,
-                                amount=amount
-                            )
-                            return PromoteProduct(
-                                status=True,
-                                message="Product promoted",
-                                product=product
-                            )
-                        except Exception as e:
-                            return {
-                                "status": False,
-                                "message": e
-                            }
+
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return PromoteProduct(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        if Product.objects.filter(id=product_id).exists():
+            product = Product.objects.get(id=product_id)
+            if product.user == user:
+                if product.promoted:
+                    try:
+                        from datetime import timedelta
+                        new_end_date = product.promo.end_date + timedelta(days=days)
+                        ProductPromotion.objects.filter(product=product).update(end_date=new_end_date)
+                        return PromoteProduct(
+                            status=True,
+                            message="Promotion extended",
+                            product=product
+                        )
+                    except Exception as e:
+                        return PromoteProduct(status=False,message=e)
                 else:
-                    return {
-                        "status": False,
-                        "message": "Product does not belong to this user"
-                    }
+                    try:
+                        ProductPromotion.objects.create(
+                            product=product,
+                            days=days,
+                            amount=amount
+                        )
+                        return PromoteProduct(
+                            status=True,
+                            message="Product promoted",
+                            product=product
+                        )
+                    except Exception as e:
+                        return PromoteProduct(status=False,message=e)
             else:
-                return {
-                    "status": False,
-                    "message": "Product does not exist"
-                }
-                
+                return PromoteProduct(status=False,message="Product does not belong to you")
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return PromoteProduct(status=False,message="Product does not exist")
 
 
 

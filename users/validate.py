@@ -1,7 +1,10 @@
+from email.mime import audio
 import re
 from django.contrib.auth.models import User, auth
 from django.contrib.auth import get_user_model
 from .models import ExtendUser
+from django.conf import settings
+import jwt, time
 
 def validate_email(email):
     User = get_user_model()
@@ -33,3 +36,17 @@ def validate_user_passwords(new_password):
         return {"status": False, "message": "Password should contain numerical character"}
     else:
         return {"status": True, "message": "Valid Password"}
+
+
+def authenticate_user(token:str):
+    try:
+        dt = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        exp = int("{}".format(dt['exp']))
+        if time.time() < exp:
+            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+            user = ExtendUser.objects.get(email=email)
+            return {"status":True, "message": "authenticated", "user":user}
+        else:
+            return {"status":False, "message": "token expired", "user":ExtendUser()}
+    except Exception as e:
+        return {"status":False, "message": "invalid authentication token", "user":ExtendUser()}

@@ -7,7 +7,7 @@ from market.models import Cart, Wishlist
 from market.mutation import verify_cart
 from market.pusher import push_to_client
 from notifications.models import Message, Notification
-from .validate import validate_email, validate_passwords, validate_user_passwords
+from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user
 from .sendmail import (
     send_confirmation_email,
     user_loggedIN,
@@ -194,11 +194,11 @@ class VerifyToken(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token):
-
-        if user_loggedIN(token):
-            return VerifyToken(status=True, message="User is Logged in")
+        auth = authenticate_user(token)
+        if auth["status"]:
+            return VerifyToken(status=auth["status"], message=auth["message"])
         else:
-            return VerifyToken(status=False, message="User is not Authenticated")
+            return VerifyToken(status=auth["status"], message=auth["message"])
 
 class RevokeToken(graphene.Mutation):
     message = graphene.String()
@@ -351,9 +351,10 @@ class StartSelling(graphene.Mutation):
         how_you_heard_about_us,
         accepted_policy,
     ):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user = ExtendUser.objects.get(email=email)
-        userid = c_user.id
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return StartSelling(status=auth["status"],message=auth["message"])
+        c_user = auth["user"]
 
         if c_user.is_seller == False:
             if SellerProfile.objects.filter(shop_url=shop_url).exists():
@@ -405,24 +406,6 @@ class StartSelling(graphene.Mutation):
             return StartSelling(status=False, message="User is already a seller")
 
 
-class TestToken(graphene.Mutation):
-    user = graphene.Field(UserType)
-    message = graphene.String()
-    message2 = graphene.String()
-    message3 = graphene.String()
-    status = graphene.Boolean()
-
-    class Arguments:
-        token = graphene.String()
-
-    @staticmethod
-    def mutate(self, info, token):
-        dt = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
-            "username"
-        ]
-
-        return TestToken(status=False, message=dt, message2=token, message3=username)
 
 
 class AccountNameRetrieval(graphene.Mutation):
@@ -503,8 +486,10 @@ class SellerVerification(graphene.Mutation):
         bank_sort_code,
         account_name,
     ):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return SellerVerification(status=auth["status"],message=auth["message"])
+        c_user = auth["user"]
         userid = c_user.id
 
         seller = SellerProfile.objects.get(user=userid)
@@ -594,10 +579,11 @@ class UserAccountUpdate(graphene.Mutation):
     def mutate(
         self, info, token, new_first_name, new_last_name, new_email, new_phone_number
     ):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user, fullname = ExtendUser.objects.get(email=email), "{} {}".format(
-            new_first_name, new_last_name
-        )
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return UserAccountUpdate(status=auth["status"],message=auth["message"])
+        c_user = auth["user"]
+        fullname,email = "{} {}".format(new_first_name, new_last_name), c_user.email
 
         def u_update(c_email):
             try:
@@ -751,8 +737,10 @@ class StoreUpdate(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token, store_banner, store_description):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return StoreUpdate(status=auth["status"],message=auth["message"])
+        c_user = auth["user"]
         try:
             seller = SellerProfile.objects.get(user=c_user.id)
             seller.store_banner_url, seller.store_description = (
@@ -795,8 +783,10 @@ class StoreLocationUpdate(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token, shop_address, state, city, lga, landmark):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        c_user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return StoreLocationUpdate(status=auth["status"],message=auth["message"])
+        c_user = auth["user"]
         try:
             seller = SellerProfile.objects.get(user=c_user.id)
             seller.shop_address, seller.state, seller.city = shop_address, state, city
@@ -817,8 +807,10 @@ class StoreBanner(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token, image_url, store_description=None):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return StoreBanner(status=auth["status"],message=auth["message"])
+        user = auth["user"]
         if user.is_seller:
             seller = SellerProfile.objects.filter(user=user)
             if store_description:
@@ -835,7 +827,4 @@ class StoreBanner(graphene.Mutation):
                 )
             
         else:
-            return {
-                "status": False,
-                "message": "User is not a seller"
-            }
+            return StoreBanner(status=False,message="User is not a seller")

@@ -4,6 +4,7 @@ import jwt
 from django.conf import settings
 
 from users.models import ExtendUser
+from users.validate import authenticate_user
 
 from .models import Message, Notification
 
@@ -20,35 +21,22 @@ class ReadNotification(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, message_id, notification_id):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        if ExtendUser.objects.filter(email=email).exists():
-            user = ExtendUser.objects.get(email=email)
-            if Notification.objects.filter(id=notification_id, user=user).exists():
-                notification = Notification.objects.get(id=notification_id)
-                if Message.objects.filter(id=message_id, notification=notification):
-                    try:
-                        Message.objects.filter(id=message_id).update(read=True)
-                        return ReadNotification(
-                            status=True,
-                            message="Read Message"
-                        )
-                    except Exception as e:
-                        return {
-                            "status": False,
-                            "message": e
-                        }
-                else:
-                    return {
-                        "status": False,
-                        "message": "Message does not exist for user"
-                    }
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return ReadNotification(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        if Notification.objects.filter(id=notification_id, user=user).exists():
+            notification = Notification.objects.get(id=notification_id)
+            if Message.objects.filter(id=message_id, notification=notification):
+                try:
+                    Message.objects.filter(id=message_id).update(read=True)
+                    return ReadNotification(
+                        status=True,
+                        message="Read Message"
+                    )
+                except Exception as e:
+                    return ReadNotification(status=False,message=e)
             else:
-                return {
-                    "status": False,
-                    "message": "No user notification"
-                }
+                return ReadNotification(status=False,message="Message does not exist for user")
         else:
-            return {
-                "status": False,
-                "message": "Invalid user"
-            }
+            return ReadNotification(status=False,message="No user notification")

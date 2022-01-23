@@ -1,6 +1,8 @@
+from email import message
 from typing_extensions import Required
 import graphene
 import jwt
+from users.validate import authenticate_user
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -53,29 +55,26 @@ class BillingAddress(graphene.Mutation):
                 )
                 return BillingAddress(billing_address=billing_address, status=True, message="Address added")
             elif token is not None:
-                email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-                user = ExtendUser.objects.get(email=email)
-                if user:
-                    billing_address = Billing.objects.create(
-                        full_name=full_name,
-                        contact=contact,
-                        address=address,
-                        state = state,
-                        city=city,
-                        user=user
-                    )
-                    return BillingAddress(billing_address=billing_address, status=True, message="Address added")
-                
+                auth = authenticate_user(token)
+                if not auth["status"]:
+                    return BillingAddress(auth["status"],auth["message"])
                 else:
-                    return {
-                        "status": False,
-                        "message": "Invalid User"
-                    }
+                    user = auth["user"]
+                    if user:
+                        billing_address = Billing.objects.create(
+                            full_name=full_name,
+                            contact=contact,
+                            address=address,
+                            state = state,
+                            city=city,
+                            user=user
+                        )
+                        return BillingAddress(billing_address=billing_address, status=True, message="Address added")
+                    
+                    else:
+                        return BillingAddress(status=False,message="Invalid User")
             else:
-                return {
-                    "status": False,
-                    "message": "Address not added"
-                }
+                return BillingAddress(status=False,message="Address not added")
 
 class BillingAddressUpdate(graphene.Mutation):
     status = graphene.Boolean()
@@ -128,15 +127,9 @@ class BillingAddressUpdate(graphene.Mutation):
                     billing = billing
                 )
             except Exception as e:
-                return {
-                    "status":False,
-                    "message": e
-                }
+                return BillingAddressUpdate(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid address"
-            }
+            return BillingAddressUpdate(status=False,message="Invalid address")
 
 class BillingAddressDelete(graphene.Mutation):
     status = graphene.Boolean()
@@ -156,10 +149,7 @@ class BillingAddressDelete(graphene.Mutation):
                 message= 'Address deleted successfully'
             )
         else:
-            return {
-                "status": False,
-                "message": "Invalid address"
-            }
+            return BillingAddressDelete(status=False,message="Invalid address")
 class PickUpLocation(graphene.Mutation):
     location = graphene.Field(PickupType)
     status = graphene.Boolean()
@@ -176,10 +166,7 @@ class PickUpLocation(graphene.Mutation):
     def mutate(self, root, name, contact, address, state, city):
         location = Pickup.objects.filter(name=name)
         if location.exists():
-            return {
-                "status": False,
-                "message": f"Location {name} already exists"
-            }
+            return PickUpLocation(status=False,message=f"Location {name} already exists")
         else:
             try:
                 location = Pickup.objects.create(
@@ -191,10 +178,7 @@ class PickUpLocation(graphene.Mutation):
                 )
                 return PickUpLocation(location=location, status=True, message="Location added")
             except Exception as e:
-                return {
-                    "status": False,
-                    "message": e
-                }
+                return BillingAddressUpdate(status=False,message=e)
 
 class PickupLocationUpdate(graphene.Mutation):
     status = graphene.Boolean()
@@ -245,15 +229,9 @@ class PickupLocationUpdate(graphene.Mutation):
                     message="Address updated successfully"
                 )
             except Exception as e:
-                return {
-                    "status":False,
-                    "message": e
-                }
+                return PickupLocationUpdate(status=False,message=e)
         else:
-            return {
-                "status": False,
-                "message": "Invalid address"
-            }
+            return PickupLocationUpdate(status=False,message="Invalid address")
 
 class PickupLocationDelete(graphene.Mutation):
     status = graphene.Boolean()
@@ -273,10 +251,7 @@ class PickupLocationDelete(graphene.Mutation):
                 message= 'Address deleted successfully'
             )
         else:
-            return {
-                "status": False,
-                "message": "Invalid address"
-            }
+            return PickupLocationDelete(status=False,message="Invalid address")
 class PaymentInitiate(graphene.Mutation):
     payment = graphene.Field(PaymentType)
     status = graphene.Boolean()
@@ -292,63 +267,57 @@ class PaymentInitiate(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, amount, token, description, redirect_url, currency=None):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
-        if user:
-            if amount:
-                try:
-                    payment = Payment.objects.create(
-                        amount=amount,
-                        user_id=user.id,
-                        email=email,
-                        name=user.full_name,
-                        phone=user.phone_number,
-                        description=description,
-                    )
-                    if currency:
-                        payment.currency = currency
-                    payment.save()
-
-                    link = get_payment_url(
-                        user.id,
-                        email,
-                        user.full_name,
-                        user.phone_number,
-                        payment.ref,
-                        float(amount),
-                        payment.currency,
-                        redirect_url,
-                        payment.description
-                    )
-                    if link["status"]==True:
-                        return PaymentInitiate(
-                            payment=payment,
-                            status=True,
-                            message=link["message"],
-                            payment_link=link["payment_link"]
-                        )
-                    else:
-                        return PaymentInitiate(
-                            payment=payment,
-                            status=False,
-                            message=link["message"],
-                            payment_link=link["payment_link"]
-                        )
-                except Exception as e:
-                    return {
-                        "status": False,
-                        "message": e
-                    }
-            else:
-                return {
-                    "status": False,
-                    "message": "Invalid amount"
-                }
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return PaymentInitiate(status=auth["status"],message=auth["message"])
         else:
-            return {
-                "status":False,
-                "message": "Invalid user"
-            }
+            user = auth["user"]
+            if user:
+                if amount:
+                    try:
+                        payment = Payment.objects.create(
+                            amount=amount,
+                            user_id=user.id,
+                            email=user.email,
+                            name=user.full_name,
+                            phone=user.phone_number,
+                            description=description,
+                        )
+                        if currency:
+                            payment.currency = currency
+                        payment.save()
+
+                        link = get_payment_url(
+                            user.id,
+                            user.email,
+                            user.full_name,
+                            user.phone_number,
+                            payment.ref,
+                            float(amount),
+                            payment.currency,
+                            redirect_url,
+                            payment.description
+                        )
+                        if link["status"]==True:
+                            return PaymentInitiate(
+                                payment=payment,
+                                status=True,
+                                message=link["message"],
+                                payment_link=link["payment_link"]
+                            )
+                        else:
+                            return PaymentInitiate(
+                                payment=payment,
+                                status=False,
+                                message=link["message"],
+                                payment_link=link["payment_link"]
+                            )
+                    except Exception as e:
+                        return PaymentInitiate(status=False,message=e)
+                else:
+                    return PickupLocationDelete(status=False,message="Invalid amount")
+            else:
+                return PaymentInitiate(status=False,message="Invalid user")
 
 class PaymentVerification(graphene.Mutation):
     status = graphene.Boolean()
@@ -363,22 +332,11 @@ class PaymentVerification(graphene.Mutation):
         try:
             verify = verify_transaction(transaction_id)
             if verify["status"] == True:
-                return {
-                    "status": verify["status"],
-                    "message": verify["message"],
-                    "transaction_info": verify["transaction_info"]
-                }
+                return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
             else:
-                return {
-                    "status": verify["status"],
-                    "message": verify["message"],
-                    "transaction_info": verify["transaction_info"]
-                }
+                return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
         except Exception as e:
-            return {
-                "status": False,
-                "message": e
-            }
+            return PaymentVerification(staus=verify["status"],message=e)
 
 class PlaceOrder(graphene.Mutation):
     status = graphene.Boolean()
@@ -397,104 +355,95 @@ class PlaceOrder(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_type=None, coupon_id=None):
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
-        cart = Cart.objects.get(id=cart_id)
-        cart_owner = cart.user
-        cart_items = CartItem.objects.filter(cart=cart)
-        cart_items_id =[]
-        for item in cart_items:
-            cart_items_id.append(item.id)
-        if coupon_id and coupon_type:
-            if coupon_type == "product":
-                coupon = ProductCoupon.objects.get(id=coupon_id)
-            elif coupon_type == "order":
-                coupon = OrderCoupon.objects.get(id=coupon_id)
-        if delivery_method == "door step":
-            shipping_address = Billing.objects.get(id=address_id)
-        elif delivery_method == "pickup":
-            shipping_address = Pickup.objects.get(id=address_id)
-        if user:
-            if cart:
-                if user == cart_owner:
-                    try:
-                        order = Order.objects.create(
-                            user=user,
-                            cart_items=cart_items_id,
-                            payment_method=payment_method,
-                            delivery_method=delivery_method
-                        )
-                        if coupon_type == "product":
-                            Order.objects.filter(id=order.id).update(
-                                productcoupon=coupon
-                            )
-                        elif coupon_type == "order":
-                            Order.objects.filter(id=order.id).update(
-                                ordercoupon=coupon
-                            )
-                        if delivery_method == "door step":
-                            Order.objects.filter(id=order.id).update(
-                                door_step=shipping_address
-                            )
-                        elif delivery_method == "pickup":
-                            Order.objects.filter(id=order.id).update(
-                                pickup=shipping_address
-                            )
-                        OrderProgress.objects.create(order=order)
-                        for cart_item in cart_items:
-                            cart_item_quantity = cart_item.quantity
-                            for id in product_options_id:
-                                product = ProductOption.objects.get(id=id)
-                                product_quantity = product.quantity
-                                new_quantity = int(product_quantity) - int(cart_item_quantity)
-                                ProductOption.objects.filter(id=id).update(quantity=new_quantity)
-
-                        if Notification.objects.filter(user=user).exists():
-                            notification = Notification.objects.get(
-                                user=user
-                            )
-                        else:
-                            notification = Notification.objects.create(
-                                user=user
-                            )
-                        notification_message = Message.objects.create(
-                            notification=notification,
-                            message=f"Your order has been placed successfully",
-                            subject="Order placed"
-                        )
-                        # print(notification_message.message)
-                        notification_info = {"notification":str(notification_message.notification.id),
-                        "message":notification_message.message, 
-                        "subject":notification_message.subject}
-                        push_to_client(user.id, notification_info)
-                        CartItem.objects.filter(cart=cart).delete()
-                        return PlaceOrder(
-                            status=True,
-                            message="Order placed successfully",
-                            order_id=order.order_id
-                        )
-                    except Exception as e:
-                        return {
-                            "status": False,
-                            "message": e
-                        }
-            
-                else:
-                    return {
-                        "status": False,
-                        "message": "User is not the owner of the cart"
-                    }
-
-            else:
-                return {
-                    "status": False,
-                    "message": "Cart does not exist"
-                }
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return PlaceOrder(status=auth["status"],message=auth["message"])
         else:
-            return {
-                "status": False,
-                "message": "User does not exist"
-            }
+            user = auth["user"]
+            cart = Cart.objects.get(id=cart_id)
+            cart_owner = cart.user
+            cart_items = CartItem.objects.filter(cart=cart)
+            cart_items_id =[]
+            for item in cart_items:
+                cart_items_id.append(item.id)
+            if coupon_id and coupon_type:
+                if coupon_type == "product":
+                    coupon = ProductCoupon.objects.get(id=coupon_id)
+                elif coupon_type == "order":
+                    coupon = OrderCoupon.objects.get(id=coupon_id)
+            if delivery_method == "door step":
+                shipping_address = Billing.objects.get(id=address_id)
+            elif delivery_method == "pickup":
+                shipping_address = Pickup.objects.get(id=address_id)
+            if user:
+                if cart:
+                    if user == cart_owner:
+                        try:
+                            order = Order.objects.create(
+                                user=user,
+                                cart_items=cart_items_id,
+                                payment_method=payment_method,
+                                delivery_method=delivery_method
+                            )
+                            if coupon_type == "product":
+                                Order.objects.filter(id=order.id).update(
+                                    productcoupon=coupon
+                                )
+                            elif coupon_type == "order":
+                                Order.objects.filter(id=order.id).update(
+                                    ordercoupon=coupon
+                                )
+                            if delivery_method == "door step":
+                                Order.objects.filter(id=order.id).update(
+                                    door_step=shipping_address
+                                )
+                            elif delivery_method == "pickup":
+                                Order.objects.filter(id=order.id).update(
+                                    pickup=shipping_address
+                                )
+                            OrderProgress.objects.create(order=order)
+                            for cart_item in cart_items:
+                                cart_item_quantity = cart_item.quantity
+                                for id in product_options_id:
+                                    product = ProductOption.objects.get(id=id)
+                                    product_quantity = product.quantity
+                                    new_quantity = int(product_quantity) - int(cart_item_quantity)
+                                    ProductOption.objects.filter(id=id).update(quantity=new_quantity)
+
+                            if Notification.objects.filter(user=user).exists():
+                                notification = Notification.objects.get(
+                                    user=user
+                                )
+                            else:
+                                notification = Notification.objects.create(
+                                    user=user
+                                )
+                            notification_message = Message.objects.create(
+                                notification=notification,
+                                message=f"Your order has been placed successfully",
+                                subject="Order placed"
+                            )
+                            # print(notification_message.message)
+                            notification_info = {"notification":str(notification_message.notification.id),
+                            "message":notification_message.message, 
+                            "subject":notification_message.subject}
+                            push_to_client(user.id, notification_info)
+                            CartItem.objects.filter(cart=cart).delete()
+                            return PlaceOrder(
+                                status=True,
+                                message="Order placed successfully",
+                                order_id=order.order_id
+                            )
+                        except Exception as e:
+                            return PlaceOrder(status=False,message=e)
+                
+                    else:
+                        return PlaceOrder(status=False,message="User is not the owner of the cart")
+
+                else:
+                    return PlaceOrder(status=False,message= "Cart does not exist")
+            else:
+                return PlaceOrder(status=False,message="User does not exist")
 
 class TrackOrder(graphene.Mutation):
     status = graphene.Boolean()
