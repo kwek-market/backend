@@ -14,6 +14,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 
+from .post_offices import post_offices
+# print(post_offices.get_all())
+# print(post_offices.get_for_state("lagos"))
+# print(post_offices.get_for_lga("surulere"))
+# print(post_offices.get_for_state_and_lga("lagos","surulere"))
+
+
 
 
 sched = BackgroundScheduler(daemon=True)
@@ -841,4 +848,6 @@ def unpromote():
 # )
 sched.add_job(unpromote, 'interval', minutes=20)
 sched.start()
+
+
 
