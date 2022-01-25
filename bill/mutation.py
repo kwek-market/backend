@@ -5,7 +5,7 @@ import jwt
 from users.validate import authenticate_user
 
 from django.conf import settings
-from market.pusher import push_to_client
+from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
 from users.models import ExtendUser
 from .models import (
@@ -23,7 +23,7 @@ from .object_types import (
     PickupType
 )
 from .flutterwave import get_payment_url, verify_transaction
-from market.models import Cart, CartItem, ProductOption
+from market.models import Cart, CartItem, Product, ProductOption, ProductPromotion
 
 
 class BillingAddress(graphene.Mutation):
@@ -407,8 +407,12 @@ class PlaceOrder(graphene.Mutation):
                                 for id in product_options_id:
                                     product = ProductOption.objects.get(id=id)
                                     product_quantity = product.quantity
+                                    product_sales = cart_item.product.sales + cart_item_quantity
                                     new_quantity = int(product_quantity) - int(cart_item_quantity)
+                                    reach = cart_item.product.promo.reach + 1
                                     ProductOption.objects.filter(id=id).update(quantity=new_quantity)
+                                    Product.objects.filter(id=cart_item.product.id).update(sales=product_sales)
+                                    ProductPromotion.objects.filter(product=cart_item.product).update(reach=reach)
 
                             if Notification.objects.filter(user=user).exists():
                                 notification = Notification.objects.get(
@@ -428,6 +432,8 @@ class PlaceOrder(graphene.Mutation):
                             "message":notification_message.message, 
                             "subject":notification_message.subject}
                             push_to_client(user.id, notification_info)
+                            email_send = SendEmailNotification(user.email)
+                            email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                             CartItem.objects.filter(cart=cart).delete()
                             return PlaceOrder(
                                 status=True,
@@ -513,6 +519,8 @@ class UpdateDeliverystatus(graphene.Mutation):
                         "message":notification_message.message, 
                         "subject":notification_message.subject}
                 push_to_client(order.user.id, notification_info)
+                email_send = SendEmailNotification(order.user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
             return UpdateDeliverystatus(
                 status=True,
                 message="Delivery status updated"
@@ -550,6 +558,8 @@ class CancelOrder(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(order.user.id, notification_info)
+                email_send = SendEmailNotification(order.user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return CancelOrder(
                     status=True,
                     message="Order cancelled"

@@ -2,7 +2,7 @@ import graphene
 import jwt
 
 from django.conf import settings
-from market.pusher import push_to_client
+from market.pusher import SendEmailNotification, push_to_client
 
 from notifications.models import Message, Notification
 
@@ -155,6 +155,8 @@ class FundWallet(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
 
                 return FundWallet(
                     status=True,
@@ -217,6 +219,8 @@ class WithdrawFromWallet(graphene.Mutation):
                         "message":notification_message.message, 
                         "subject":notification_message.subject}
                         push_to_client(user.id, notification_info)
+                        email_send = SendEmailNotification(user.email)
+                        email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
 
                         return FundWallet(
                             status=True,

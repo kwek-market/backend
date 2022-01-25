@@ -43,6 +43,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     orders = graphene.Field(OrderType, token=graphene.String(required=True))
     rating_sort = graphene.Field(ProductType)
     user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
+    get_seller_review = graphene.Field(RatingType, token=graphene.String(required=True))
+    get_seller_promoted_products = graphene.Field(RatingType, token=graphene.String(required=True))
+    # get_seller_orders = graphene.Field(OrderType, token=graphene.String(required=True))
     get_seller_store_detail = graphene.List(StoreDetailType, token=graphene.String(required=True))
     get_seller_invoices = graphene.List(InvoiceType, token=graphene.String())
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
@@ -191,6 +194,25 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         review = Rating.objects.get(id=review_id)
         
         return review
+    def resolve_get_seller_review(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+
+        review = Rating.objects.filter(product__user__user=user)
+        
+        return review
+    
+    def resolve_get_seller_promoted_products(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+
+        promoted_products = Product.objects.filter(user=user, promoted=True)
+        
+        return promoted_products
     
     def resolve_billing_address(root, info, address_id):
         billing_address = Billing.objects.get(id=address_id)
@@ -218,6 +240,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         user_orders = Order.objects.filter(user=user)
+
+        return user_orders
+    
+    # def resolve_get_seller_orders(root, info, token):
+    #     auth = authenticate_user(token)
+    #     if not auth["status"]:
+    #         raise GraphQLError(auth["message"])
+    #     user = auth["user"]
+    #     user_orders = Order.objects.filter(user=user)
 
         return user_orders
     
