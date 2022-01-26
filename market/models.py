@@ -1,4 +1,5 @@
 from pickle import FALSE
+from pyexpat import model
 from typing_extensions import Required
 from django.db import models
 from typing import Any
@@ -32,6 +33,12 @@ class Keyword(models.Model):
     def __str__(self):
         return self.keyword
 
+class Sales(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="sales")
+    amount = models.FloatField()
+    date = models.DateField(auto_now_add=True)
+    
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -51,7 +58,6 @@ class Product(models.Model):
     clicks = models.IntegerField(default=0)
     promoted = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
-    sales = models.PositiveBigIntegerField(default=0)
 
 
     def __str__(self):
@@ -90,6 +96,7 @@ class ProductPromotion(models.Model):
     amount = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
     link_clicks = models.IntegerField(default=0)
+    date = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return self.keyword

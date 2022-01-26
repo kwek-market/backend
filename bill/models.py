@@ -113,7 +113,7 @@ class UsedCoupon(models.Model):
 class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     progress = models.CharField(max_length=30, default="Order Placed")
-    order = models.OneToOneField("Order", on_delete=models.CASCADE)
+    order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="progress")
     
 
 class Order(models.Model):

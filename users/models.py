@@ -1,6 +1,7 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-import uuid
+from django.utils import timezone
 
 # Create your models here.
 
@@ -55,5 +56,11 @@ class SellerProfile(models.Model):
         default=False, verbose_name="accepted_vendor_policy"
     )
 
+    date = models.DateField(auto_now_add=True)
+
     def __str__(self):
         return self.user
+    
+    @property
+    def since(self):
+      return (timezone.now() - self.date).days
