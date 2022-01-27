@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from market.models import Cart, Wishlist
 
 from market.mutation import verify_cart
-from market.pusher import push_to_client
+from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
 from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user
 from .sendmail import (
@@ -174,6 +174,8 @@ class LoginUser(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return LoginUser(
                     user=user,
                     status=True,
@@ -308,6 +310,8 @@ class ChangePassword(graphene.Mutation):
                     "message":notification_message.message, 
                     "subject":notification_message.subject}
                     push_to_client(user.id, notification_info)
+                    email_send = SendEmailNotification(user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                     return ChangePassword(status=True, message="Password Change Successful")
             else:
                 return ChangePassword(status=False, message="Invalid Token")
@@ -394,6 +398,8 @@ class StartSelling(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(c_user.id, notification_info)
+                email_send = SendEmailNotification(c_user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return StartSelling(
                     status=True, message="Seller account created successfully"
                 )
@@ -558,6 +564,8 @@ class CompleteSellerVerification(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
             push_to_client(c_user.id, notification_info)
+            email_send = SendEmailNotification(c_user.email)
+            email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
             return CompleteSellerVerification(status=True, message="Successful")
         except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
@@ -633,6 +641,8 @@ class UserAccountUpdate(graphene.Mutation):
                     "message":notification_message.message, 
                     "subject":notification_message.subject}
                     push_to_client(f_user.id, notification_info)
+                    email_send = SendEmailNotification(f_user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                     return UserAccountUpdate(
                         status=True, message="Update Successful", token=token
                     )
@@ -665,6 +675,8 @@ class UserAccountUpdate(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(c_user.id, notification_info)
+                email_send = SendEmailNotification(c_user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return UserAccountUpdate(
                     status=True, message="Update Successful", token=n_token
                 )
@@ -710,10 +722,10 @@ class UserPasswordUpdate(graphene.Mutation):
                         message=f"Your password was reset successfully",
                         subject="Password reset"
                     )
-                    notification_info = {"notification":str(notification_message.notification.id),
-                "message":notification_message.message, 
-                "subject":notification_message.subject}
+                    notification_info = {"notification":str(notification_message.notification.id), "message":notification_message.message, "subject":notification_message.subject}
                     push_to_client(c_user.id, notification_info)
+                    email_send = SendEmailNotification(c_user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                     return UserPasswordUpdate(
                         status=True, message="Password Change Successful"
                     )
@@ -765,6 +777,8 @@ class StoreUpdate(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
             push_to_client(c_user.id, notification_info)
+            email_send = SendEmailNotification(c_user.email)
+            email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
             return StoreUpdate(status=True, message="Update Successful")
         except Exception as e:
             return StoreUpdate(status=False, message=e)

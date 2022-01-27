@@ -1,5 +1,6 @@
 import uuid
 import secrets
+import string
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from users.models import ExtendUser
@@ -55,6 +56,7 @@ class Payment(models.Model):
     verified = models.BooleanField(default=False)
     redirect_url = models.URLField(default="https://kwekmarket.com/")
     transaction_date = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("-transaction_date",)
@@ -75,13 +77,13 @@ class Payment(models.Model):
 
 class Coupon(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    code = models.CharField(max_length=7)
+    code = models.CharField(max_length=8)
     amount = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         while not self.code:
-            code = f"KW-{secrets.token_urlsafe(4)}"
-
+            alpha_num = string.ascii_uppercase + string.digits
+            code = "KW-".join(secrets.choice(alpha_num) for i in range(5))
             object_with_similar_code = Coupon.objects.filter(code=code)
             if not object_with_similar_code.exists():
                 self.code = code
@@ -113,7 +115,7 @@ class UsedCoupon(models.Model):
 class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     progress = models.CharField(max_length=30, default="Order Placed")
-    order = models.OneToOneField("Order", on_delete=models.CASCADE)
+    order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="progress")
     
 
 class Order(models.Model):
@@ -125,14 +127,16 @@ class Order(models.Model):
     delivery_method = models.CharField(max_length=30)
     delivery_status = models.CharField(max_length=30, default="Order in progress")
     closed = models.BooleanField(default=False)
+    paid = models.BooleanField(default=False)
     ordercoupon = models.ForeignKey(OrderCoupon, on_delete=models.CASCADE, null=True)
     productcoupon = models.ForeignKey(ProductCoupon, on_delete=models.CASCADE, null=True)
     door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
     pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
+    date_created = models.DateField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         while not self.order_id:
-            order_id = f"KWEK-{secrets.token_urlsafe(14)}"
+            order_id = f"KWEK-{secrets.token_urlsafe(8)}"
 
             object_with_similar_order_id = Order.objects.filter(order_id=order_id)
             if not object_with_similar_order_id.exists():

@@ -1,6 +1,8 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-import uuid
+from django.contrib.postgres.fields import ArrayField
+from django.utils import timezone
 
 # Create your models here.
 
@@ -36,6 +38,7 @@ class SellerProfile(models.Model):
     landmark = models.CharField(max_length=255, blank=False, null=True)
     how_you_heard_about_us = models.CharField(max_length=255, blank=False, null=True)
     accepted_policy = models.BooleanField(blank=False)
+    kwek_charges = models.FloatField(default=0.1)
     store_banner_url = models.CharField(max_length=255, blank=True, null=True)
     store_description = models.CharField(max_length=255, blank=True, null=True)
     prefered_id = models.CharField(max_length=255, blank=True, null=True)
@@ -55,5 +58,18 @@ class SellerProfile(models.Model):
         default=False, verbose_name="accepted_vendor_policy"
     )
 
+
+    date = models.DateField(auto_now_add=True)
+
     def __str__(self):
         return self.user
+    
+    @property
+    def since(self):
+      return (timezone.now() - self.date).days
+
+class SellerCustomer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    seller = models.OneToOneField(SellerProfile, on_delete=models.CASCADE, related_name="customers")
+    customer_id = ArrayField(models.CharField(max_length=225))
+    date_created = models.DateField(auto_now_add=True)

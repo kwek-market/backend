@@ -1,5 +1,5 @@
 from graphene_django import DjangoObjectType
-from users.models import SellerProfile
+from users.models import SellerCustomer, SellerProfile
 from django.contrib.auth import get_user_model
 
 
@@ -39,3 +39,7 @@ class SellerProfileType(DjangoObjectType):
             "bank_sort_code",
             "accepted_vendor_policy",
         )
+
+class SellerCustomerType(DjangoObjectType):
+    class Meta:
+        model = SellerCustomer

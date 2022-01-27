@@ -1,16 +1,8 @@
-from pickle import FALSE
-from typing_extensions import Required
 from django.db import models
-from typing import Any
-import time
 import django
 from django.contrib.postgres.fields import ArrayField
-from django.apps import apps as django_apps
-from django.contrib.auth import get_user_model
-from django.db.models.deletion import CASCADE
 from users.models import ExtendUser as User
 import uuid
-from datetime import datetime
 
 # Create your models here.
 
@@ -32,6 +24,12 @@ class Keyword(models.Model):
     def __str__(self):
         return self.keyword
 
+class Sales(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="sales")
+    amount = models.FloatField()
+    date = models.DateField(auto_now_add=True)
+    
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -51,7 +49,6 @@ class Product(models.Model):
     clicks = models.IntegerField(default=0)
     promoted = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
-    sales = models.PositiveBigIntegerField(default=0)
 
 
     def __str__(self):
@@ -82,7 +79,7 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=FALSE)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=False)
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(default=django.utils.timezone.now)
     days = models.IntegerField(default=1)
@@ -90,6 +87,7 @@ class ProductPromotion(models.Model):
     amount = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
     link_clicks = models.IntegerField(default=0)
+    date = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return self.keyword

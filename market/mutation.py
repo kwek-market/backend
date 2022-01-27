@@ -1,4 +1,3 @@
-from math import prod
 import graphene
 import jwt
 from users.validate import authenticate_user
@@ -231,6 +230,8 @@ class CreateProduct(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
         push_to_client(product.user.id, notification_info)
+        email_send = SendEmailNotification(user.email)
+        email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
         return CreateProduct(
             product=product,
             status=True,
@@ -255,6 +256,9 @@ class ProductClick(graphene.Mutation):
         product = Product.objects.get(id=product_id)
         if user.exists():
             if product:
+                if product.promoted:
+                    link_clicks = product.promo.link_clicks + 1
+                    ProductPromotion.objects.filter(product=product).update(link_clicks=link_clicks)
                 clicks = product.clicks + 1
                 Product.objects.filter(id=product.id).update(clicks=clicks)
                 return ProductClick(
@@ -375,6 +379,8 @@ class Reviews(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(product.user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -401,6 +407,8 @@ class Reviews(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(product.user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
@@ -427,6 +435,8 @@ class Reviews(graphene.Mutation):
                 "message":notification_message.message, 
                 "subject":notification_message.subject}
                 push_to_client(product.user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                 return Reviews(
                     product_review=product_review,
                     status=True,
