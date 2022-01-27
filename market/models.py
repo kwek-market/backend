@@ -1,17 +1,8 @@
-from pickle import FALSE
-from pyexpat import model
-from typing_extensions import Required
 from django.db import models
-from typing import Any
-import time
 import django
 from django.contrib.postgres.fields import ArrayField
-from django.apps import apps as django_apps
-from django.contrib.auth import get_user_model
-from django.db.models.deletion import CASCADE
 from users.models import ExtendUser as User
 import uuid
-from datetime import datetime
 
 # Create your models here.
 
@@ -88,7 +79,7 @@ class ProductOption(models.Model):
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=FALSE)
+    product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE, blank=False)
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(default=django.utils.timezone.now)
     days = models.IntegerField(default=1)

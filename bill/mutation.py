@@ -1,13 +1,9 @@
-from email import message
-from typing_extensions import Required
 import graphene
-import jwt
 from users.validate import authenticate_user
 
-from django.conf import settings
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
-from users.models import ExtendUser
+from users.models import SellerCustomer
 from .models import (
     Billing,
     OrderCoupon,
@@ -91,8 +87,8 @@ class BillingAddressUpdate(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, address_id, full_name=None, contact=None, address=None, state=None, city=None):
-        billing_address= Billing.objects.get(id=address_id)
-        if billing_address:
+        if Billing.objects.filter(id=address_id).exists():
+            billing_address= Billing.objects.get(id=address_id)
             if full_name:
                 fullname = full_name
             else:
@@ -129,7 +125,7 @@ class BillingAddressUpdate(graphene.Mutation):
             except Exception as e:
                 return BillingAddressUpdate(status=False,message=e)
         else:
-            return BillingAddressUpdate(status=False,message="Invalid address")
+            return BillingAddressUpdate(status=False,message="Invalid address id")
 
 class BillingAddressDelete(graphene.Mutation):
     status = graphene.Boolean()
@@ -326,12 +322,14 @@ class PaymentVerification(graphene.Mutation):
 
     class Arguments:
         transaction_id = graphene.Int(required=True)
+        payment_ref = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, transaction_id):
+    def mutate(self, info, transaction_id, payment_ref):
         try:
             verify = verify_transaction(transaction_id)
             if verify["status"] == True:
+                Payment.objects.filter(ref=payment_ref).update(verified=True)
                 return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
             else:
                 return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
@@ -350,11 +348,12 @@ class PlaceOrder(graphene.Mutation):
         delivery_method = graphene.String(required=True)
         address_id = graphene.String(required=True)
         product_options_id = graphene.List(graphene.String, required=True)
+        payment_ref = graphene.String()
         coupon_type = graphene.String()
         coupon_id = graphene.String()
     
     @staticmethod
-    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_type=None, coupon_id=None):
+    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_type=None, coupon_id=None, payment_ref=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PlaceOrder(status=auth["status"],message=auth["message"])
@@ -379,6 +378,30 @@ class PlaceOrder(graphene.Mutation):
                 if cart:
                     if user == cart_owner:
                         try:
+                            if payment_method != "pay on delivery" and payment_ref is not None:
+                                if Payment.objects.filter(ref=payment_ref).exists:
+                                    payment = Payment.objects.get(ref=payment_ref)
+                                    if payment.verified:
+                                        if payment.used:
+                                            return PlaceOrder(
+                                                status = False,
+                                                message = "Payment reference already used"
+                                            )
+                                    else:
+                                        return PlaceOrder(
+                                            status = False,
+                                            message = "Payment has not been verified"
+                                        )
+                                else:
+                                    return PlaceOrder(
+                                        status = False,
+                                        message = "Invalid payment reference"
+                                    )
+                            elif payment_method != "pay on delivery" and payment_ref is None:
+                                return PlaceOrder(
+                                    status = False,
+                                    message = "Payment reference not provided"
+                                )
                             order = Order.objects.create(
                                 user=user,
                                 cart_items=cart_items_id,
@@ -413,7 +436,9 @@ class PlaceOrder(graphene.Mutation):
                                     ProductOption.objects.filter(id=id).update(quantity=new_quantity)
                                     Product.objects.filter(id=cart_item.product.id).update(sales=product_sales)
                                     ProductPromotion.objects.filter(product=cart_item.product).update(reach=reach)
-
+                            if payment_ref:
+                                Payment.objects.filter(ref=payment_ref).update(used=True)
+                                Order.objects.filter(id=order.id).update(paid=True)
                             if Notification.objects.filter(user=user).exists():
                                 notification = Notification.objects.get(
                                     user=user
@@ -434,6 +459,28 @@ class PlaceOrder(graphene.Mutation):
                             push_to_client(user.id, notification_info)
                             email_send = SendEmailNotification(user.email)
                             email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                            for seller_item in cart_items:
+                                cart_item_seller = seller_item.product.user
+                                if Notification.objects.filter(user=cart_item_seller).exists():
+                                    notification = Notification.objects.get(
+                                        user=cart_item_seller
+                                    )
+                                else:
+                                    notification = Notification.objects.create(
+                                        user=cart_item_seller
+                                    )
+                                notification_message = Message.objects.create(
+                                    notification=notification,
+                                    message=f"You've got a new order - Order no. #{order.order_id}",
+                                    subject="New Order"
+                                )
+                                # print(notification_message.message)
+                                notification_info = {"notification":str(notification_message.notification.id),
+                                "message":notification_message.message, 
+                                "subject":notification_message.subject}
+                                push_to_client(cart_item_seller.id, notification_info)
+                                email_send = SendEmailNotification(cart_item_seller.email)
+                                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                             CartItem.objects.filter(cart=cart).delete()
                             return PlaceOrder(
                                 status=True,
@@ -460,13 +507,25 @@ class TrackOrder(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, order_id):
-        order = Order.objects.get(id=order_id)
-        order_progress = OrderProgress.objects.get(order=order)
+        if Order.objects.filter(id=order_id):
+            try:
+                order = Order.objects.get(id=order_id)
+                order_progress = OrderProgress.objects.get(order=order)
 
-        return TrackOrder(
-            status=True,
-            message=order_progress.progress
-        )
+                return TrackOrder(
+                    status=True,
+                    message=order_progress.progress
+                )
+            except Exception as e:
+                return TrackOrder(
+                    status = False,
+                    message = e
+                )
+        else:
+            return TrackOrder(
+                status = False,
+                message = "Invalid Order id"
+            )
 
 class UpdateOrderProgress(graphene.Mutation):
     status = graphene.Boolean()
@@ -478,14 +537,26 @@ class UpdateOrderProgress(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, order_id, progress):
-        order = Order.objects.get(id=order_id)
-        OrderProgress.objects.filter(order=order).update(progress=progress)
-        order_progress = OrderProgress.objects.get(order=order)        
+        if Order.objects.filter(id=order_id):
+            try:
+                order = Order.objects.get(id=order_id)
+                OrderProgress.objects.filter(order=order).update(progress=progress)
+                order_progress = OrderProgress.objects.get(order=order)        
 
-        return UpdateOrderProgress(
-            status=True,
-            message=order_progress.progress
-        )
+                return UpdateOrderProgress(
+                    status=True,
+                    message=order_progress.progress
+                )
+            except Exception as e:
+                return UpdateOrderProgress(
+                    status = False,
+                    message = e
+                )
+        else:
+            return UpdateOrderProgress(
+                status = False,
+                message = "Invalid Order id"
+            )
 
 class UpdateDeliverystatus(graphene.Mutation):
     status = graphene.Boolean()
@@ -497,33 +568,55 @@ class UpdateDeliverystatus(graphene.Mutation):
     
     @staticmethod
     def mutate(self, info, order_id, delivery_status):
-        order = Order.objects.get(id=order_id)
-        if order:
-            Order.objects.filter(id=order_id).update(delivery_status=delivery_status)
-            order = Order.objects.get(id=order_id)
-            if order.delivery_status == "delivered":
-                if Notification.objects.filter(user=order.user).exists():
-                    notification = Notification.objects.get(
-                        user=order.user
+        if Order.objects.filter(id=order_id).exists():
+            try:
+                Order.objects.filter(id=order_id).update(delivery_status=delivery_status)
+                order = Order.objects.get(id=order_id)
+                if order.delivery_status == "delivered":
+                    OrderProgress.objects.filter(order=order).update(progress="Order Delivered")
+                    Order.objects.filter(id=order_id).update(closed=True, paid=True)
+                    for item_id in order.cart_items:
+                        item = CartItem.objects.get(id=item_id)
+                        seller = item.product.user
+                        if SellerCustomer.objects.filter(seller=seller).exists():
+                            customers_id = SellerCustomer.objects.get(seller=seller).customer_id
+                            if order.user.id in customers_id:
+                                pass
+                            else:
+                                customers_id.append(order.user.id)
+                                SellerCustomer.objects.filter(seller=seller).update(customer_id=customers_id)
+                    if Notification.objects.filter(user=order.user).exists():
+                        notification = Notification.objects.get(
+                            user=order.user
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=order.user
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"Your order has been delivered successfully",
+                        subject="Order completed"
                     )
-                else:
-                    notification = Notification.objects.create(
-                        user=order.user
-                    )
-                notification_message = Message.objects.create(
-                    notification=notification,
-                    message=f"Your order has been delivered successfully",
-                    subject="Order completed"
+                    notification_info = {"notification":str(notification_message.notification.id),
+                            "message":notification_message.message, 
+                            "subject":notification_message.subject}
+                    push_to_client(order.user.id, notification_info)
+                    email_send = SendEmailNotification(order.user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                return UpdateDeliverystatus(
+                    status=True,
+                    message="Delivery status updated"
                 )
-                notification_info = {"notification":str(notification_message.notification.id),
-                        "message":notification_message.message, 
-                        "subject":notification_message.subject}
-                push_to_client(order.user.id, notification_info)
-                email_send = SendEmailNotification(order.user.email)
-                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+            except Exception as e:
+                return UpdateDeliverystatus(
+                    status = False,
+                    message = e
+                )
+        else:
             return UpdateDeliverystatus(
-                status=True,
-                message="Delivery status updated"
+                status = False,
+                message = "Invalid Order Id"
             )
 
 
@@ -536,31 +629,70 @@ class CancelOrder(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, order_id):
-        order = Order.objects.get(id=order_id)
-
-        if order:
-            if order.payment_method == "pay on delivery":
-                Order.objects.filter(id=order_id).update()
-                if Notification.objects.filter(user=order.user).exists():
-                        notification = Notification.objects.get(
+        if Order.objects.filter(id=order_id).exists():
+            try:
+                order = Order.objects.get(id=order_id)
+                if order.payment_method == "pay on delivery":
+                    Order.objects.filter(id=order_id).update(closed=True)
+                    OrderProgress.objects.filter(order=order).update(progress="Order cancelled")
+                    if Notification.objects.filter(user=order.user).exists():
+                            notification = Notification.objects.get(
+                                user=order.user
+                            )
+                    else:
+                        notification = Notification.objects.create(
                             user=order.user
                         )
-                else:
-                    notification = Notification.objects.create(
-                        user=order.user
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"Your order has been cancelled successfully",
+                        subject="Cancel order"
                     )
-                notification_message = Message.objects.create(
-                    notification=notification,
-                    message=f"Your order has been cancelled successfully",
-                    subject="Cancel order"
-                )
-                notification_info = {"notification":str(notification_message.notification.id),
-                "message":notification_message.message, 
-                "subject":notification_message.subject}
-                push_to_client(order.user.id, notification_info)
-                email_send = SendEmailNotification(order.user.email)
-                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                    notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                    push_to_client(order.user.id, notification_info)
+                    email_send = SendEmailNotification(order.user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                    for item_id in order.cart_items:
+                        seller_item = CartItem.objects.get(id=item_id)
+                        cart_item_seller = seller_item.product.user
+                        if Notification.objects.filter(user=cart_item_seller).exists():
+                            notification = Notification.objects.get(
+                                user=cart_item_seller
+                            )
+                        else:
+                            notification = Notification.objects.create(
+                                user=cart_item_seller
+                            )
+                        notification_message = Message.objects.create(
+                            notification=notification,
+                            message=f"Order no. #{order.order_id} has been cancelled",
+                            subject="Order Cancelled"
+                        )
+                        # print(notification_message.message)
+                        notification_info = {"notification":str(notification_message.notification.id),
+                        "message":notification_message.message, 
+                        "subject":notification_message.subject}
+                        push_to_client(cart_item_seller.id, notification_info)
+                        email_send = SendEmailNotification(cart_item_seller.email)
+                        email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                    return CancelOrder(
+                        status=True,
+                        message="Order cancelled"
+                    )
+                else:
+                    return CancelOrder(
+                        status = False,
+                        message = "You cannot cancel this order"
+                    )
+            except Exception as e:
                 return CancelOrder(
-                    status=True,
-                    message="Order cancelled"
+                    status = False,
+                    message = e
                 )
+        else:
+            return CancelOrder(
+                status = False,
+                message = "Invalid order id"
+            )

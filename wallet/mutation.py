@@ -1,7 +1,7 @@
 import graphene
-import jwt
 
-from django.conf import settings
+from django.contrib.auth import authenticate
+from bill.models import Payment
 from market.pusher import SendEmailNotification, push_to_client
 
 from notifications.models import Message, Notification
@@ -118,53 +118,73 @@ class FundWallet(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         remark = graphene.String(required=True)
-        amount = graphene.Int(required=True)
+        payment_ref = graphene.String(required=True)
     
     @staticmethod
-    def mutate(self, info, token, remark, amount):
+    def mutate(self, info, token, remark, payment_ref):
         auth = authenticate_user(token)
         if not auth["status"]:
             return FundWallet(status=auth["status"],message=auth["message"])
         user = auth["user"]
         if Wallet.objects.filter(owner=user).exists():
-            try:
-                seller_wallet = Wallet.objects.get(owner=user)
-                wallet = WalletTransaction.objects.create(
-                    wallet=seller_wallet,
-                    amount=amount,
-                    remark=remark,
-                    transaction_type="Funding"
-                )
-                balance = seller_wallet.balance
-                new_balance = balance + amount
-                Wallet.objects.filter(owner=user).update(balance=new_balance)
-                if Notification.objects.filter(user=user).exists():
-                    notification = Notification.objects.get(
-                        user=user
-                    )
+            if Payment.objects.filter(ref=payment_ref).exists():
+                payment = Payment.objects.get(ref=payment_ref)
+                if payment.verified:
+                    if payment.used:
+                        return FundWallet(
+                            status = False,
+                            message = "Payment is invalid"
+                        )
+                    else:
+                        amount = payment.amount
                 else:
-                    notification = Notification.objects.create(
-                        user=user
+                    return FundWallet(
+                        status = False,
+                        message = "Payment has not been verified"
                     )
-                notification_message = Message.objects.create(
-                    notification=notification,
-                    message=f"{amount} was added to your wallet successfully",
-                    subject="Fund wallet"
-                )
-                notification_info = {"notification":str(notification_message.notification.id),
-                "message":notification_message.message, 
-                "subject":notification_message.subject}
-                push_to_client(user.id, notification_info)
-                email_send = SendEmailNotification(user.email)
-                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                try:
+                    seller_wallet = Wallet.objects.get(owner=user)
+                    wallet = WalletTransaction.objects.create(
+                        wallet=seller_wallet,
+                        amount=amount,
+                        remark=remark,
+                        transaction_type="Funding"
+                    )
+                    balance = seller_wallet.balance
+                    new_balance = balance + amount
+                    Wallet.objects.filter(owner=user).update(balance=new_balance)
+                    if Notification.objects.filter(user=user).exists():
+                        notification = Notification.objects.get(
+                            user=user
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=user
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"{amount} was added to your wallet successfully",
+                        subject="Fund wallet"
+                    )
+                    notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                    push_to_client(user.id, notification_info)
+                    email_send = SendEmailNotification(user.email)
+                    email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
 
+                    return FundWallet(
+                        status=True,
+                        message="Wallet funded",
+                        wallet=wallet
+                    )
+                except Exception as e:
+                    return FundWallet(status=False,message=e)
+            else:
                 return FundWallet(
-                    status=True,
-                    message="Wallet funded",
-                    wallet=wallet
+                    status = False,
+                    message = "Invalid Payment reference"
                 )
-            except Exception as e:
-                return FundWallet(status=False,message=e)
         else:
             return FundWallet(status=False,message="User has no wallet")
 
@@ -175,15 +195,17 @@ class WithdrawFromWallet(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
+        password = graphene.String(required=True)
         amount = graphene.Int(required=True)
     
     @staticmethod
-    def mutate(self, info, token, remark, amount):
+    def mutate(self, info, token, password, amount):
         auth = authenticate_user(token)
         if not auth["status"]:
             return WithdrawFromWallet(status=auth["status"],message=auth["message"])
         user = auth["user"]
-        if user:
+        a_user = authenticate(username=user.email, password=password)
+        if user == a_user:
             if Wallet.objects.filter(owner=user).exists():
                 try:
                     seller_wallet = Wallet.objects.get(owner=user)

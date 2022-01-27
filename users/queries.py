@@ -1,4 +1,5 @@
 import graphene
+import json
 from django.http import JsonResponse
 from graphene_django import DjangoListField
 from graphql_auth.schema import UserQuery, MeQuery
@@ -10,9 +11,9 @@ from datetime import datetime
 from notifications.object_types import MessageType
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
 from wallet.object_types import InvoiceType, StoreDetailType, WalletTransactionType, WalletType
-from .model_object_type import UserType, SellerProfileType
+from .model_object_type import UserType, SellerProfileType, SellerCustomerType
 from market.object_types import *
-from users.models import SellerProfile
+from users.models import SellerCustomer, SellerProfile
 from users.validate import authenticate_user
 from django.db.models import Q
 from bill.object_types import *
@@ -58,6 +59,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_product_promotion_reach = graphene.List(ProductPromotionType, token=graphene.String(required=True))
     get_seller_product_promotion_link_clicks = graphene.List(ProductPromotionType, token=graphene.String(required=True))
     get_seller_product_promotion_amount = graphene.List(ProductPromotionType, token=graphene.String(required=True))
+    get_seller_customers = graphene.List(SellerCustomerType, token=graphene.String(required=True))
+    get_seller_sales_earnings = graphene.List(ProductType, token=graphene.String(required=True))
+    get_seller_revenue_chart_data = graphene.List(ProductType, token=graphene.String(required=True))
 
 
     def resolve_user_data(root, info, token):
@@ -106,7 +110,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     return sort
                 else:
                     seller_products = Product.objects.filter(user=user)
-                    this_month = Product.objects.filter(user=user, date_created__month=datetime.now().strftime('%m'), date__year=datetime.now().strftime('%Y'))
+                    this_month = Product.objects.filter(user=user, date_created__month=datetime.now().month, date__year=datetime.now().year)
 
                     return JsonResponse(
                         {
@@ -284,15 +288,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return user_orders
     
-    # def resolve_get_seller_orders(root, info, token):
-    #     auth = authenticate_user(token)
-    #     if not auth["status"]:
-    #         raise GraphQLError(auth["message"])
-    #     user = auth["user"]
-    #     user_orders = Order.objects.filter(user=user)
-
-        return user_orders
-    
     def resolve_user_notifications(root, info, token):
         auth = authenticate_user(token)
         if not auth["status"]:
@@ -368,11 +363,29 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             sales = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
-            this_month = Sales.objects.filter(date__month=datetime.now().strftime('%m'), date__year=datetime.now().strftime('%Y'), product__user=user).aggregate(Sum("sales"))           
+            this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales"))           
             return JsonResponse(
                 {
                     "Total sales": sales,
                     "This month sales": this_month
+                }
+            )
+        else:
+            raise GraphQLError("Not a seller")
+    
+    def resolve_get_seller_sales_earnings(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_seller:
+            sales_earnings = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
+            this_month_sales_earnings = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales")) 
+            kwek_charges = sales_earnings * SellerProfile.objects.get(user=user).kwek_charges
+            return JsonResponse(
+                {
+                    "Total sales_earnings": sales_earnings - kwek_charges,
+                    "This month sales_earnings": this_month_sales_earnings - kwek_charges
                 }
             )
         else:
@@ -445,7 +458,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             reach = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("reach"))
-            reach_this_month = ProductPromotion.objects.filter(date__month=datetime.now().strftime('%m'), date__year=datetime.now().strftime('%Y'), product__user=user).aggregate(Sum("reach"))
+            reach_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("reach"))
             return JsonResponse(
                 {
                     "Total reach": reach,
@@ -462,7 +475,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             link_clicks = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("link_clicks"))
-            link_clicks_this_month = ProductPromotion.objects.filter(date__month=datetime.now().strftime('%m'), date__year=datetime.now().strftime('%Y'), product__user=user).aggregate(Sum("link_clicks"))
+            link_clicks_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("link_clicks"))
             return JsonResponse(
                 {
                     "Total link clicks": link_clicks,
@@ -479,12 +492,78 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             amount = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("amount"))
-            amount_this_month = ProductPromotion.objects.filter(date__month=datetime.now().strftime('%m'), date__year=datetime.now().strftime('%Y'), product__user=user).aggregate(Sum("amount"))
+            amount_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
             return JsonResponse(
                 {
                     "Total amount": amount,
                     "This month amount": amount_this_month
                 }
+            )
+        else:
+            raise GraphQLError("Not a seller")
+
+    def resolve_get_seller_customer(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_seller:
+            customer_id = SellerCustomer.objects.get(seller=user).customer_id
+            customer_id_this_month = SellerCustomer.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, seller=user).customer_id
+            return JsonResponse(
+                {
+                    "Total customer count": len(customer_id),
+                    "This month customer count": len(customer_id_this_month)
+                }
+            )
+        else:
+            raise GraphQLError("Not a seller")
+    
+    def resolve_get_seller_orders(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        orders = Order.objects.all()
+        seller_orders = []
+        charge = SellerProfile.objects.get(user=user).kwek_charges
+        for order in orders:
+            cart_items = order.cart_items
+            for id in cart_items:
+                item = CartItem.objects.get(id=id)
+                if item.product.user == user:
+                    seller_orders.append(
+                        json.dumps({
+                            "order_id": order.order_id,
+                            "created": order.date_created,
+                            "customer": order.user.full_name,
+                            "total": item.price,
+                            "profit": item.price - (item.price * charge),
+                            "paid": order.paid,
+                            "status": order.progress.progress
+                        }, indent=4)
+                    )
+
+        return JsonResponse(
+            {
+                "seller orders": seller_orders
+            }
+        )
+    
+    def resolve_get_seller_revenue_chart_data(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_seller:
+            data ={}
+            for i in range(1, datetime.now().month):
+                sales = Sales.objects.filter(date__month=i, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales")) 
+                kwek_charges = sales * SellerProfile.objects.get(user=user).kwek_charges
+                sales_earnings = sales - kwek_charges
+                data[i] = sales_earnings
+            return JsonResponse(
+                data
             )
         else:
             raise GraphQLError("Not a seller")
