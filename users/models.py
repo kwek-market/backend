@@ -59,7 +59,7 @@ class SellerProfile(models.Model):
     )
 
 
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user
@@ -72,4 +72,4 @@ class SellerCustomer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     seller = models.OneToOneField(SellerProfile, on_delete=models.CASCADE, related_name="customers")
     customer_id = ArrayField(models.CharField(max_length=225))
-    date_created = models.DateField(auto_now_add=True)
+    date_created = models.DateTimeField(auto_now_add=True)

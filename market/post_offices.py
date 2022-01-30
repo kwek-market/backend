@@ -18,13 +18,15 @@ class PostOffices():
 
     def get_for_state(self, state:str):
         post_os = []
-        for i in self.offices_data: post_os.append(i) if i["attributes"]["state_name"].lower() == state.lower() else False
+        for i in self.offices_data: 
+            post_os.append(i) if i["attributes"]["state_name"].lower() == state.lower() else False
                  
         return post_os
 
     def get_for_lga(self, lga:str):
         post_os = []
-        for i in self.offices_data: post_os.append(i) if i["attributes"]["lga_name"].lower() == lga.lower() else False
+        for i in self.offices_data: 
+            post_os.append(i) if i["attributes"]["lga_name"].lower() == lga.lower() else False
         return post_os
 
     def get_for_state_and_lga(self, state:str, lga:str):
@@ -35,5 +37,3 @@ class PostOffices():
 
 
 post_offices = PostOffices()
-
-

@@ -132,7 +132,7 @@ class Order(models.Model):
     productcoupon = models.ForeignKey(ProductCoupon, on_delete=models.CASCADE, null=True)
     door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
     pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
-    date_created = models.DateField(auto_now_add=True)
+    date_created = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         while not self.order_id:

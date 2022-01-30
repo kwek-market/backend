@@ -19,7 +19,7 @@ from .object_types import (
     PickupType
 )
 from .flutterwave import get_payment_url, verify_transaction
-from market.models import Cart, CartItem, Product, ProductOption, ProductPromotion
+from market.models import Cart, CartItem, Product, ProductOption, ProductPromotion, Sales
 
 
 class BillingAddress(graphene.Mutation):
@@ -430,12 +430,17 @@ class PlaceOrder(graphene.Mutation):
                                 for id in product_options_id:
                                     product = ProductOption.objects.get(id=id)
                                     product_quantity = product.quantity
-                                    product_sales = cart_item.product.sales + cart_item_quantity
+                                    for i in range(int(product_quantity)):
+                                        Sales.objects.create(
+                                            product = product.product,
+                                            amount = cart_item.price
+                                        )
+                                    
                                     new_quantity = int(product_quantity) - int(cart_item_quantity)
-                                    reach = cart_item.product.promo.reach + 1
                                     ProductOption.objects.filter(id=id).update(quantity=new_quantity)
-                                    Product.objects.filter(id=cart_item.product.id).update(sales=product_sales)
-                                    ProductPromotion.objects.filter(product=cart_item.product).update(reach=reach)
+                                    if ProductPromotion.objects.filter(product=product.product, active=True).exists():
+                                        reach = ProductPromotion.objects.get(product=product.product).reach + 1
+                                        ProductPromotion.objects.filter(product=cart_item.product).update(reach=reach)
                             if payment_ref:
                                 Payment.objects.filter(ref=payment_ref).update(used=True)
                                 Order.objects.filter(id=order.id).update(paid=True)
@@ -481,7 +486,7 @@ class PlaceOrder(graphene.Mutation):
                                 push_to_client(cart_item_seller.id, notification_info)
                                 email_send = SendEmailNotification(cart_item_seller.email)
                                 email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
-                            CartItem.objects.filter(cart=cart).delete()
+                            CartItem.objects.filter(cart=cart).update(ordered=True)
                             return PlaceOrder(
                                 status=True,
                                 message="Order placed successfully",

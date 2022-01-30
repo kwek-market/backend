@@ -93,3 +93,7 @@ class WishlistItemType(DjangoObjectType):
 class OrderType(DjangoObjectType):
     class Meta:
         model=Order
+
+class SalesType(DjangoObjectType):
+    class Meta:
+        model = Sales
