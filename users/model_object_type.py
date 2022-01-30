@@ -1,3 +1,5 @@
+from typing import Dict
+import graphene
 from graphene_django import DjangoObjectType
 from users.models import SellerCustomer, SellerProfile
 from django.contrib.auth import get_user_model
@@ -41,5 +43,13 @@ class SellerProfileType(DjangoObjectType):
         )
 
 class SellerCustomerType(DjangoObjectType):
+
+    days_selling = graphene.Int()
+    
+    @staticmethod
+    def resolve_days_selling(parent, info, *args, **kwargs):
+        days = SellerProfile.objects.get(user=parent.user).since
+        return [days]
     class Meta:
         model = SellerCustomer
+    

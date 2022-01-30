@@ -7,6 +7,7 @@ from market.models import Cart, Wishlist
 from market.mutation import verify_cart
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
+from wallet.models import StoreDetail, Wallet
 from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user
 from .sendmail import (
     send_confirmation_email,
@@ -547,6 +548,15 @@ class CompleteSellerVerification(graphene.Mutation):
             seller = SellerProfile.objects.get(user=userid)
             seller.seller_is_verified = True
             seller.save()
+            StoreDetail.objects.create(
+                user = c_user,
+                store_name = seller.shop_name,
+                email=c_user.email,
+                address = seller.shop_address
+            )
+            Wallet.objects.create(
+                owner = seller.user
+            )
             if Notification.objects.filter(user=c_user).exists():
                 notification = Notification.objects.get(
                     user=c_user

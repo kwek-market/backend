@@ -59,6 +59,6 @@ class WalletTransaction(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transaction")
     remark = models.CharField(max_length=225)
     amount = models.PositiveBigIntegerField()
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     transaction_type = models.CharField(max_length=10)
     status = models.BooleanField(default=False)

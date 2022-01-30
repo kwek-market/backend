@@ -1,6 +1,5 @@
 import graphene
-import json
-from django.http import JsonResponse
+import uuid
 from graphene_django import DjangoListField
 from graphql_auth.schema import UserQuery, MeQuery
 from notifications.models import Message, Notification
@@ -11,7 +10,7 @@ from datetime import datetime
 from notifications.object_types import MessageType
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
 from wallet.object_types import InvoiceType, StoreDetailType, WalletTransactionType, WalletType
-from .model_object_type import UserType, SellerProfileType, SellerCustomerType
+from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, SellerProfile
 from users.validate import authenticate_user
@@ -43,26 +42,25 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     orders = graphene.Field(OrderType, token=graphene.String(required=True))
     rating_sort = graphene.Field(ProductType)
     user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
-    get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
-    get_seller_review = graphene.Field(RatingType, token=graphene.String(required=True))
-    get_seller_promoted_products = graphene.Field(RatingType, token=graphene.String(required=True))
-    # get_seller_orders = graphene.Field(OrderType, token=graphene.String(required=True))
+    get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), this_month=graphene.Boolean(), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
+    get_seller_review = graphene.List(RatingType, token=graphene.String(required=True))
+    get_seller_promoted_products = graphene.List(ProductType, token=graphene.String(required=True))
+    get_seller_orders = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
     get_seller_store_detail = graphene.List(StoreDetailType, token=graphene.String(required=True))
     get_seller_invoices = graphene.List(InvoiceType, token=graphene.String(required=True))
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
     get_seller_wallet_transactions = graphene.List(WalletTransactionType, token=graphene.String(required=True))
     # locations = graphene.List()
-    get_seller_successful_sales = graphene.List(ProductType, token=graphene.String(required=True))
-    get_seller_product_quality = graphene.List(RatingType, token=graphene.String(required=True))
-    get_seller_delivery_rate = graphene.List(OrderType, token=graphene.String(required=True))
-    get_seller_days_selling = graphene.List(SellerProfileType, token=graphene.String(required=True))
-    get_seller_product_promotion_reach = graphene.List(ProductPromotionType, token=graphene.String(required=True))
-    get_seller_product_promotion_link_clicks = graphene.List(ProductPromotionType, token=graphene.String(required=True))
-    get_seller_product_promotion_amount = graphene.List(ProductPromotionType, token=graphene.String(required=True))
-    get_seller_customers = graphene.List(SellerCustomerType, token=graphene.String(required=True))
-    get_seller_sales_earnings = graphene.List(ProductType, token=graphene.String(required=True))
-    get_seller_revenue_chart_data = graphene.List(ProductType, token=graphene.String(required=True))
-
+    get_seller_successful_sales = graphene.List(SalesType, token=graphene.String(required=True))
+    get_seller_product_quality = graphene.JSONString(token=graphene.String(required=True))
+    get_seller_delivery_rate = graphene.JSONString(token=graphene.String(required=True))
+    get_seller_days_selling = graphene.JSONString(token=graphene.String(required=True))
+    get_seller_product_promotion_reach = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_product_promotion_link_clicks = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_product_promotion_amount = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_customers = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_sales_earnings = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_revenue_chart_data = graphene.JSONString(token=graphene.String(required=True))
 
     def resolve_user_data(root, info, token):
         auth = authenticate_user(token)
@@ -76,7 +74,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
     
-    def resolve_get_seller_products(root, info, token, rating=False, popular=False, recent=False, price=None):
+    def resolve_get_seller_products(root, info, token, this_month=False, rating=False, popular=False, recent=False, price=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
@@ -94,7 +92,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                         for product in products:
                             products_included.append(product)
                         rate += 1
-                    return products_included
+                    return {
+                        "Seller products": products_included
+                    }
                 elif popular:
                     clicks = Product.objects.filter(user=user)
                     sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
@@ -108,16 +108,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 elif price and price == "down":
                     sort = Product.objects.filter(user=user).order_by("-options__price")
                     return sort
+                elif this_month:
+                    this_month = Product.objects.filter(date_created__month=datetime.now().month, date_created__year=datetime.now().year, user=user)
+                    return this_month
                 else:
                     seller_products = Product.objects.filter(user=user)
-                    this_month = Product.objects.filter(user=user, date_created__month=datetime.now().month, date__year=datetime.now().year)
-
-                    return JsonResponse(
-                        {
-                            "All products": seller_products,
-                            "This month's products": this_month
-                        }
-                    )
+                    return seller_products
     
     def resolve_category(root, info, id):
         return Category.objects.get(id=id)
@@ -244,20 +240,23 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
-
-        review = Rating.objects.filter(product__user__user=user)
-        
-        return review
+        if user.is_seller:
+            review = Rating.objects.filter(product__user=user)
+            return review
+        else:
+            raise GraphQLError("Not a seller")
     
     def resolve_get_seller_promoted_products(root, info, token):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
+        if user.is_seller:
+            promoted_products = Product.objects.filter(user=user, promoted=True)
+            return promoted_products
+        else:
+            raise GraphQLError("Not a seller")
 
-        promoted_products = Product.objects.filter(user=user, promoted=True)
-        
-        return promoted_products
     
     def resolve_billing_address(root, info, address_id):
         billing_address = Billing.objects.get(id=address_id)
@@ -304,7 +303,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            return StoreDetail.objects.get(user=user)
+            detail = StoreDetail.objects.filter(user=user)
+            return detail
         else:
             raise GraphQLError("Not a seller")
 
@@ -314,10 +314,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            store = StoreDetail.objects.get(user=user)
-            invoices = Invoice.objects.filter(store=store)
+            if StoreDetail.objects.filter(user=user).exists():
+                store = StoreDetail.objects.get(user=user)
+                invoice = Invoice.objects.filter(store=store)
+                return invoice
+            else:
+                raise GraphQLError("Store detail invalid")
 
-            return invoices
         else:
             raise GraphQLError("Not a seller")
     
@@ -327,7 +330,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            return Wallet.objects.get(owner=user)
+            wallet= Wallet.objects.filter(owner=user)
+            return wallet
         else:
             raise GraphQLError("Not a seller")
 
@@ -344,50 +348,37 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_successful_sales(root, info, token):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            raise GraphQLError(auth["message"])
-        user = auth["user"]
-        if user.is_seller:
-            sales = Product.objects.aggregate(Sum("sales"))
-            
-            return sales
-        else:
-            raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_successful_sales(root, info, token):
+    def resolve_get_seller_successful_sales(root, info, token, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            sales = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
-            this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales"))           
-            return JsonResponse(
-                {
-                    "Total sales": sales,
-                    "This month sales": this_month
-                }
-            )
+            if this_month:
+                this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
+                return this_month["amount__sum"]       
+            else:
+                sales = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
+                return sales["amount__sum"]
         else:
             raise GraphQLError("Not a seller")
     
-    def resolve_get_seller_sales_earnings(root, info, token):
+    def resolve_get_seller_sales_earnings(root, info, token, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            sales_earnings = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
-            this_month_sales_earnings = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales")) 
-            kwek_charges = sales_earnings * SellerProfile.objects.get(user=user).kwek_charges
-            return JsonResponse(
-                {
-                    "Total sales_earnings": sales_earnings - kwek_charges,
-                    "This month sales_earnings": this_month_sales_earnings - kwek_charges
-                }
-            )
+            if this_month:
+                sales_earnings = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
+            else:
+                sales_earnings = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
+            if sales_earnings["amount__sum"]:
+                kwek_charges = sales_earnings["amount__sum"] * SellerProfile.objects.get(user=user).kwek_charges
+                return sales_earnings - kwek_charges
+            else:
+                return 0
         else:
             raise GraphQLError("Not a seller")
 
@@ -399,12 +390,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user.is_seller:
             rating_sum = Rating.objects.filter(product__user=user).aggregate(Sum("rating"))
             rating_total_sum = Rating.objects.filter(product__user=user).count() * 5
-            rating_percent = (rating_sum/rating_total_sum) * 100
-            return JsonResponse(
-                {
-                    "Product quality": rating_percent
-                }
-            )
+            if rating_sum["rating__sum"]:
+                rating_percent = (rating_sum["rating__sum"]/rating_total_sum) * 100
+                return rating_percent
+            else:
+                return 0
         else:
             raise GraphQLError("Not a seller")
 
@@ -424,14 +414,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                         all_orders += 1
                         if order.delivery_status == "delivered":
                             successful_orders += 1
-            
-            delivery_rate_percent = (successful_orders/all_orders) * 100
-
-            return JsonResponse(
-                {
-                    "Delivery rate": delivery_rate_percent
-                }
-            )
+            if all_orders > 0 and successful_orders > 0:
+                delivery_rate_percent = (successful_orders/all_orders) * 100
+            else:
+                delivery_rate_percent = 0
+            return delivery_rate_percent
         else:
             raise GraphQLError("Not a seller")
 
@@ -443,79 +430,72 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user.is_seller:
             days = SellerProfile.objects.get(user=user).since
 
-            return JsonResponse(
-                {
-                    "Days selling": days
-                }
-            )
+            return days
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_product_promotion_reach(root, info, token):
+    def resolve_get_seller_product_promotion_reach(root, info, token, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            reach = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("reach"))
-            reach_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("reach"))
-            return JsonResponse(
-                {
-                    "Total reach": reach,
-                    "This month reach": reach_this_month
-                }
-            )
+            if this_month:
+                reach = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("reach"))
+            else:
+                reach = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("reach"))
+            if reach["reach__sum"]:
+                return reach["reach__sum"]
+            else:
+                return 0
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_product_promotion_link_clicks(root, info, token):
+    def resolve_get_seller_product_promotion_link_clicks(root, info, token, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            link_clicks = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("link_clicks"))
-            link_clicks_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("link_clicks"))
-            return JsonResponse(
-                {
-                    "Total link clicks": link_clicks,
-                    "This month link clicks": link_clicks_this_month
-                }
-            )
+            if this_month:
+                link_clicks = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("link_clicks"))
+            else:
+                link_clicks = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("link_clicks"))
+            if link_clicks["link_clicks__sum"]:
+                return link_clicks["link_clicks__sum"]
+            else:
+                return 0
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_product_promotion_amount(root, info, token):
+    def resolve_get_seller_product_promotion_amount(root, info, token, this_month=True):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            amount = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("amount"))
-            amount_this_month = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
-            return JsonResponse(
-                {
-                    "Total amount": amount,
-                    "This month amount": amount_this_month
-                }
-            )
+            if this_month:
+                amount = ProductPromotion.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
+            else:
+                amount = ProductPromotion.objects.filter(product__user=user).aggregate(Sum("amount"))
+            if amount["amount__sum"]:
+                return amount["amount__sum"]
+            else:
+                return 0
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_customer(root, info, token):
+    def resolve_get_seller_customer(root, info, token, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            customer_id = SellerCustomer.objects.get(seller=user).customer_id
-            customer_id_this_month = SellerCustomer.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, seller=user).customer_id
-            return JsonResponse(
-                {
-                    "Total customer count": len(customer_id),
-                    "This month customer count": len(customer_id_this_month)
-                }
-            )
+            if this_month:
+                customer_id = SellerCustomer.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, seller=user).customer_id
+            else:
+                customer_id = SellerCustomer.objects.get(seller=user).customer_id
+            return len(customer_id)
         else:
             raise GraphQLError("Not a seller")
     
@@ -525,30 +505,24 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         orders = Order.objects.all()
-        seller_orders = []
+        seller_orders = {}
         charge = SellerProfile.objects.get(user=user).kwek_charges
         for order in orders:
             cart_items = order.cart_items
             for id in cart_items:
+                id = uuid.UUID(id)
                 item = CartItem.objects.get(id=id)
                 if item.product.user == user:
-                    seller_orders.append(
-                        json.dumps({
-                            "order_id": order.order_id,
-                            "created": order.date_created,
-                            "customer": order.user.full_name,
-                            "total": item.price,
-                            "profit": item.price - (item.price * charge),
+                    seller_orders[order.order_id] = {
+                            "created": str(order.date_created),
+                            "customer_id": str(order.user.id),
+                            "total": int(item.price),
+                            "profit": int(item.price) - (int(item.price) * charge),
                             "paid": order.paid,
                             "status": order.progress.progress
-                        }, indent=4)
-                    )
+                        }
 
-        return JsonResponse(
-            {
-                "seller orders": seller_orders
-            }
-        )
+        return seller_orders
     
     def resolve_get_seller_revenue_chart_data(root, info, token):
         auth = authenticate_user(token)
@@ -558,12 +532,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user.is_seller:
             data ={}
             for i in range(1, datetime.now().month):
-                sales = Sales.objects.filter(date__month=i, date__year=datetime.now().year, product__user=user).aggregate(Sum("sales")) 
-                kwek_charges = sales * SellerProfile.objects.get(user=user).kwek_charges
-                sales_earnings = sales - kwek_charges
-                data[i] = sales_earnings
-            return JsonResponse(
-                data
-            )
+                sales = Sales.objects.filter(date__month=i, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
+                if sales["amount__sum"]:
+                    kwek_charges = sales["amount__sum"] * SellerProfile.objects.get(user=user).kwek_charges
+                    sales_earnings = sales["amount__sum"] - kwek_charges
+                    data[i] = sales_earnings
+            return data
         else:
             raise GraphQLError("Not a seller")

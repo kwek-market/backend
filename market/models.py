@@ -28,7 +28,7 @@ class Sales(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="sales")
     amount = models.FloatField()
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     
 
 class Product(models.Model):
@@ -87,7 +87,7 @@ class ProductPromotion(models.Model):
     amount = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
     link_clicks = models.IntegerField(default=0)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.keyword
@@ -144,9 +144,10 @@ class CartItem(models.Model):
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField(blank=False)
     cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
+    ordered = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.product.product_title} - {self.user_id.email}"
+        return f"{self.product.product_title} - {self.product.user}"
 
 
 class Wishlist(models.Model):
