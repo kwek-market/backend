@@ -2,6 +2,7 @@ from graphene_django import DjangoObjectType
 
 from .models import (
     Billing,
+    Coupon,
     Payment,
     Pickup
 )
@@ -24,3 +25,7 @@ class PaymentType(DjangoObjectType):
     class Meta:
         model = Payment
         fields = "__all__"
+
+class CouponType(DjangoObjectType):
+    class Meta:
+        model = Coupon

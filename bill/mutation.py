@@ -1,4 +1,5 @@
 import graphene
+from datetime import timedelta, datetime
 from users.validate import authenticate_user
 
 from market.pusher import SendEmailNotification, push_to_client
@@ -6,15 +7,16 @@ from notifications.models import Message, Notification
 from users.models import SellerCustomer
 from .models import (
     Billing,
-    OrderCoupon,
+    Coupon,
+    CouponUser,
     Payment,
     Pickup,
     Order,
-    ProductCoupon,
     OrderProgress
 )
 from .object_types import (
     BillingType,
+    CouponType,
     PaymentType,
     PickupType
 )
@@ -349,11 +351,10 @@ class PlaceOrder(graphene.Mutation):
         address_id = graphene.String(required=True)
         product_options_id = graphene.List(graphene.String, required=True)
         payment_ref = graphene.String()
-        coupon_type = graphene.String()
-        coupon_id = graphene.String()
+        coupon_ids = graphene.List(graphene.String)
     
     @staticmethod
-    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_type=None, coupon_id=None, payment_ref=None):
+    def mutate(self, info, token, cart_id, payment_method, delivery_method, address_id, product_options_id, coupon_ids=None, payment_ref=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PlaceOrder(status=auth["status"],message=auth["message"])
@@ -365,11 +366,6 @@ class PlaceOrder(graphene.Mutation):
             cart_items_id =[]
             for item in cart_items:
                 cart_items_id.append(item.id)
-            if coupon_id and coupon_type:
-                if coupon_type == "product":
-                    coupon = ProductCoupon.objects.get(id=coupon_id)
-                elif coupon_type == "order":
-                    coupon = OrderCoupon.objects.get(id=coupon_id)
             if delivery_method == "door step":
                 shipping_address = Billing.objects.get(id=address_id)
             elif delivery_method == "pickup":
@@ -402,20 +398,30 @@ class PlaceOrder(graphene.Mutation):
                                     status = False,
                                     message = "Payment reference not provided"
                                 )
-                            order = Order.objects.create(
-                                user=user,
-                                cart_items=cart_items_id,
-                                payment_method=payment_method,
-                                delivery_method=delivery_method
-                            )
-                            if coupon_type == "product":
-                                Order.objects.filter(id=order.id).update(
-                                    productcoupon=coupon
+                            if coupon_ids:
+                                for id in coupon_ids:
+                                    coupon = Coupon.objects.get(id=id)
+                                    if CouponUser.objects.get(coupon=coupon, user=user).exists():
+                                        order = Order.objects.create(
+                                            user=user,
+                                            cart_items=cart_items_id,
+                                            payment_method=payment_method,
+                                            delivery_method=delivery_method,
+                                            coupon = coupon_ids
+                                        )
+                                    else:
+                                        return ApplyCoupon(
+                                            status = False,
+                                            message = "Coupon has not been applied"
+                                        )
+                            else:
+                                order = Order.objects.create(
+                                    user=user,
+                                    cart_items=cart_items_id,
+                                    payment_method=payment_method,
+                                    delivery_method=delivery_method
                                 )
-                            elif coupon_type == "order":
-                                Order.objects.filter(id=order.id).update(
-                                    ordercoupon=coupon
-                                )
+                            
                             if delivery_method == "door step":
                                 Order.objects.filter(id=order.id).update(
                                     door_step=shipping_address
@@ -701,3 +707,175 @@ class CancelOrder(graphene.Mutation):
                 status = False,
                 message = "Invalid order id"
             )
+
+
+class CreateCoupon(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    coupon = graphene.Field(CouponType)
+
+    class Arguments:
+        value = graphene.Int(required=True)
+        code = graphene.String()
+        days = graphene.Int()
+        valid_until = graphene.DateTime()
+        user_list = graphene.List(graphene.String)
+    
+    @staticmethod
+    def mutate(self, info, value, code=None, days=None, valid_until=None, user_list=None):
+        if days and (not valid_until):
+            valid_until_date = datetime.today() + timedelta(days=days)
+        elif valid_until and (not days):
+            valid_until_date = valid_until
+        else:
+            return CreateCoupon(
+                status= False,
+                message = "Please enter either number of days(int) or valid_until(datetime)"
+            )
+        try:
+            if code and user_list:
+                coupon = Coupon.objects.create(
+                    value=value,
+                    valid_until=valid_until_date,
+                    code = code,
+                    user_list = user_list
+                )
+            elif user_list and (not code):
+                coupon = Coupon.objects.create(
+                    value=value,
+                    valid_until=valid_until_date,
+                    user_list = user_list
+                )
+            elif code and (not user_list):
+                coupon = Coupon.objects.create(
+                    value=value,
+                    valid_until=valid_until_date,
+                    code = code
+                )
+            else:
+                coupon = Coupon.objects.create(
+                    value=value,
+                    valid_until=valid_until_date
+                )
+            return CreateCoupon(
+                status = True,
+                message = "Coupon created successfully",
+                coupon = coupon
+            )
+        except Exception as e:
+            return CreateCoupon(
+                status = False,
+                message = e
+            )
+
+
+class ApplyCoupon(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    coupon = graphene.Field(CouponType)
+
+    class Arguments:
+        token = graphene.String(required = True)
+        coupon_id = graphene.String(required = True)
+    
+    @staticmethod
+    def mutate(info, token, coupon_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return ApplyCoupon(status=auth["status"], message=auth["message"])
+        else:
+            user = auth["user"]
+        
+        try:
+            coupon = Coupon.objects.get(id=coupon_id)
+        except Coupon.DoesNotExist:
+            return ApplyCoupon(
+                status = False,
+                message = "Coupon does not exist"
+            )
+        
+        if coupon.expired:
+            return ApplyCoupon(
+                status = False,
+                message = "Coupon is expired"
+            )
+
+        elif coupon.user_list:
+            if str(user.id) in coupon.user_list:
+                if coupon.is_redeemed:
+                    return ApplyCoupon(
+                        status = False,
+                        message = "Coupon has been redeemed by all users"
+                    )
+                else:
+                    CouponUser.objects.create(
+                        coupon = coupon,
+                        user = user
+                    )
+
+                    return ApplyCoupon(
+                        status = True,
+                        message = "Coupon redeemed",
+                        coupon = coupon
+                    )                    
+            else:
+                return ApplyCoupon(
+                    status = False,
+                    message = "Coupon is not available for this user"
+                )
+        elif CouponUser.objects.filter(coupon=coupon, user=user).exists():
+            return ApplyCoupon(
+                status = False,
+                message = "This coupon has been redeemed by this user"
+            )
+        else:
+            CouponUser.objects.create(
+                coupon = coupon,
+                user = user
+            )
+
+            return ApplyCoupon(
+                status = True,
+                message = "Coupon redeemed",
+                coupon = coupon
+            )
+
+class UnapplyCoupon(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    coupon = graphene.Field(CouponType)
+
+    class Arguments:
+        coupon_ids = graphene.List(graphene.String, required = True)
+        token = graphene.String(required = True)
+    
+    @staticmethod
+    def mutate(info, token, coupon_ids):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return ApplyCoupon(status=auth["status"], message=auth["message"])
+        else:
+            user = auth["user"]
+        
+        for id in coupon_ids:
+            try:
+                coupon = Coupon.objects.get(id=id)
+            except Coupon.DoesNotExist:
+                return ApplyCoupon(
+                    status = False,
+                    message = "Coupon does not exist"
+                )
+            try:
+                CouponUser.objects.filter(coupon=coupon, user=user).delete()
+                return UnapplyCoupon(
+                    status = True,
+                    message = "Coupon unapplied",
+                    coupon = coupon
+                )
+            except Exception as e:
+                return UnapplyCoupon(
+                    status = False,
+                    message = e
+                )
+
+
