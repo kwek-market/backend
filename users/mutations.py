@@ -29,6 +29,7 @@ from bill.mutation import (
     BillingAddressDelete,
     BillingAddressUpdate,
     CancelOrder,
+    CreateCoupon,
     PaymentInitiate,
     PickUpLocation,
     PaymentVerification,
@@ -96,3 +97,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     withdraw_from_wallet = WithdrawFromWallet.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
     decrease_cart_item_quantity = DecreaseCartItemQuantity.Field()
+    create_coupon = CreateCoupon.Field()
