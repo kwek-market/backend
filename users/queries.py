@@ -30,6 +30,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     contact_us = DjangoListField(ContactMessageType)
+    coupons = DjangoListField(CouponType)
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
