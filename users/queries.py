@@ -204,7 +204,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 rate += 1
             
             page_size = 50
-            qs = random.shuffle(products_included)
+            qs = products_included
             return get_paginator(qs, page_size, page, ProductPaginatedType)
 
         if keyword:
@@ -213,8 +213,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
 
             products = Product.objects.filter(filter)
+
             page_size = 50
-            qs = random.shuffle(products)
+            qs = products
             return get_paginator(qs, page_size, page, ProductPaginatedType)
             return products
             # filtered_products.append(products)
@@ -237,7 +238,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
 
         page_size = 50
-        qs = random.shuffle(Product.objects.all())
+        qs = Product.objects.all()
         return get_paginator(qs, page_size, page, ProductPaginatedType)
 
     def resolve_contact_us(root, info):
