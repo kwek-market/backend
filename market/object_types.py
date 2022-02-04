@@ -1,5 +1,4 @@
 import graphene
-from graphene.relay.connection import Connection
 from graphene_django import DjangoObjectType
 
 from bill.models import Order
@@ -97,3 +96,10 @@ class OrderType(DjangoObjectType):
 class SalesType(DjangoObjectType):
     class Meta:
         model = Sales
+
+class ProductPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(ProductType)
