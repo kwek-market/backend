@@ -1,7 +1,9 @@
 import graphene
 import uuid
+import random
 from graphene_django import DjangoListField
 from graphql_auth.schema import UserQuery, MeQuery
+from market.post_offices import get_paginator
 from notifications.models import Message, Notification
 from graphql import GraphQLError
 from django.db.models import Sum
@@ -27,7 +29,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     subcategories = graphene.List(CategoryType)
     least_subcategories = graphene.List(CategoryType)
     product = graphene.Field(ProductType, id=graphene.String(required=True))
-    products = graphene.List(ProductType, search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
+    products = graphene.Field(ProductPaginatedType, page=graphene.Int(), search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
@@ -170,7 +172,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return product
     
-    def resolve_products(root, info, search=None, keyword=None, rating=None, clicks=None, sales=None):
+    def resolve_products(root, info, page, search=None, keyword=None, rating=None, clicks=None, sales=None):
         # if search or keyword or rating or clicks or sales:
         #     filtered_products = []
         if search:
@@ -184,7 +186,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(short_description__icontains=search) |
                 Q(options__price__icontains=search)
             )
-
+            page_size = 50
+            qs = Product.objects.filter(filter).distinct()
+            return get_paginator(qs, page_size, page, ProductPaginatedType)
             products = Product.objects.filter(filter).distinct()
             return products
             # for product in products:
@@ -193,16 +197,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if rating:
             rate = rating
             products_included = []
-            # if rating > 5:
-            #     clicks = Product.objects.all()
-            #     sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
             while rate <= 5:
                 products = Product.objects.filter(product_rating__rating__exact=rate)
                 for product in products:
                     products_included.append(product)
                 rate += 1
-            return products_included
-            # filtered_products.append(products_included)
+            
+            page_size = 50
+            qs = random.shuffle(products_included)
+            return get_paginator(qs, page_size, page, ProductPaginatedType)
 
         if keyword:
             filter = (
@@ -210,24 +213,32 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
 
             products = Product.objects.filter(filter)
+            page_size = 50
+            qs = random.shuffle(products)
+            return get_paginator(qs, page_size, page, ProductPaginatedType)
             return products
             # filtered_products.append(products)
         
         if clicks:
             clicks = Product.objects.all()
             sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
-            return sort
-            # filtered_products.append(sort)
+            
+            page_size = 50
+            qs = sort
+            return get_paginator(qs, page_size, page, ProductPaginatedType)
         
         if sales:
             sales = Product.objects.all()
             sort = sorted(sales, key=attrgetter("sales"), reverse=True)
-            return sort
-            # filtered_products.append(sort)
 
-        # return filtered_products
-        # else:
-        return Product.objects.all()
+            page_size = 50
+            qs = sort
+            return get_paginator(qs, page_size, page, ProductPaginatedType)
+
+
+        page_size = 50
+        qs = random.shuffle(Product.objects.all())
+        return get_paginator(qs, page_size, page, ProductPaginatedType)
 
     def resolve_contact_us(root, info):
        return ContactMessage.objects.all().order_by('-sent_at')

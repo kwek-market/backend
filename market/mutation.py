@@ -1,5 +1,6 @@
 import graphene
 import jwt
+from django.utils import timezone
 from users.validate import authenticate_user
 
 from django.conf import settings
@@ -828,7 +829,8 @@ class PromoteProduct(graphene.Mutation):
                         ProductPromotion.objects.create(
                             product=product,
                             days=days,
-                            amount=amount
+                            amount=amount,
+                            start_date = timezone.now()
                         )
                         return PromoteProduct(
                             status=True,

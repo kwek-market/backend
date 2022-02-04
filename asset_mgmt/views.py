@@ -1,5 +1,4 @@
-from json.decoder import JSONDecodeError
-from django.shortcuts import render
+from django.utils import timezone
 from django.views import View
 from django.http import JsonResponse
 from asset_mgmt.models import AssetFile
@@ -19,7 +18,7 @@ from django.utils._os import safe_join
 from pathlib import Path
 from kwek.vendor_array import data
 from market.models import (
-    Category, Product, ProductImage, ProductOption, Keyword
+    Category, Product, ProductImage, ProductOption, Keyword, ProductPromotion, Rating
 )
 from users.models import ExtendUser, SellerProfile
 import posixpath
@@ -188,6 +187,32 @@ class PopulateProduct(View):
                     image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
                 )
 
+                rates = [1, 2, 3, 4, 5]
+                user_to_review = ExtendUser.objects.all()
+
+                Rating.objects.create(
+                    product = created_product,
+                    rating = random.choice(rates),
+                    review = "This is a very good product",
+                    user = random.choice(user_to_review),
+                    likes = random.choice(range(1, 41)),
+                    dislikes = random.choice(range(1, 21))    
+                )
+        half_products = Product.objects.all().count() / 2
+        i = 0
+        while i < half_products:
+            product_to_promote = random.choice(Product.objects.all())
+            if ProductPromotion.objects.filter(product=product_to_promote):
+                pass
+            else:
+                ProductPromotion.objects.create(
+                    product = product_to_promote,
+                    days = random.choice(range(1, 5)),
+                    amount = random.choice(range(1000, 5000)),
+                    start_date = timezone.now()
+                )
+
+                i += 1
         return JsonResponse( {
             "status": True,
             "message":"Products populated"
