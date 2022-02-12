@@ -245,3 +245,137 @@ CORS_ALLOW_HEADERS = [
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
 
+# import sys
+
+# class Logger(object):
+#     def __init__(self):
+#         self.console = sys.stderr
+#         self.file = open("runserver.log", "a")
+
+#     def write(self, msg):
+#         self.console.write(msg)
+#         self.file.write(msg)
+
+# sys.stderr = Logger()
+# class OutLogger(object):
+#     def __init__(self):
+#         self.console = sys.stdout
+#         self.file = open("runserver.log", "a")
+
+#     def write(self, msg):
+#         self.console.write(msg)
+#         self.file.write(msg)
+
+# sys.stdout = OutLogger()
+
+
+
+
+import logging
+import os, sys
+import datetime
+
+# Get name of module, use as application name
+try:
+  ME=os.path.split(__file__)[-1].split('.')[0]
+except:
+  ME='pyExec_'
+
+LOG_IDENTIFIER="uuu___( o O )___uuu "
+LOG_IDR_LENGTH=len(LOG_IDENTIFIER)
+
+class PyExec(object):
+
+  # Use this to capture all possible error / output to log
+  class SuperTee(object):
+      # Original reference: http://mail.python.org/pipermail/python-list/2007-May/442737.html
+      def __init__(self, name):
+          self.fl = open(name, 'a')
+          self.fl.write('\n')
+          self.stdout = sys.stdout
+          self.stdout.write('\n')
+          self.stderr = sys.stderr
+
+          sys.stdout = self
+          sys.stderr = self
+
+      def __del__(self):
+          self.fl.write('\n')
+          self.fl.flush()
+          sys.stderr = self.stderr
+          sys.stdout = self.stdout
+          self.fl.close()
+
+      def write(self, data):
+          # If the data to write includes the log identifier prefix, then it is already formatted
+          if data[0:LOG_IDR_LENGTH]==LOG_IDENTIFIER:
+            self.fl.write("%s\n" % data[LOG_IDR_LENGTH:])
+            self.stdout.write(data[LOG_IDR_LENGTH:])
+
+          # Otherwise, we can give it a timestamp
+          else:
+
+            timestamp=str(datetime.datetime.now())
+            if 'Traceback' == data[0:9]:
+              data='%s: %s' % (timestamp, data)
+              self.fl.write(data)
+            else:
+              self.fl.write(data)
+
+            self.stdout.write(data)
+      def flush(self):
+            pass
+
+
+  def __init__(self, aName, aCmd, logFileName='runserver.log', outFileName='runserver.log'):
+
+    # Using name for 'logger' (context?), which is separate from the module or the function
+    baseFormatter=logging.Formatter("%(asctime)s \t %(levelname)s \t %(name)s:%(module)s:%(lineno)d \t %(message)s")
+    errorFormatter=logging.Formatter(LOG_IDENTIFIER + "%(asctime)s \t %(levelname)s \t %(name)s:%(module)s:%(lineno)d \t %(message)s")
+
+    if logFileName:
+      # open passed filename as append
+      fl=logging.FileHandler("%s.log" % aName)
+    else:
+      # otherwise, use log filename as a one-time use file
+      fl=logging.FileHandler("%s.log" % aName, 'w')
+
+    fl.setLevel(logging.DEBUG)
+    fl.setFormatter(baseFormatter)
+
+    # This will capture stdout and CRITICAL and beyond errors
+
+    if outFileName:
+      teeFile=PyExec.SuperTee("%s_out.log" % aName)
+    else:
+      teeFile=PyExec.SuperTee("%s_out.log" % aName, 'w')
+
+    fl_out=logging.StreamHandler( teeFile )
+    fl_out.setLevel(logging.CRITICAL)
+    fl_out.setFormatter(errorFormatter)
+
+    # Set up logging
+    self.log=logging.getLogger('pyExec_main')
+    log=self.log
+
+    log.addHandler(fl)
+    log.addHandler(fl_out)
+
+    print ("Test print statement.")
+
+    log.setLevel(logging.DEBUG)
+
+    log.info("Starting %s", ME)
+    # log.critical("Critical.")
+
+    # # Caught exception
+    # try:
+    #   raise Exception('Exception test.')
+    # except Exception as e:
+    #   log.exception(str(e))
+
+    # # Uncaught exception
+    # a=2/0
+
+
+PyExec('test_pyExec',None)
