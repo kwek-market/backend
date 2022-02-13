@@ -332,9 +332,9 @@ class PaymentVerification(graphene.Mutation):
             verify = verify_transaction(transaction_id)
             if verify["status"] == True:
                 Payment.objects.filter(ref=payment_ref).update(verified=True)
-                return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
+                return PaymentVerification(status=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
             else:
-                return PaymentVerification(staus=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
+                return PaymentVerification(status=verify["status"],message=verify["message"],transaction_info=verify["transaction_info"])
         except Exception as e:
             return PaymentVerification(status=verify["status"],message=e)
 
