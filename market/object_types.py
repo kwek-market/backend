@@ -102,4 +102,4 @@ class ProductPaginatedType(graphene.ObjectType):
     pages = graphene.Int()
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
-    objects = graphene.List(ProductType)
+    products = graphene.List(ProductType)
