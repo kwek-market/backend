@@ -29,7 +29,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     subcategories = graphene.List(CategoryType)
     least_subcategories = graphene.List(CategoryType)
     product = graphene.Field(ProductType, id=graphene.String(required=True))
-    products = graphene.Field(ProductPaginatedType, page=graphene.Int(), search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
+    products = graphene.Field(ProductPaginatedType, page=graphene.Int(),page_size=graphene.Int(), search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
     subcribers = DjangoListField(NewsletterType)
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
@@ -172,7 +172,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return product
     
-    def resolve_products(root, info, page, search=None, keyword=None, rating=None, clicks=None, sales=None):
+    def resolve_products(root, info, page, page_size=50, search=None, keyword=None, rating=None, clicks=None, sales=None):
         # if search or keyword or rating or clicks or sales:
         #     filtered_products = []
         if search:
@@ -186,7 +186,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 Q(short_description__icontains=search) |
                 Q(options__price__icontains=search)
             )
-            page_size = 50
             qs = Product.objects.filter(filter).distinct()
             return get_paginator(qs, page_size, page, ProductPaginatedType)
             products = Product.objects.filter(filter).distinct()
@@ -203,7 +202,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     products_included.append(product)
                 rate += 1
             
-            page_size = 50
             qs = products_included
             return get_paginator(qs, page_size, page, ProductPaginatedType)
 
@@ -214,7 +212,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
             products = Product.objects.filter(filter)
 
-            page_size = 50
             qs = products
             return get_paginator(qs, page_size, page, ProductPaginatedType)
             return products
@@ -224,7 +221,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             clicks = Product.objects.all()
             sort = sorted(clicks, key=attrgetter("clicks"), reverse=True)
             
-            page_size = 50
             qs = sort
             return get_paginator(qs, page_size, page, ProductPaginatedType)
         
@@ -232,12 +228,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             sales = Product.objects.all()
             sort = sorted(sales, key=attrgetter("sales"), reverse=True)
 
-            page_size = 50
             qs = sort
             return get_paginator(qs, page_size, page, ProductPaginatedType)
 
-
-        page_size = 50
         qs = Product.objects.all()
         return get_paginator(qs, page_size, page, ProductPaginatedType)
 
