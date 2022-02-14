@@ -40,6 +40,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     billing_addresses = DjangoListField(BillingType)
     user_billing_addresses = graphene.Field(BillingType, token=graphene.String(required=True))
     billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
+    deals_of_the_day = graphene.List(ProductType)
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
     orders = graphene.Field(OrderType, token=graphene.String(required=True))
@@ -148,7 +149,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             if user:
                 cart = Cart.objects.get(user=user)
                 if cart:
-                    cart_items=CartItem.objects.filter(cart=cart)
+                    cart_items=CartItem.objects.filter(cart=cart, ordered=False)
                 else:
                     cart_items=[]
                 return cart_items
@@ -240,6 +241,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page_size = 50
         qs = Product.objects.all()
         return get_paginator(qs, page_size, page, ProductPaginatedType)
+    
+    def resolve_deals_of_the_day(root, info):
+        return Product.objects.filter(promoted=True)
 
     def resolve_contact_us(root, info):
        return ContactMessage.objects.all().order_by('-sent_at')

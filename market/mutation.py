@@ -852,8 +852,9 @@ def unpromote():
     for product in all_products:
         if product.promoted:
             now = datetime.now()
-            if (product.promo.start_date + now) >= product.promo.end_date:
+            if (product.promo.start_date + now) > product.promo.end_date:
                 Product.objects.filter(id=product.id).update(promoted=False)
+                ProductPromotion.objects.filter(product=product).update(active=False)
     
 # trigger = CronTrigger(
 #     year="*", month="*", day="*", hour="8", minute="0", second="0"
