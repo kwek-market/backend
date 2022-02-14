@@ -79,7 +79,7 @@ class BillingAddressUpdate(graphene.Mutation):
     message = graphene.String()
     billing = graphene.Field(BillingType)
 
-    class Arugments:
+    class Arguments:
         address_id = graphene.String(required=True)
         full_name = graphene.String()
         contact = graphene.String()
