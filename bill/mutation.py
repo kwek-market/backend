@@ -79,7 +79,7 @@ class BillingAddressUpdate(graphene.Mutation):
     message = graphene.String()
     billing = graphene.Field(BillingType)
 
-    class Arugments:
+    class Arguments:
         address_id = graphene.String(required=True)
         full_name = graphene.String()
         contact = graphene.String()
@@ -257,18 +257,20 @@ class PaymentInitiate(graphene.Mutation):
     payment_link = graphene.String()
 
     class Arguments:
-        amount = graphene.Int(required=True)
+        amount = graphene.Float(required=True)
         token = graphene.String(required=True)
         description = graphene.String(required=True)
         currency = graphene.String()
         redirect_url = graphene.String(required=True)
     
     @staticmethod
-    def mutate(self, info, amount, token, description, redirect_url, currency=None):
+    def mutate(self, info, amount, token, description, redirect_url, currency="NGN"):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PaymentInitiate(status=auth["status"],message=auth["message"])
         else:
+            if not redirect_url or redirect_url == "":
+                return PaymentInitiate(status=False,message="redirect url cannot be empty")
             user = auth["user"]
             if user:
                 if amount:

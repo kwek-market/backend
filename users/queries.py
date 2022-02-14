@@ -42,7 +42,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
-    orders = graphene.Field(OrderType, token=graphene.String(required=True))
+    orders = graphene.List(OrderType, token=graphene.String(required=True))
     rating_sort = graphene.Field(ProductType)
     user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
     get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), this_month=graphene.Boolean(), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
