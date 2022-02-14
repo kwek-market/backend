@@ -495,6 +495,7 @@ class PlaceOrder(graphene.Mutation):
                                 email_send = SendEmailNotification(cart_item_seller.email)
                                 email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
                             CartItem.objects.filter(cart=cart).update(ordered=True)
+                            cart_items.delete()
                             return PlaceOrder(
                                 status=True,
                                 message="Order placed successfully",

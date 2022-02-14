@@ -7,6 +7,8 @@ from .models import (
     Keyword,
     ProductPromotion,
     Rating,
+    Cart,
+    CartItem
 )
 from django.apps import apps
 
@@ -17,4 +19,6 @@ admin.site.register(ProductOption)
 admin.site.register(Keyword)
 admin.site.register(ProductPromotion)
 admin.site.register(Rating)
+admin.site.register(Cart)
+admin.site.register(CartItem)
 # Register your models here.
