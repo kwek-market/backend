@@ -606,10 +606,9 @@ class CreateCartItem(graphene.Mutation):
             except Exception:
                 user_cart = Cart.objects.create(ip=ip_address)
 
-            has_product = Cart.objects.filter(ip=ip_address, cart_item__product=product, cart_item__product__options=option)
+            has_product = Cart.objects.filter(ip=ip_address, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
 
             if has_product:
-                
                 cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
                 initial_price = cart_item.price/cart_item.quantity
                 quantity = int(cart_item.quantity) + 1
