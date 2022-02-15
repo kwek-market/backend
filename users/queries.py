@@ -35,7 +35,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
-    cartitem = graphene.List(CartItemType,id=graphene.String(required=True))
+    cartitem = graphene.Field(CartItemType,id=graphene.String(required=True))
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))
@@ -170,7 +170,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return cart_items
 
     def resolve_cartitem(root, info, id):
-        item = CartItem.objects.filter(id=id)
+        item = CartItem.objects.get(id=id)
         return item
 
     def resolve_wishlists(root, info, token):
