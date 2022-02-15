@@ -151,18 +151,26 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             user = auth["user"]
             if user:
                 cart = Cart.objects.get(user=user)
-                if cart:
-                    cart_items=CartItem.objects.filter(cart=cart, ordered=False)
-                else:
+                try:
+                    if cart:
+                        cart_items=CartItem.objects.filter(cart=cart, ordered=False)
+                    else:
+                        cart_items=[]
+                except Exception as e:
                     cart_items=[]
+                
                 return cart_items
         elif ip is not None:
-            cart = Cart.objects.get(ip=ip)
-            cart_items = CartItem.objects.filter(cart=cart)
+            try:
+                cart = Cart.objects.get(ip=ip)
+                cart_items = CartItem.objects.filter(cart=cart)
+            except Exception as e:
+                cart_items=[]
+            
             return cart_items
 
     def resolve_cartitem(root, info, id):
-        item = CartItem.objects.get(id=id)
+        item = CartItem.objects.filter(id=id)
         return item
 
     def resolve_wishlists(root, info, token):
