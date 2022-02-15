@@ -1,3 +1,4 @@
+from typing_extensions import Required
 import graphene
 import uuid
 import random
@@ -34,6 +35,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
+    cartitem = graphene.List(CartItemType,id=graphene.String(required=True))
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     reviews = DjangoListField(RatingType)
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))
@@ -44,6 +46,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
     orders = graphene.List(OrderType, token=graphene.String(required=True))
+    order = graphene.Field(OrderType, token=graphene.String(required=True), id=graphene.String(required=True))
     rating_sort = graphene.Field(ProductType)
     user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
     get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), this_month=graphene.Boolean(), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
@@ -157,6 +160,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             cart = Cart.objects.get(ip=ip)
             cart_items = CartItem.objects.filter(cart=cart)
             return cart_items
+
+    def resolve_cartitem(root, info, id):
+        item = CartItem.objects.get(id=id)
+        return item
 
     def resolve_wishlists(root, info, token):
         auth = authenticate_user(token)
@@ -295,7 +302,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         user_orders = Order.objects.filter(user=user)
 
-        return user_orders
+        return user_orders    
+        
+    def resolve_order(root, info, token, id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        user_order = Order.objects.get(user=user, id=id)
+        return user_order
     
     def resolve_user_notifications(root, info, token):
         auth = authenticate_user(token)
