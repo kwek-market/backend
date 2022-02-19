@@ -520,9 +520,9 @@ class TrackOrder(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, order_id):
-        if Order.objects.filter(id=order_id):
+        if Order.objects.filter(order_id=order_id):
             try:
-                order = Order.objects.get(id=order_id)
+                order = Order.objects.get(order_id=order_id)
                 order_progress = OrderProgress.objects.get(order=order)
 
                 return TrackOrder(
