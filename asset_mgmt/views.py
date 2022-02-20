@@ -9,6 +9,8 @@ from django.http import (
     HttpResponse,
     HttpResponseNotModified,
 )
+from django.contrib.auth import get_user_model
+import uuid
 
 import mimetypes
 from PIL import Image
@@ -18,7 +20,13 @@ from django.utils._os import safe_join
 from pathlib import Path
 from kwek.vendor_array import data
 from market.models import (
-    Category, Product, ProductImage, ProductOption, Keyword, ProductPromotion, Rating
+    Category,
+    Product,
+    ProductImage,
+    ProductOption,
+    Keyword,
+    ProductPromotion,
+    Rating,
 )
 from users.models import ExtendUser, SellerProfile
 import posixpath
@@ -29,7 +37,7 @@ import random
 # Create your views here.
 with open("asset_mgmt/kwek.json", "r") as file:
     products = json.load(file)
-    
+
 allowed_imgs = ["jpg", "png", "jpeg", "svg"]
 allowed_files = ["pdf", "docx"]
 
@@ -51,6 +59,7 @@ class FileAssetView(View):
             resp[i.name] = file_url
         return JsonResponse(resp)
 
+
 class PopulateCategory(View):
     def get(self, request):
         for array in data:
@@ -60,18 +69,16 @@ class PopulateCategory(View):
                 Category.objects.create(name=array[0])
             count = 1
             while count < len(array):
-                parent = Category.objects.get(name=array[count-1])
+                parent = Category.objects.get(name=array[count - 1])
                 if Category.objects.filter(name=array[count]).exists():
                     pass
                 else:
                     Category.objects.create(name=array[count], parent=parent)
                 count += 1
         return JsonResponse(
-            {
-            "status": True,
-            "message":"Categories and Subcategories populated"
-        }
+            {"status": True, "message": "Categories and Subcategories populated"}
         )
+
 
 class ImageAssetView(View):
     def post(self, request, *args, **kwargs):
@@ -156,7 +163,7 @@ class PopulateProduct(View):
                     return_policy=product["returnPolicy"],
                     short_description=product["shortDescription"],
                     warranty=product["warranty"],
-                    color=product["color"]
+                    color=product["color"],
                 )
                 for option in product["productOptions"]:
                     ProductOption.objects.create(
@@ -164,39 +171,48 @@ class PopulateProduct(View):
                         size=option["size"],
                         quantity=option["quantity"],
                         price=option["price"],
-                        discounted_price=option["discountedPrice"]
+                        discounted_price=option["discountedPrice"],
+                    )
+
+                if len(product["productOptions"]) < 1:
+                    ProductOption.objects.create(
+                        product=created_product,
+                        size=12,
+                        quantity=20,
+                        price=34,
+                        discounted_price=30,
                     )
                 ProductImage.objects.create(
                     product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
                 )
                 ProductImage.objects.create(
                     product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
                 )
                 ProductImage.objects.create(
                     product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
                 )
                 ProductImage.objects.create(
                     product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
                 )
                 ProductImage.objects.create(
                     product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier"
+                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
                 )
 
                 rates = [1, 2, 3, 4, 5]
                 user_to_review = ExtendUser.objects.all()
 
                 Rating.objects.create(
-                    product = created_product,
-                    rating = random.choice(rates),
-                    review = "This is a very good product",
-                    user = random.choice(user_to_review),
-                    likes = random.choice(range(1, 41)),
-                    dislikes = random.choice(range(1, 21))    
+                    product=created_product,
+                    rating=random.choice(rates),
+                    review="This is a very good product",
+                    user=random.choice(user_to_review),
+                    likes=random.choice(range(1, 41)),
+                    dislikes=random.choice(range(1, 21)),
                 )
         half_products = Product.objects.all().count() / 2
         i = 0
@@ -206,50 +222,52 @@ class PopulateProduct(View):
                 pass
             else:
                 ProductPromotion.objects.create(
-                    product = product_to_promote,
-                    days = random.choice(range(1, 5)),
-                    amount = random.choice(range(1000, 5000)),
-                    start_date = timezone.now()
+                    product=product_to_promote,
+                    days=random.choice(range(1, 5)),
+                    amount=random.choice(range(1000, 5000)),
+                    start_date=timezone.now(),
                 )
 
                 i += 1
-        return JsonResponse( {
-            "status": True,
-            "message":"Products populated"
-        }
-        )
+        return JsonResponse({"status": True, "message": "Products populated"})
+
 
 class PopulateSellers(View):
-    def post(self, request):
+    def get(self, request):
         for i in range(5):
-            user = ExtendUser.objects.create(
-                email=f"admin{i}@kwek.com",
+            uuD = uuid.uuid4()
+            user = get_user_model()(
+                username=f"admin{uuD}@kwek.com",
+                email=f"admin{uuD}@kwek.com",
                 full_name=f"Kwek{i} Admin{i}",
                 phone_number=f"{i}{i+1}{i+2}{i+3}{i+4}{i+5}",
                 is_verified=True,
-                is_seller=True
+                is_seller=True,
             )
-            SellerProfile.objects.create(
+            user.set_password("password")
+            user.save()
+            seller = SellerProfile(
                 user=user,
-                first_name=f"Kwek{i}",
-                last_name=f"Admin{1}",
+                firstname=f"Kwek{i}",
+                lastname=f"Admin{i}",
                 phone_number=f"{i}{i+1}{i+2}{i+3}{i+4}{i+5}",
-                shop_name = f"Kwekadmin{i} market",
-                shop_url=f"/kwekadmin{i}",
-                shop_address=f"@kwekmarket{i}",
+                shop_name=f"Kwekadmin{i}_market",
+                shop_url=f"kwekmarket.com/kwekadmin{i}",
+                shop_address="Lagos",
                 state="Lagos",
-                city="Lagos",
-                lga="Unknown",
-                landmark="kwekmarket",
-                how_you_heard_about_us="Kwekofficial",
+                lga="lga",
                 accepted_policy=True,
                 store_banner_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
+                accepted_vendor_policy=True,
+                prefered_id="id",
+                prefered_id_url="population.id.url",
+                bvn="57587680000",
+                bank_name="access",
+                bank_sort_code="00445",
+                bank_account_number="0076654356",
+                bank_account_name="Account Name",
                 seller_is_verified=True,
-                accepted_vendor_policy=True
             )
-        
-        return JsonResponse(
-            status=True,
-            message="Sellers created successfully"
-        )
+
+        return JsonResponse(data="Sellers created successfully",safe=False)
         pass
