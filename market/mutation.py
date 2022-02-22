@@ -293,7 +293,7 @@ class Reviews(graphene.Mutation):
 
     class Arguments:
         product_id = graphene.String()
-        comment = graphene.String()
+        # comment = graphene.String()
         review_id = graphene.String()
         review = graphene.String()
         rating = graphene.Int()

@@ -37,7 +37,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
     cartitem = graphene.Field(CartItemType,id=graphene.String(required=True))
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
-    reviews = DjangoListField(RatingType)
+    reviews = DjangoListField(RatingType, product_id=graphene.String(required=False))
     review = graphene.Field(RatingType, review_id=graphene.String(required=True))
     billing_addresses = DjangoListField(BillingType)
     user_billing_addresses = graphene.Field(BillingType, token=graphene.String(required=True))
@@ -258,8 +258,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     
     def resolve_review(root, info, review_id):
         review = Rating.objects.get(id=review_id)
+
+    def resolve_reviews(root, info, product_id=None):
+        if product_id:
+            product = Product.objects.get(id=product_id)
+            reviews = Rating.objects.filter(product=product)
+        else:
+            reviews = Rating.objects.all().order_by('rated_at')
         
-        return review
+        return reviews
     def resolve_get_seller_review(root, info, token):
         auth = authenticate_user(token)
         if not auth["status"]:
