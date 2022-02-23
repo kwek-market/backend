@@ -365,9 +365,6 @@ class PlaceOrder(graphene.Mutation):
             cart = Cart.objects.get(id=cart_id)
             cart_owner = cart.user
             cart_items = CartItem.objects.filter(cart=cart)
-            cart_items_id =[]
-            for item in cart_items:
-                cart_items_id.append(item.id)
             if delivery_method == "door step":
                 shipping_address = Billing.objects.get(id=address_id)
             elif delivery_method == "pickup":
@@ -406,11 +403,11 @@ class PlaceOrder(graphene.Mutation):
                                     if CouponUser.objects.get(coupon=coupon, user=user).exists():
                                         order = Order.objects.create(
                                             user=user,
-                                            cart_items=cart_items_id,
                                             payment_method=payment_method,
                                             delivery_method=delivery_method,
                                             coupon = coupon_ids
                                         )
+                                        order.cart_items.add(*cart_items)
                                     else:
                                         return ApplyCoupon(
                                             status = False,
@@ -419,10 +416,10 @@ class PlaceOrder(graphene.Mutation):
                             else:
                                 order = Order.objects.create(
                                     user=user,
-                                    cart_items=cart_items_id,
                                     payment_method=payment_method,
                                     delivery_method=delivery_method
                                 )
+                                order.cart_items.add(*cart_items)
                             
                             if delivery_method == "door step":
                                 Order.objects.filter(id=order.id).update(

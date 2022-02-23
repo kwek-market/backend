@@ -15,7 +15,7 @@ from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
 from wallet.object_types import InvoiceType, StoreDetailType, WalletTransactionType, WalletType
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
-from users.models import SellerCustomer, SellerProfile
+from users.models import SellerCustomer,ExtendUser, SellerProfile
 from users.validate import authenticate_user
 from django.db.models import Q
 from bill.object_types import *
@@ -52,7 +52,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), this_month=graphene.Boolean(), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
     get_seller_review = graphene.List(RatingType, token=graphene.String(required=True))
     get_seller_promoted_products = graphene.List(ProductType, token=graphene.String(required=True))
-    get_seller_orders = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
+    get_seller_orders = graphene.List(GetSellerOrdersType,token=graphene.String(required=True), this_month=graphene.Boolean())
     get_seller_store_detail = graphene.List(StoreDetailType, token=graphene.String(required=True))
     get_seller_invoices = graphene.List(InvoiceType, token=graphene.String(required=True))
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
@@ -444,16 +444,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            all_orders = 0
-            successful_orders = 0
-            orders = Order.objects.all()
-            for order in orders:
-                for id in order.cart_items:
-                    item = CartItem.objects.get(id=id)
-                    if item.product.user == user:
-                        all_orders += 1
-                        if order.delivery_status == "delivered":
-                            successful_orders += 1
+            orders = Order.objects.filter(cart_items__product__user = user)
+            delivered_orders = Order.objects.filter(cart_items__product__user = user,delivery_status='delivered')
+            all_orders, successful_orders = orders.count(),delivered_orders.count()
             if all_orders > 0 and successful_orders > 0:
                 delivery_rate_percent = (successful_orders/all_orders) * 100
             else:
@@ -538,31 +531,26 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return len(customer_id)
         else:
             raise GraphQLError("Not a seller")
-    
+
     def resolve_get_seller_orders(root, info, token):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
-        user = auth["user"]
-        orders = Order.objects.all()
-        seller_orders = {}
+        user,seller_orders = auth["user"], []
         charge = SellerProfile.objects.get(user=user).kwek_charges
-        for order in orders:
-            cart_items = order.cart_items
-            for id in cart_items:
-                id = uuid.UUID(id)
-                item = CartItem.objects.get(id=id)
-                if item.product.user == user:
-                    seller_orders[order.order_id] = {
-                            "created": str(order.date_created),
-                            "customer_id": str(order.user.id),
-                            "total": int(item.price),
-                            "profit": int(item.price) - (int(item.price) * charge),
-                            "paid": order.paid,
-                            "status": order.progress.progress
-                        }
-
+        orders = Order.objects.filter(cart_items__product__user = user)
+        orders_values = orders.values('order_id', 'date_created','user__id', 'paid','cart_items__price','progress__progress')
+        for i in orders_values: seller_orders.append(GetSellerOrdersType(
+                                                order = Order.objects.get(order_id=i['order_id']),
+                                                created = str(i['date_created']),
+                                                customer = ExtendUser.objects.get(id=i['user__id']),
+                                                total = int(i['cart_items__price']),
+                                                profit =  int(i['cart_items__price']) - (int(i['cart_items__price']) * charge),
+                                                paid =  i['paid'],
+                                                status = i['cart_items__price'],
+                                            ))
         return seller_orders
+
     
     def resolve_get_seller_revenue_chart_data(root, info, token):
         auth = authenticate_user(token)

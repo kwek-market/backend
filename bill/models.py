@@ -158,7 +158,7 @@ class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE)
     order_id = models.CharField(max_length=30)
-    cart_items = ArrayField(models.CharField(max_length=225), default=None)
+    cart_items = models.ManyToManyField(CartItem,related_name='order_cart_items')
     payment_method = models.CharField(max_length=30)
     delivery_method = models.CharField(max_length=30)
     delivery_status = models.CharField(max_length=30, default="Order in progress")
@@ -172,10 +172,6 @@ class Order(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        for id in self.cart_items:
-            item = CartItem.objects.get(id=id)
-            self.order_price += int(item.price)
-        
         total_coupon_price = 0
 
         if self.coupon:

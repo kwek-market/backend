@@ -3,6 +3,7 @@ from graphene_django import DjangoObjectType
 
 from bill.models import Order
 from .models import *
+from users.model_object_type import UserType
 
 
 class CategoryType(DjangoObjectType):
@@ -103,3 +104,12 @@ class ProductPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(ProductType)
+
+class GetSellerOrdersType(graphene.ObjectType):
+    order = graphene.Field(OrderType)
+    created = graphene.String()
+    customer = graphene.Field(UserType)
+    total = graphene.Int()
+    profit = graphene.Int()
+    paid = graphene.Boolean()
+    status = graphene.String()
