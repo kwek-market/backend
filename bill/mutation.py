@@ -41,6 +41,7 @@ class BillingAddress(graphene.Mutation):
     def mutate(self, root, full_name, contact, address, state, city, token=None):
         billing_address = Billing.objects.filter(full_name=full_name, contact=contact, address=address, state=state, city=city)
         if billing_address.exists():
+            billing_address = Billing.objects.get(full_name=full_name, contact=contact, address=address, state=state, city=city)
             return BillingAddress(billing_address=billing_address, status=True, message="Address added")
         else:
             if token is None:

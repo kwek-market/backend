@@ -12,6 +12,7 @@ from .object_types import *
 from .pusher import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from django.utils import timezone
 
 
 from .post_offices import post_offices
@@ -574,10 +575,10 @@ class CreateCartItem(graphene.Mutation):
                 except Exception:
                     user_cart = Cart.objects.create(user=user)
                 
-                has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option)
+                has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
 
                 if has_product:
-                    cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option)
+                    cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option, ordered=False)
                     initial_price = cart_item.price/cart_item.quantity
                     quantity = int(cart_item.quantity) + 1
                     price = int(cart_item.price) + initial_price
@@ -847,13 +848,14 @@ class PromoteProduct(graphene.Mutation):
 
 def unpromote():
     from datetime import timedelta, datetime
-    all_products = Product.objects.all()
+    # now = datetime.now()
+    now = timezone.now()
+    all_products = Product.objects.filter(promoted=True, promo__end_date__lte = now)
     for product in all_products:
-        if product.promoted:
-            now = datetime.now()
-            if (product.promo.start_date + now) > product.promo.end_date:
+            # if (product.promo.start_date + now) > product.promo.end_date:
                 Product.objects.filter(id=product.id).update(promoted=False)
                 ProductPromotion.objects.filter(product=product).update(active=False)
+    
     
 # trigger = CronTrigger(
 #     year="*", month="*", day="*", hour="8", minute="0", second="0"

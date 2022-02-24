@@ -151,6 +151,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             user = auth["user"]
             if user:
                 cart = Cart.objects.get(user=user)
+                print(cart)
                 try:
                     if cart:
                         cart_items=CartItem.objects.filter(cart=cart, ordered=False)
