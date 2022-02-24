@@ -103,17 +103,26 @@ WSGI_APPLICATION = "kwek.wsgi.application"
 #     }
 # }
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": config("DATABASE"),
+#         "USER": config("USER_NAME"),
+#         "PASSWORD": config("PASSWORD"),
+#         "HOST": config("HOST"),
+#         "PORT": config("PORT"),
+#     }
+# }
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DATABASE"),
-        "USER": config("USER_NAME"),
-        "PASSWORD": config("PASSWORD"),
-        "HOST": config("HOST"),
-        "PORT": config("PORT"),
+        "NAME": "d32s70iousao4l",
+        "USER": "jvtkaahtroqcbg",
+        "PASSWORD": "476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa",
+        "HOST": "ec2-50-19-32-96.compute-1.amazonaws.com",
+        "PORT": 5432,
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
