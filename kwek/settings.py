@@ -113,18 +113,19 @@ WSGI_APPLICATION = "kwek.wsgi.application"
 #         "PORT": config("PORT"),
 #     }
 # }
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": "d32s70iousao4l",
-#         "USER": "jvtkaahtroqcbg",
-#         "PASSWORD": "476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa",
-#         "HOST": "50.19.32.96",
-#         "PORT": 5432,
-#     }
-# }
-import dj_database_url
-DATABASES = {"default":dj_database_url.parse('postgres://jvtkaahtroqcbg:476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa@ec2-50-19-32-96.compute-1.amazonaws.com:5432/d32s70iousao4l', conn_max_age=600)}
+DATABASES = {
+    "default": {
+        # "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": "d32s70iousao4l",
+        "USER": "jvtkaahtroqcbg",
+        "PASSWORD": "476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa",
+        "HOST": "ec2-50-19-32-96.compute-1.amazonaws.com",
+        "PORT": 5432,
+    }
+}
+# import dj_database_url
+# DATABASES = {"default":dj_database_url.parse('postgres://jvtkaahtroqcbg:476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa@ec2-50-19-32-96.compute-1.amazonaws.com:5432/d32s70iousao4l', conn_max_age=600)}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
