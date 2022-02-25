@@ -119,7 +119,7 @@ DATABASES = {
         "NAME": "d32s70iousao4l",
         "USER": "jvtkaahtroqcbg",
         "PASSWORD": "476b802ed25ea70a1be17da685811594d6aac0fb986b637e3c760c32c0a899fa",
-        "HOST": "ec2-50-19-32-96.compute-1.amazonaws.com",
+        "HOST": "50.19.32.96",
         "PORT": 5432,
     }
 }
