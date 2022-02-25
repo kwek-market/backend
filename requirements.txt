@@ -36,3 +36,4 @@ channels==3.0.4
 pusher==3.1.0
 channels-redis==3.3.1
 APScheduler==3.8.1
+dj-database-url==0.5.0
