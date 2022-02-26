@@ -155,17 +155,25 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = "/static/"
-MEDIA_URL = "/asset/"
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-STATICFILES_DIRS = [BASE_DIR, "static"]
+# STATIC_URL = "/static/"
+# MEDIA_URL = "/asset/"
+
+# STATICFILES_DIRS = [BASE_DIR, "static"]
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 # STATIC_ROOT = "/home/kwekxbyu/kwekapi.com/static/"
 # if DEBUG:
 #     MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
 # else:
 #     MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
 
+# ?/////////////////////////////Heroku
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_ROOT  = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+# ?/////////////////////////////Heroku
 
 
 AUTH_USER_MODEL = "users.ExtendUser"
