@@ -2,6 +2,7 @@
 
 import os
 from .general_settings import *
+import django_heroku
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
@@ -26,4 +27,5 @@ MEDIA_ROOT  = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 # ?/////////////////////////////Heroku
 
+django_heroku.settings(locals())
 

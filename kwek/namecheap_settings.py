@@ -1,6 +1,5 @@
 
 import os
-import django_heroku
 from .general_settings import *
 
 STATIC_URL = "/static/"
@@ -15,5 +14,4 @@ if DEBUG:
 else:
     MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
 
-django_heroku.settings(locals())
 
