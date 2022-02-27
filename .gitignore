@@ -7,6 +7,7 @@ Kwek.zip
 ssh.txt
 #docker files
 nginx/
+_ignored/
 docker-compose.yml
 Dockerfile
 entrypoint.sh

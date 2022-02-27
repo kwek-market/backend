@@ -14,6 +14,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from decouple import config
+import django_heroku
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -114,6 +116,8 @@ DATABASES = {
     }
 }
 
+# import dj_database_url
+# DATABASES = {"default":dj_database_url.parse('postgres://...', conn_max_age=600)}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -151,16 +155,25 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = "/static/"
-MEDIA_URL = "/asset/"
+# STATIC_URL = "/static/"
+# MEDIA_URL = "/asset/"
+
+# STATICFILES_DIRS = [BASE_DIR, "static"]
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-STATICFILES_DIRS = [BASE_DIR, "static"]
-STATIC_ROOT = "/home/kwekxbyu/kwekapi.com/static/"
-if DEBUG:
-    MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
-else:
-    MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
+# STATIC_ROOT = "/home/kwekxbyu/kwekapi.com/static/"
+# if DEBUG:
+#     MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
+# else:
+#     MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
+
+# ?/////////////////////////////Heroku
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_ROOT  = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+# ?/////////////////////////////Heroku
 
 
 AUTH_USER_MODEL = "users.ExtendUser"
@@ -245,25 +258,5 @@ CORS_ALLOW_HEADERS = [
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
 
-# import sys
+django_heroku.settings(locals())
 
-# class Logger(object):
-#     def __init__(self):
-#         self.console = sys.stderr
-#         self.file = open("runserver.log", "a")
-
-#     def write(self, msg):
-#         self.console.write(msg)
-#         self.file.write(msg)
-
-# sys.stderr = Logger()
-# class OutLogger(object):
-#     def __init__(self):
-#         self.console = sys.stdout
-#         self.file = open("runserver.log", "a")
-
-#     def write(self, msg):
-#         self.console.write(msg)
-#         self.file.write(msg)
-
-# sys.stdout = OutLogger()
