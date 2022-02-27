@@ -16,7 +16,7 @@ prod.env
 yyyy
 # C extensions
 *.so
-# migrations
+migrations
 # Distribution / packaging
 .Python
 build/
