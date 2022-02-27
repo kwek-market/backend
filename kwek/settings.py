@@ -1,9 +1,5 @@
 import imp
-from pathlib import Path
-import os
-from dotenv import load_dotenv
 from decouple import config
-import django_heroku
 
 
 stage = config("stage")
