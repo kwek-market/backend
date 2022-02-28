@@ -23,32 +23,14 @@ from operator import attrgetter
 
 
 class Query(UserQuery, MeQuery, graphene.ObjectType):
-    user_data = graphene.Field(UserType, token=graphene.String())
-    seller_data = graphene.Field(SellerProfileType, token=graphene.String())
+    billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
+    billing_addresses = DjangoListField(BillingType)
     categories = graphene.List(CategoryType)
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
-    subcategories = graphene.List(CategoryType)
-    least_subcategories = graphene.List(CategoryType)
-    product = graphene.Field(ProductType, id=graphene.String(required=True))
-    products = graphene.Field(ProductPaginatedType, page=graphene.Int(),page_size=graphene.Int(), search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
-    subcribers = DjangoListField(NewsletterType)
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
-    user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
     cartitem = graphene.Field(CartItemType,id=graphene.String(required=True))
-    wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
-    reviews = DjangoListField(RatingType, product_id=graphene.String(required=False))
-    review = graphene.Field(RatingType, review_id=graphene.String(required=True))
-    billing_addresses = DjangoListField(BillingType)
-    user_billing_addresses = graphene.Field(BillingType, token=graphene.String(required=True))
-    billing_address = graphene.Field(PickupType, address_id=graphene.String(required=True))
     deals_of_the_day = graphene.List(ProductType)
-    pickup_locations = DjangoListField(PickupType)
-    pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
-    orders = graphene.List(OrderType, token=graphene.String(required=True))
-    order = graphene.Field(OrderType, token=graphene.String(required=True), id=graphene.String(required=True))
-    rating_sort = graphene.Field(ProductType)
-    user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
     get_seller_products = graphene.List(ProductType, token=graphene.String(required=True), this_month=graphene.Boolean(), rating=graphene.Boolean(), price=graphene.String(), popular=graphene.Boolean(), recent=graphene.Boolean())
     get_seller_review = graphene.List(RatingType, token=graphene.String(required=True))
     get_seller_promoted_products = graphene.List(ProductType, token=graphene.String(required=True))
@@ -68,6 +50,57 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_customers = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
     get_seller_sales_earnings = graphene.JSONString(token=graphene.String(required=True), this_month=graphene.Boolean())
     get_seller_revenue_chart_data = graphene.JSONString(token=graphene.String(required=True))
+    least_subcategories = graphene.List(CategoryType)
+    orders = graphene.List(OrderType, token=graphene.String(required=True))
+    order = graphene.Field(OrderType, token=graphene.String(required=True), id=graphene.String(required=True))
+    pickup_locations = DjangoListField(PickupType)
+    pickup_location = graphene.Field(PickupType, location_id=graphene.String(required=True))
+    product = graphene.Field(ProductType, id=graphene.String(required=True))
+    products = graphene.Field(ProductPaginatedType, page=graphene.Int(),page_size=graphene.Int(), search=graphene.String(), rating=graphene.Int(), keyword=graphene.List(graphene.String), clicks=graphene.String(), sales=graphene.String())
+    rating_sort = graphene.Field(ProductType)
+    reviews = DjangoListField(RatingType, product_id=graphene.String(required=False))
+    review = graphene.Field(RatingType, review_id=graphene.String(required=True))
+    seller_data = graphene.Field(SellerProfileType, token=graphene.String())
+    subcategories = graphene.List(CategoryType)
+    subcribers = DjangoListField(NewsletterType)
+    user_data = graphene.Field(UserType, token=graphene.String())
+    user_cart = graphene.List(CartItemType, token=graphene.String(), ip=graphene.String())
+    user_billing_addresses = graphene.Field(BillingType, token=graphene.String(required=True))
+    user_notifications = graphene.List(MessageType, token=graphene.String(required=True))
+    wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
+
+    def resolve_billing_address(root, info, address_id):
+        billing_address = Billing.objects.get(id=address_id)
+        return billing_address
+
+
+    def resolve_user_billing_addresses(root, info, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        billing_addresses = []
+        for address in Billing.objects.all():
+            if address.user == user:
+                billing_addresses.append(address)
+        return billing_addresses
+
+    def resolve_categories(root, info):
+        cat_list=Category.objects.filter(parent=None)
+        return cat_list
+
+    def resolve_category(root, info, id):
+        return Category.objects.get(id=id)
+
+    def resolve_contact_us(root, info):
+       return ContactMessage.objects.all().order_by('-sent_at')
+
+    def resolve_cartitem(root, info, id):
+        item = CartItem.objects.get(id=id)
+        return item
+
+    def resolve_deals_of_the_day(root, info):
+        return Product.objects.filter(promoted=True)
 
     def resolve_user_data(root, info, token):
         auth = authenticate_user(token)
@@ -169,9 +202,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             
             return cart_items
 
-    def resolve_cartitem(root, info, id):
-        item = CartItem.objects.get(id=id)
-        return item
 
     def resolve_wishlists(root, info, token):
         auth = authenticate_user(token)
@@ -250,11 +280,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         qs = Product.objects.all()
         return get_paginator(qs, page_size, page, ProductPaginatedType)
     
-    def resolve_deals_of_the_day(root, info):
-        return Product.objects.filter(promoted=True)
 
-    def resolve_contact_us(root, info):
-       return ContactMessage.objects.all().order_by('-sent_at')
     
     def resolve_review(root, info, review_id):
         review = Rating.objects.get(id=review_id)
@@ -289,21 +315,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    
-    def resolve_billing_address(root, info, address_id):
-        billing_address = Billing.objects.get(id=address_id)
-
-        return billing_address
-    def resolve_user_billing_addresses(root, info, token):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            raise GraphQLError(auth["message"])
-        user = auth["user"]
-        billing_addresses = []
-        for address in Billing.objects.all():
-            if address.user == user:
-                billing_addresses.append(address)
-        return billing_addresses
 
     def resolve_pickup_location(root, info, location_id):
         location = Pickup.objects.get(id=location_id)
