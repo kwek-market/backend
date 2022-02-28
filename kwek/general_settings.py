@@ -174,7 +174,7 @@ REGISTER_MUTATION_FIELDS = {
     "full_name": "String",
 }
 
-
+EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = "support@kwekmarket.com"
 PHPWEB = "kwekmailapiphpmailsystem"
