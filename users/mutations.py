@@ -40,7 +40,8 @@ from bill.mutation import (
     TrackOrder,
     UnapplyCoupon,
     UpdateDeliverystatus,
-    UpdateOrderProgress
+    UpdateOrderProgress,
+    PromoteProduct
 )
 from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
 
@@ -91,6 +92,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     store_banner = StoreBanner.Field()
     track_order = TrackOrder.Field()
     update_order_progress = UpdateOrderProgress.Field()
+    promote_product = PromoteProduct.Field()
     update_delivery_status = UpdateDeliverystatus.Field()
     cancel_order = CancelOrder.Field()
     read_notification = ReadNotification.Field()
