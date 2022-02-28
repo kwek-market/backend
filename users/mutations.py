@@ -40,8 +40,7 @@ from bill.mutation import (
     TrackOrder,
     UnapplyCoupon,
     UpdateDeliverystatus,
-    UpdateOrderProgress,
-    PromoteProduct
+    UpdateOrderProgress
 )
 from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
 
