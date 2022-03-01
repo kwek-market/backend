@@ -1,3 +1,4 @@
+import this
 from typing_extensions import Required
 import graphene
 import uuid
@@ -424,11 +425,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             if this_month:
-                this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
-                return this_month["amount__sum"]       
+                # this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).aggregate(Sum("amount"))
+                # return this_month["amount__sum"]   
+                this_month = Sales.objects.filter(date__month=datetime.now().month, date__year=datetime.now().year, product__user=user).count() 
+                return this_month   
             else:
-                sales = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
-                return sales["amount__sum"]
+                # sales = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
+                # return sales["amount__sum"]
+                sales = Sales.objects.filter(product__user=user).count()
+                return sales
         else:
             raise GraphQLError("Not a seller")
     
