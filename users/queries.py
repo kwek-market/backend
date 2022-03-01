@@ -42,7 +42,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
     get_seller_wallet_transactions = graphene.List(WalletTransactionType, token=graphene.String(required=True))
     # locations = graphene.List()
-    get_seller_successful_sales = graphene.List(SalesType, token=graphene.String(required=True))
+    get_seller_successful_sales = graphene.JSONString(token=graphene.String(required=True))
     get_seller_product_quality = graphene.JSONString(token=graphene.String(required=True))
     get_seller_delivery_rate = graphene.JSONString(token=graphene.String(required=True))
     get_seller_days_selling = graphene.JSONString(token=graphene.String(required=True))
