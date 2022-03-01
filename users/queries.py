@@ -37,6 +37,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_orders = graphene.List(GetSellerOrdersType,token=graphene.String(required=True), this_month=graphene.Boolean())
     get_seller_store_detail = graphene.List(StoreDetailType, token=graphene.String(required=True))
     get_seller_invoices = graphene.List(InvoiceType, token=graphene.String(required=True))
+    get_seller_invoice = graphene.Field(InvoiceType,invoice_id=graphene.String(required=True), token=graphene.String(required=True))
     get_seller_wallet = graphene.List(WalletType, token=graphene.String(required=True))
     get_seller_wallet_transactions = graphene.List(WalletTransactionType, token=graphene.String(required=True))
     # locations = graphene.List()
@@ -375,6 +376,22 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
     
+    def resolve_get_seller_invoice(root, info,invoice_id, token):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_seller:
+            if StoreDetail.objects.filter(user=user).exists():
+                store = StoreDetail.objects.get(user=user)
+                invoice = Invoice.objects.get(store=store,id=invoice_id)
+                return invoice
+            else:
+                raise GraphQLError("Store details invalid")
+
+        else:
+            raise GraphQLError("Not a seller")
+    
     def resolve_get_seller_wallet(root, info, token):
         auth = authenticate_user(token)
         if not auth["status"]:
@@ -426,8 +443,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             else:
                 sales_earnings = Sales.objects.filter(product__user=user).aggregate(Sum("amount"))
             if sales_earnings["amount__sum"]:
+                print("amount", sales_earnings)
                 kwek_charges = sales_earnings["amount__sum"] * SellerProfile.objects.get(user=user).kwek_charges
-                return sales_earnings - kwek_charges
+                return sales_earnings["amount__sum"] - kwek_charges
             else:
                 return 0
         else:
