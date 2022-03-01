@@ -832,6 +832,8 @@ class PromoteProduct(graphene.Mutation):
                             amount=amount,
                             start_date = timezone.now()
                         )
+                        product.promoted = True
+                        product.save()
                         return PromoteProduct(
                             status=True,
                             message="Product promoted",
