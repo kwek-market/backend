@@ -346,7 +346,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         notification = Notification.objects.get(user=user)
-        messages = Message.objects.filter(notification=notification)
+        messages = Message.objects.filter(notification=notification).order_by('created_at')
 
         return messages
 
