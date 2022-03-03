@@ -104,6 +104,12 @@ class ProductPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(ProductType)
+class RatingPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(RatingType)
 
 class GetSellerOrdersType(graphene.ObjectType):
     order = graphene.Field(OrderType)
