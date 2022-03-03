@@ -29,7 +29,9 @@ class ReadNotification(graphene.Mutation):
             notification = Notification.objects.get(id=notification_id)
             if Message.objects.filter(id=message_id, notification=notification):
                 try:
-                    Message.objects.filter(id=message_id).update(read=True)
+                    message = Message.objects.get(id=message_id)
+                    message.read=True
+                    message.save()
                     return ReadNotification(
                         status=True,
                         message="Read Message"

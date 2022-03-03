@@ -3,6 +3,7 @@ import graphene
 from django.contrib.auth import authenticate
 from bill.models import Payment
 from market.pusher import SendEmailNotification, push_to_client
+import json, ast
 
 from notifications.models import Message, Notification
 
@@ -89,17 +90,20 @@ class CreateInvoice(graphene.Mutation):
                     note=note
                 )
 
-                for items in purchased_item:
-                    item = eval(items)
-                    PurchasedItem.objects.create(
-                        invoice=invoice,
-                        item=item["item"],
-                        description=item["description"],
-                        quantity=item["quantity"],
-                        unit_cost=item["unit_cost"],
-                        total=item["total"],
-                    )
-                
+                for item_string in purchased_item:
+                    try:
+                        json_acceptable_string = item_string.replace("'", "\"")
+                        item = json.loads(json_acceptable_string)
+                        PurchasedItem.objects.create(
+                            invoice=invoice,
+                            item=item["item"],
+                            description=item["description"],
+                            quantity=item["quantity"],
+                            unit_cost=item["unit_cost"],
+                            total=item["total"],
+                        )
+                    except Exception as e:
+                        return CreateInvoice(status=False,message=e)
                 return CreateInvoice(
                     invoice=invoice,
                     status=True,
