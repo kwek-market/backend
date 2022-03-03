@@ -51,7 +51,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         popular=graphene.Boolean(),
         recent=graphene.Boolean(),
     )
-    get_seller_review = graphene.List(RatingPaginatedType, page=graphene.Int(), page_size=graphene.Int(), token=graphene.String(required=True))
+    get_seller_review = graphene.Field(RatingPaginatedType, page=graphene.Int(), page_size=graphene.Int(), token=graphene.String(required=True))
     get_seller_promoted_products = graphene.List(
         ProductType, token=graphene.String(required=True)
     )
