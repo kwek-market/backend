@@ -815,10 +815,11 @@ class PromoteProduct(graphene.Mutation):
             if product.user == user:
                 seller_wallet = Wallet.objects.get(owner=user)
                 if seller_wallet.balance < amount:
-                    return {
-                        "status": False,
-                        "message": "Insufficient balance"
-                    }
+                    return PromoteProduct(
+                            status=False,
+                            message="Insufficient balance",
+                            product=product
+                        )
                 if product.promoted:
                     try:
                         from datetime import timedelta
