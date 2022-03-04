@@ -2,7 +2,7 @@ import this
 from typing_extensions import Required
 import graphene
 import uuid
-import random
+import random, math
 from graphene_django import DjangoListField
 from graphql_auth.schema import UserQuery, MeQuery
 from market.post_offices import get_paginator
@@ -51,7 +51,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         popular=graphene.Boolean(),
         recent=graphene.Boolean(),
     )
-    get_seller_review = graphene.List(RatingPaginatedType, page=graphene.Int(), page_size=graphene.Int(), token=graphene.String(required=True))
+    get_seller_review = graphene.Field(RatingPaginatedType, page=graphene.Int(), page_size=graphene.Int(), token=graphene.String(required=True))
     get_seller_promoted_products = graphene.List(
         ProductType, token=graphene.String(required=True)
     )
@@ -524,7 +524,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
             rating_total_sum = Rating.objects.filter(product__user=user).count() * 5
             if rating_sum["rating__sum"]:
-                rating_percent = (rating_sum["rating__sum"] / rating_total_sum) * 100
+                rating_percent = math.ceil((rating_sum["rating__sum"] / rating_total_sum) * 100)
                 return rating_percent
             else:
                 return 0
@@ -543,7 +543,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
             all_orders, successful_orders = orders.count(), delivered_orders.count()
             if all_orders > 0 and successful_orders > 0:
-                delivery_rate_percent = (successful_orders / all_orders) * 100
+                delivery_rate_percent = math.ceil((successful_orders / all_orders) * 100)
             else:
                 delivery_rate_percent = 0
             return delivery_rate_percent
@@ -688,7 +688,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             data = {}
-            for i in range(1, datetime.now().month):
+            for i in range(1, 13):
                 sales = Sales.objects.filter(
                     date__month=i, date__year=datetime.now().year, product__user=user
                 ).aggregate(Sum("amount"))
@@ -699,6 +699,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     )
                     sales_earnings = sales["amount__sum"] - kwek_charges
                     data[i] = sales_earnings
+                else:
+                    data[i] = 0
             return data
         else:
             raise GraphQLError("Not a seller")
