@@ -13,6 +13,7 @@ from .pusher import *
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
+from wallet.models import Wallet
 
 
 from .post_offices import post_offices
@@ -256,13 +257,16 @@ class ProductClick(graphene.Mutation):
             return ProductClick(status=auth["status"],message=auth["message"])
         user = auth["user"]
         product = Product.objects.get(id=product_id)
-        if user.exists():
+        if user:
             if product:
                 if product.promoted:
                     link_clicks = product.promo.link_clicks + 1
-                    ProductPromotion.objects.filter(product=product).update(link_clicks=link_clicks)
+                    promo = ProductPromotion.objects.get(product=product)
+                    promo.link_clicks = link_clicks
+                    promo.save()
                 clicks = product.clicks + 1
-                Product.objects.filter(id=product.id).update(clicks=clicks)
+                product.clicks = clicks
+                product.save()
                 return ProductClick(
                     status = True,
                     message = "Click added"
@@ -812,6 +816,13 @@ class PromoteProduct(graphene.Mutation):
         if Product.objects.filter(id=product_id).exists():
             product = Product.objects.get(id=product_id)
             if product.user == user:
+                seller_wallet = Wallet.objects.get(owner=user)
+                if seller_wallet.balance < amount:
+                    return PromoteProduct(
+                            status=False,
+                            message="Insufficient balance",
+                            product=product
+                        )
                 if product.promoted:
                     try:
                         from datetime import timedelta

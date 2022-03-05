@@ -1,3 +1,4 @@
+import re
 import this
 from typing_extensions import Required
 import graphene
@@ -10,7 +11,15 @@ from notifications.models import Message, Notification
 from graphql import GraphQLError
 from django.db.models import Sum
 from datetime import datetime
-from django.db.models import F, Count, Subquery, OuterRef
+from django.db.models import (
+    F,
+    Count,
+    Subquery,
+    OuterRef,
+    FloatField,
+    ExpressionWrapper,
+    Prefetch,
+)
 
 from notifications.object_types import MessageType
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
@@ -29,6 +38,13 @@ from bill.object_types import *
 from operator import attrgetter
 
 
+def get_price_range(range):
+    try:
+        return range[0], range[1]
+    except:
+        raise GraphQLError("wrong price range data")
+
+
 class Query(UserQuery, MeQuery, graphene.ObjectType):
     billing_address = graphene.Field(
         PickupType, address_id=graphene.String(required=True)
@@ -43,15 +59,22 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_products = graphene.Field(
         ProductPaginatedType,
         token=graphene.String(required=True),
-        page_size=graphene.Int(),
         page=graphene.Int(),
-        this_month=graphene.Boolean(),
+        page_size=graphene.Int(),
+        search=graphene.String(),
+        sort_by=graphene.String(),
+        keyword=graphene.List(graphene.String),
+        price_range=graphene.List(graphene.Float),
         rating=graphene.Int(),
-        price=graphene.String(),
-        popular=graphene.Boolean(),
-        recent=graphene.Boolean(),
+        sizes=graphene.List(graphene.String),
+        this_month=graphene.Boolean(),
     )
-    get_seller_review = graphene.Field(RatingPaginatedType, page=graphene.Int(), page_size=graphene.Int(), token=graphene.String(required=True))
+    get_seller_review = graphene.Field(
+        RatingPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True),
+    )
     get_seller_promoted_products = graphene.List(
         ProductType, token=graphene.String(required=True)
     )
@@ -119,14 +142,22 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page=graphene.Int(),
         page_size=graphene.Int(),
         search=graphene.String(),
-        rating=graphene.Int(),
+        sort_by=graphene.String(),
         keyword=graphene.List(graphene.String),
-        clicks=graphene.String(),
-        sales=graphene.String(),
+        price_range=graphene.List(graphene.Float),
+        rating=graphene.Int(),
+        sizes=graphene.List(graphene.String),
     )
     rating_sort = graphene.Field(ProductType)
-    reviews = DjangoListField(RatingType, page=graphene.Int(), page_size=graphene.Int(), product_id=graphene.String(required=False))
-    review = graphene.Field(RatingPaginatedType, review_id=graphene.String(required=True))
+    reviews = DjangoListField(
+        RatingType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        product_id=graphene.String(required=False),
+    )
+    review = graphene.Field(
+        RatingPaginatedType, review_id=graphene.String(required=True)
+    )
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
     subcategories = graphene.List(CategoryType)
     subcribers = DjangoListField(NewsletterType)
@@ -143,8 +174,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
 
     def resolve_billing_address(root, info, address_id):
-        billing_address = Billing.objects.get(id=address_id)
-        return billing_address
+        return Billing.objects.get(id=address_id)
 
     def resolve_user_billing_addresses(root, info, token):
         auth = authenticate_user(token)
@@ -158,8 +188,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return billing_addresses
 
     def resolve_categories(root, info):
-        cat_list = Category.objects.filter(parent=None)
-        return cat_list
+        return Category.objects.filter(parent=None)
 
     def resolve_category(root, info, id):
         return Category.objects.get(id=id)
@@ -168,8 +197,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return ContactMessage.objects.all().order_by("-sent_at")
 
     def resolve_cartitem(root, info, id):
-        item = CartItem.objects.get(id=id)
-        return item
+        return CartItem.objects.get(id=id)
 
     def resolve_deals_of_the_day(root, info):
         return Product.objects.filter(promoted=True)
@@ -186,67 +214,21 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
 
-    def resolve_get_seller_products(
-        root,
-        info,
-        token,
-        page_size=10,
-        page=1,
-        this_month=False,
-        rating=False,
-        popular=False,
-        recent=False,
-        price=None,
-    ):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            raise GraphQLError(auth["message"])
-        user = auth["user"]
-        if user.is_seller:
-            if SellerProfile.objects.filter(user=user).exists():
-                if rating:
-                    prods = Product.objects.annotate(rate = Sum('product_rating__rating')/Count('product_rating__rating')).filter(user=user,rate__lte=rating).order_by('-rate')
-                elif popular:
-                    prods = Product.objects.filter(user=user).order_by("-clicks")
-                elif recent:
-                    prods = Product.objects.filter(user=user).order_by("-date_created")
-                elif price and price == "up":
-                    prods = Product.objects.filter(user=user).order_by("options__price")
-                elif price and price == "down":
-                    prods = Product.objects.filter(user=user).order_by(
-                        "-options__price"
-                    )
-                elif this_month:
-                    prods = Product.objects.filter(
-                        date_created__month=datetime.now().month,
-                        date_created__year=datetime.now().year,
-                        user=user,
-                    )
-                else:
-                    prods = Product.objects.filter(user=user).order_by('?')
-
-                return get_paginator(prods, page_size, page, ProductPaginatedType)
-
     def resolve_category(root, info, id):
         return Category.objects.get(id=id)
 
     def resolve_categories(root, info):
-        cat_list = Category.objects.filter(parent=None)
-
-        return cat_list
+        return Category.objects.filter(parent=None)
 
     def resolve_subcategories(root, info):
-        categories = Category.objects.all()
-        cat_list = []
-
+        categories, cat_list = Category.objects.all(), []
         for category in categories:
             if category.parent:
                 cat_list.append(category)
         return cat_list
 
     def resolve_least_subcategories(root, info):
-        cat_list = Category.objects.filter(child=None)
-        return cat_list
+        return Category.objects.filter(child=None)
 
     def resolve_user_cart(root, info, token=None, ip=None):
         if token is not None:
@@ -280,14 +262,129 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            wishlist = Wishlist.objects.get(user=user)
-            wishlist_item = WishListItem.objects.filter(wishlist=wishlist)
-            return wishlist_item
+            return WishListItem.objects.filter(wishlist=Wishlist.objects.get(user=user))
 
     def resolve_product(root, info, id):
-        product = Product.objects.get(id=id)
+        return Product.objects.get(id=id)
 
-        return product
+    def resolve_get_seller_products(
+        root,
+        info,
+        token,
+        page,
+        page_size=50,
+        search=None,
+        sort_by=None,
+        keyword=None,
+        price_range=None,
+        rating=None,
+        sizes=None,
+        this_month=False,
+    ):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_seller:
+            if SellerProfile.objects.filter(user=user).exists():
+                prods = Product.objects.filter(user=user).order_by("?")
+                search_filter, keyword_filter = Q(), Q()
+                price_filter, sizes_filter, this_month_filter = Q(), Q(), Q()
+                search_status, price_status, sizes_status = False, False, False
+                if this_month:
+                    this_month_filter = Q(date_created__month=datetime.now().month) & Q(
+                        date_created__year=datetime.now().year
+                    )
+                if search:
+                    search_status = True
+                    search_filter = (
+                        Q(product_title__icontains=search)
+                        | Q(color__iexact=search)
+                        | Q(brand__iexact=search)
+                        | Q(gender__iexact=search)
+                        | Q(category__name__icontains=search)
+                        | Q(subcategory__name__icontains=search)
+                        | Q(short_description__icontains=search)
+                        | Q(options__price__icontains=search)
+                    )
+                if keyword:
+                    keyword_filter = Q(keyword__overlap=keyword)
+                if price_range:
+                    from_price, to_price = get_price_range(price_range)
+                    price_filter = (
+                        Q(options__price__gte=from_price)
+                        & Q(options__price__lte=to_price)
+                    ) | (
+                        Q(options__discounted_price__gte=from_price)
+                        & Q(options__discounted_price__lte=to_price)
+                    )
+                    price_status = True
+
+                if sizes:
+                    sizes_filter, sizes_status = Q(options__size__in=sizes), True
+
+                if search_status or price_status or sizes_status:
+                    prods = prods.filter(
+                        search_filter,
+                        keyword_filter,
+                        price_filter,
+                        sizes_filter,
+                        this_month_filter,
+                    ).distinct()
+                else:
+                    prods = prods.filter(keyword_filter, this_month_filter)
+                if sort_by:
+                    if sort_by in [
+                        "date_created",
+                        "-date_created",
+                        "clicks",
+                        "-clicks",
+                    ]:
+                        prods = prods.order_by(sort_by)
+                    elif sort_by in ["sales", "-sales"]:
+                        sort_key = "{}_count".format(sort_by)
+                        prods = prods.annotate(sales_count=Count("sales")).order_by(
+                            sort_key
+                        )
+                    elif sort_by in ["price", "-price"]:
+                        v1, v2 = "{}_average".format(
+                            sort_by
+                        ), "{}_discounted_average".format(sort_by)
+                        prods = prods.annotate(
+                            price_average=ExpressionWrapper(
+                                Sum("options__price") / Count("options__price"),
+                                output_field=FloatField(),
+                            ),
+                            price_discounted_average=ExpressionWrapper(
+                                Sum("options__discounted_price")
+                                / Count("options__discounted_price"),
+                                output_field=FloatField(),
+                            ),
+                        ).order_by(v1, v2)
+                    elif sort_by in ["rating", "-rating"]:
+                        sort_key = "rate" if sort_by == "rating" else "-rate"
+                        if rating:
+                            if rating >= 0:
+                                prods = (
+                                    prods.annotate(
+                                        rate=Sum("product_rating__rating")
+                                        / Count("product_rating__rating")
+                                    )
+                                    .filter(rate__lte=rating)
+                                    .order_by(sort_key)
+                                )
+                            else:
+                                prods = (
+                                    prods.annotate(
+                                        rate=Sum("product_rating__rating")
+                                        / Count("product_rating__rating")
+                                    )
+                                    .filter(rate__gte=abs(rating))
+                                    .order_by(sort_key)
+                                )
+                    else:
+                        prods = prods
+                return get_paginator(prods, page_size, page, ProductPaginatedType)
 
     def resolve_products(
         root,
@@ -295,13 +392,19 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page,
         page_size=50,
         search=None,
+        sort_by=None,
         keyword=None,
+        price_range=None,
         rating=None,
-        clicks=None,
-        sales=None,
+        sizes=None,
     ):
+        prods = Product.objects.all().order_by("?")
+        search_filter, keyword_filter = Q(), Q()
+        price_filter, sizes_filter = Q(), Q()
+        search_status, price_status, sizes_status = False, False, False
         if search:
-            filter = (
+            search_status = True
+            search_filter = (
                 Q(product_title__icontains=search)
                 | Q(color__iexact=search)
                 | Q(brand__iexact=search)
@@ -311,26 +414,79 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 | Q(short_description__icontains=search)
                 | Q(options__price__icontains=search)
             )
-            return get_paginator(Product.objects.filter(filter).distinct(), page_size, page, ProductPaginatedType)
-
-        if rating:
-            return get_paginator(Product.objects.annotate(rate = Sum('product_rating__rating')/Count('product_rating__rating')).filter(rate__lte=rating).order_by('-rate'), page_size, page, ProductPaginatedType)
-
+            # prods = prods.filter(search_filter).distinct()
         if keyword:
-            return get_paginator(Product.objects.filter(Q(keyword__overlap=keyword)), page_size, page, ProductPaginatedType)
+            keyword_filter = Q(keyword__overlap=keyword)
+        if price_range:
+            from_price, to_price = get_price_range(price_range)
+            price_filter = (
+                Q(options__price__gte=from_price) & Q(options__price__lte=to_price)
+            ) | (
+                Q(options__discounted_price__gte=from_price)
+                & Q(options__discounted_price__lte=to_price)
+            )
+            price_status = True
 
-        if clicks:
-            return get_paginator(Product.objects.all().order_by('-clicks'), page_size, page, ProductPaginatedType)
+        if sizes:
+            sizes_filter, sizes_status = Q(options__size__in=sizes), True
 
-        if sales:
-            return get_paginator(Product.objects.all().order_by('-sales'), page_size, page, ProductPaginatedType)
+        if search_status or price_status or sizes_status:
+            prods = prods.filter(
+                search_filter, keyword_filter, price_filter, sizes_filter
+            ).distinct()
+        else:
+            prods = prods.filter(keyword_filter)
 
-        return get_paginator(Product.objects.all().order_by('?'), page_size, page, ProductPaginatedType)
+        if sort_by:
+            if sort_by in ["date_created", "-date_created", "clicks", "-clicks"]:
+                prods = prods.order_by(sort_by)
+            elif sort_by in ["sales", "-sales"]:
+                sort_key = "{}_count".format(sort_by)
+                prods = prods.annotate(sales_count=Count("sales")).order_by(sort_key)
+            elif sort_by in ["price", "-price"]:
+                v1, v2 = "{}_average".format(sort_by), "{}_discounted_average".format(
+                    sort_by
+                )
+                prods = prods.annotate(
+                    price_average=ExpressionWrapper(
+                        Sum("options__price") / Count("options__price"),
+                        output_field=FloatField(),
+                    ),
+                    price_discounted_average=ExpressionWrapper(
+                        Sum("options__discounted_price")
+                        / Count("options__discounted_price"),
+                        output_field=FloatField(),
+                    ),
+                ).order_by(v1, v2)
+            elif sort_by in ["rating", "-rating"]:
+                sort_key = "rate" if sort_by == "rating" else "-rate"
+                if rating:
+                    if rating >= 0:
+                        prods = (
+                            prods.annotate(
+                                rate=Sum("product_rating__rating")
+                                / Count("product_rating__rating")
+                            )
+                            .filter(rate__lte=rating)
+                            .order_by(sort_key)
+                        )
+                    else:
+                        prods = (
+                            prods.annotate(
+                                rate=Sum("product_rating__rating")
+                                / Count("product_rating__rating")
+                            )
+                            .filter(rate__gte=abs(rating))
+                            .order_by(sort_key)
+                        )
+            else:
+                prods = prods
+        return get_paginator(prods, page_size, page, ProductPaginatedType)
 
     def resolve_review(root, info, review_id):
         review = Rating.objects.get(id=review_id)
 
-    def resolve_reviews(root, info,page, page_size, product_id=None):
+    def resolve_reviews(root, info, page, page_size, product_id=None):
         if product_id:
             product = Product.objects.get(id=product_id)
             reviews = Rating.objects.filter(product=product)
@@ -524,7 +680,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
             rating_total_sum = Rating.objects.filter(product__user=user).count() * 5
             if rating_sum["rating__sum"]:
-                rating_percent = math.ceil((rating_sum["rating__sum"] / rating_total_sum) * 100)
+                rating_percent = math.ceil(
+                    (rating_sum["rating__sum"] / rating_total_sum) * 100
+                )
                 return rating_percent
             else:
                 return 0
@@ -543,7 +701,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
             all_orders, successful_orders = orders.count(), delivered_orders.count()
             if all_orders > 0 and successful_orders > 0:
-                delivery_rate_percent = math.ceil((successful_orders / all_orders) * 100)
+                delivery_rate_percent = math.ceil(
+                    (successful_orders / all_orders) * 100
+                )
             else:
                 delivery_rate_percent = 0
             return delivery_rate_percent
