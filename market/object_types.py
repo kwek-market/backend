@@ -119,3 +119,10 @@ class GetSellerOrdersType(graphene.ObjectType):
     profit = graphene.Int()
     paid = graphene.Boolean()
     status = graphene.String()
+
+class GetSellerOrdersPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(GetSellerOrdersType)
