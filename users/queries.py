@@ -850,8 +850,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user.is_seller:
             if this_month:
                 customer_id = SellerCustomer.objects.filter(
-                    date__month=datetime.now().month,
-                    date__year=datetime.now().year,
+                    date_created__month=datetime.now().month,
+                    date_created__year=datetime.now().year,
                     seller=user,
                 ).customer_id
             else:
