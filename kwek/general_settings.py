@@ -184,6 +184,7 @@ EMAIL_HOST_USER = "gregoflash01@gmail.com"  # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = "greg1998"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+PROMOTION_CLICK_CHARGE = 1
 # ALLOWED_HOSTS = ['127.0.0.1', 'localhost','143.198.115.156', 'kwekapi.com', 'www.kwekapi.com']
 # CORS_ORIGIN_ALLOW_ALL = False
 ALLOWED_HOSTS = ["*"]

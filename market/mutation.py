@@ -2,6 +2,7 @@ import graphene
 import jwt
 from django.utils import timezone
 from users.validate import authenticate_user
+from django.conf import settings
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -268,6 +269,14 @@ class ProductClick(graphene.Mutation):
         if product:
             if product.promoted:
                 ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
+                try:
+                    seller_wallet = Wallet.objects.get(owner=Product.user)
+                    balance = seller_wallet.balance
+                    new_balance = balance - settings.PROMOTION_CLICK_CHARGE
+                    seller_wallet.balance = balance
+                    seller_wallet.save()
+                except:
+                    pass       
             clicks = product.clicks + 1
             product.clicks = clicks
             product.save()
