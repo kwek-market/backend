@@ -247,34 +247,27 @@ class ProductClick(graphene.Mutation):
     message = graphene.String()
 
     class Arguments:
-        token = graphene.String(required=True)
+        token = graphene.String(required=False)
         product_id = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, token, product_id):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            return ProductClick(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+    def mutate(self, info,product_id, token=None):
         product = Product.objects.get(id=product_id)
-        if user:
-            if product:
-                if product.promoted:
-                    link_clicks = product.promo.link_clicks + 1
-                    promo = ProductPromotion.objects.get(product=product)
-                    promo.link_clicks = link_clicks
-                    promo.save()
-                clicks = product.clicks + 1
-                product.clicks = clicks
-                product.save()
-                return ProductClick(
-                    status = True,
-                    message = "Click added"
-                )
-            else:
-                return ProductClick(status=False,message="Invalid Product")
+        if product:
+            if product.promoted:
+                link_clicks = product.promo.link_clicks + 1
+                promo = ProductPromotion.objects.get(product=product)
+                promo.link_clicks = link_clicks
+                promo.save()
+            clicks = product.clicks + 1
+            product.clicks = clicks
+            product.save()
+            return ProductClick(
+                status = True,
+                message = "Click added"
+            )
         else:
-            return ProductClick(status=False,message="Invalid User")
+            return ProductClick(status=False,message="Invalid Product")
 class UpdateProductMutation(graphene.Mutation):
     product = graphene.Field(ProductType)
 
