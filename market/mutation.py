@@ -267,11 +267,7 @@ class ProductClick(graphene.Mutation):
         product = Product.objects.get(id=product_id)
         if product:
             if product.promoted:
-                ProductPromotion.objects.filter(product=product).update(link_clicks=F('link_clicks')+1)
-                # link_clicks = product.promo.link_clicks + 1
-                # promo = ProductPromotion.objects.get(product=product)
-                # promo.link_clicks = link_clicks
-                # promo.save()
+                ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
             clicks = product.clicks + 1
             product.clicks = clicks
             product.save()
