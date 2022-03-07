@@ -14,6 +14,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
 from wallet.models import Wallet
+from django.db.models import (
+    F,
+    Count,
+    Subquery,
+    OuterRef,
+    FloatField,
+    IntegerField,
+    BooleanField,
+    TextField,
+    ExpressionWrapper,
+    Prefetch,
+)
 
 
 from .post_offices import post_offices
@@ -255,10 +267,11 @@ class ProductClick(graphene.Mutation):
         product = Product.objects.get(id=product_id)
         if product:
             if product.promoted:
-                link_clicks = product.promo.link_clicks + 1
-                promo = ProductPromotion.objects.get(product=product)
-                promo.link_clicks = link_clicks
-                promo.save()
+                ProductPromotion.objects.filter(product=product).update(link_clicks=F('link_clicks')+1)
+                # link_clicks = product.promo.link_clicks + 1
+                # promo = ProductPromotion.objects.get(product=product)
+                # promo.link_clicks = link_clicks
+                # promo.save()
             clicks = product.clicks + 1
             product.clicks = clicks
             product.save()
