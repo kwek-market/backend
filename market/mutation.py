@@ -884,6 +884,7 @@ class PromoteProduct(graphene.Mutation):
 
 
 def unpromote():
+    print("unpromoting started")
     from datetime import timedelta, datetime
     now = timezone.now() # now = datetime.now()
     filter = (Q(promo__end_date__lte = now)
@@ -901,7 +902,7 @@ def unpromote():
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
   
-sched.add_job(unpromote, 'interval', minutes=0.1)
+sched.add_job(unpromote, 'interval', minutes=20)
 sched.start()
 
 
