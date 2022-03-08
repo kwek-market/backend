@@ -273,7 +273,7 @@ class ProductClick(graphene.Mutation):
                     seller_wallet = Wallet.objects.get(owner=Product.user)
                     balance = seller_wallet.balance
                     new_balance = balance - settings.PROMOTION_CLICK_CHARGE
-                    seller_wallet.balance = balance
+                    seller_wallet.balance = new_balance
                     seller_wallet.save()
                 except:
                     pass       
