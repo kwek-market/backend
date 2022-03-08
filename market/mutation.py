@@ -269,14 +269,18 @@ class ProductClick(graphene.Mutation):
         if product:
             if product.promoted:
                 ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
-                try:
-                    seller_wallet = Wallet.objects.get(owner=Product.user)
+                try: 
+                    seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
                     balance = seller_wallet.balance
                     new_balance = balance - settings.PROMOTION_CLICK_CHARGE
+                    if new_balance <= 0:
+                        new_balance = 0
+                        ProductPromotion.objects.filter(product=product).update(active=False)
+                        Product.objects.filter(id=product.id).update(promoted=False)
                     seller_wallet.balance = new_balance
                     seller_wallet.save()
-                except:
-                    pass       
+                except Exception as e:
+                    print(e)       
             clicks = product.clicks + 1
             product.clicks = clicks
             product.save()
