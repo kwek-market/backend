@@ -881,6 +881,40 @@ class PromoteProduct(graphene.Mutation):
         else:
             return PromoteProduct(status=False,message="Product does not exist")
 
+class CancelProductPromotion(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    promotion = graphene.Field(ProductPromotionType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        promotion_id = graphene.String(required=True)
+        
+    
+    @staticmethod
+    def mutate(self, info, token, promotion_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return PromoteProduct(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        promotion = ProductPromotion.objects.get(id=promotion_id)
+        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=promotion.product.user.id))
+        if promotion.product.user == user:
+            wallet_balance = seller_wallet.balance + promotion.balance
+            seller_wallet.balance = wallet_balance
+            promotion.balance = 0
+            promotion.active = False
+            seller_wallet.save()
+            promotion.save()
+            if ProductPromotion.objects.filter(product=promotion.product, active=True).count() < 1:
+                Product.objects.filter(id=promotion.product.id).update(promoted=False)
+            return CancelProductPromotion(
+                            status=True,
+                            message="Product promoted",
+                            promotion=promotion
+                        )
+        else:
+            return CancelProductPromotion(status=False,message="Product does not belong to you")
 
 
 def unpromote():
