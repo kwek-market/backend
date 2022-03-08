@@ -2,6 +2,7 @@ import graphene
 import jwt
 from django.utils import timezone
 from users.validate import authenticate_user
+from django.conf import settings
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -14,6 +15,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
 from wallet.models import Wallet
+from django.db.models import (
+    F,
+    Count,
+    Subquery,
+    OuterRef,
+    FloatField,
+    IntegerField,
+    BooleanField,
+    TextField,
+    ExpressionWrapper,
+    Prefetch,
+)
 
 
 from .post_offices import post_offices
@@ -247,34 +260,36 @@ class ProductClick(graphene.Mutation):
     message = graphene.String()
 
     class Arguments:
-        token = graphene.String(required=True)
+        token = graphene.String(required=False)
         product_id = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, token, product_id):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            return ProductClick(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+    def mutate(self, info,product_id, token=None):
         product = Product.objects.get(id=product_id)
-        if user:
-            if product:
-                if product.promoted:
-                    link_clicks = product.promo.link_clicks + 1
-                    promo = ProductPromotion.objects.get(product=product)
-                    promo.link_clicks = link_clicks
-                    promo.save()
-                clicks = product.clicks + 1
-                product.clicks = clicks
-                product.save()
-                return ProductClick(
-                    status = True,
-                    message = "Click added"
-                )
-            else:
-                return ProductClick(status=False,message="Invalid Product")
+        if product:
+            if product.promoted:
+                ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
+                try: 
+                    seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
+                    balance = seller_wallet.balance
+                    new_balance = balance - settings.PROMOTION_CLICK_CHARGE
+                    if new_balance <= 0:
+                        new_balance = 0
+                        ProductPromotion.objects.filter(product=product).update(active=False)
+                        Product.objects.filter(id=product.id).update(promoted=False)
+                    seller_wallet.balance = new_balance
+                    seller_wallet.save()
+                except Exception as e:
+                    print(e)       
+            clicks = product.clicks + 1
+            product.clicks = clicks
+            product.save()
+            return ProductClick(
+                status = True,
+                message = "Click added"
+            )
         else:
-            return ProductClick(status=False,message="Invalid User")
+            return ProductClick(status=False,message="Invalid Product")
 class UpdateProductMutation(graphene.Mutation):
     product = graphene.Field(ProductType)
 

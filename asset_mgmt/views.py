@@ -140,7 +140,12 @@ class PopulateProduct(View):
         category = Category.objects.filter(parent=None)
         subcategory = Category.objects.filter(child=None)
         user = ExtendUser.objects.filter(is_seller=True)
+        count = 0
         for product in products:
+            if count >= 500:
+                break
+            else:
+                count +=1 
             if Product.objects.filter(product_title=product["productTitle"]).exists():
                 continue
             else:
