@@ -521,9 +521,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 if sort_by == "-date_created"
                 else sort_by
             )
-            reviews.order_by(sort_by)
+            reviews = reviews.order_by(sort_by)
         else:
-            reviews.order_by("-rated_at")
+            reviews = reviews.order_by("-rated_at")
         return get_paginator(reviews, page_size, page, RatingPaginatedType)
 
     def resolve_get_seller_review(root, info, page, page_size, token, sort_by=None):
@@ -546,9 +546,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     if sort_by == "-date_created"
                     else sort_by
                 )
-                reviews.order_by(sort_by)
+                reviews = reviews.order_by(sort_by)
             else:
-                reviews.order_by("-rated_at")
+                reviews = reviews.order_by("-rated_at")
             return get_paginator(reviews, page_size, page, RatingPaginatedType)
         else:
             raise GraphQLError("Not a seller")
