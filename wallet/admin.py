@@ -3,4 +3,4 @@ from .models import WalletTransaction
 from django.apps import apps
 
 # Register your models here.
-admin.site.register(WalletTransaction)
+admin.site.register(WalletTransaction) 
