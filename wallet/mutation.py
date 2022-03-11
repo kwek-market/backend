@@ -130,6 +130,7 @@ class FundWallet(graphene.Mutation):
         if not auth["status"]:
             return FundWallet(status=auth["status"],message=auth["message"])
         user = auth["user"]
+        p_status = False
         if Wallet.objects.filter(owner=user).exists():
             if Payment.objects.filter(ref=payment_ref).exists():
                 payment = Payment.objects.get(ref=payment_ref)
@@ -141,6 +142,7 @@ class FundWallet(graphene.Mutation):
                         )
                     else:
                         amount = payment.amount
+                        p_status=True
                 else:
                     return FundWallet(
                         status = False,
@@ -152,6 +154,7 @@ class FundWallet(graphene.Mutation):
                         wallet=seller_wallet,
                         amount=amount,
                         remark=remark,
+                        status=p_status,
                         transaction_type="Funding"
                     )
                     balance = seller_wallet.balance
