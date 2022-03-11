@@ -164,8 +164,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         sizes=graphene.List(graphene.String),
     )
     rating_sort = graphene.Field(ProductType)
-    reviews = DjangoListField(
-        RatingType,
+    reviews = graphene.Field(
+        RatingPaginatedType,
         page=graphene.Int(),
         page_size=graphene.Int(),
         product_id=graphene.String(required=False),
