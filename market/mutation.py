@@ -841,10 +841,10 @@ class PromoteProduct(graphene.Mutation):
                         )
                 if product.promoted:
                     try:
-                        new_end_date = product.promo.end_date + timedelta(days=days)
+                        new_end_date = product.promo.end_date + timezone.timedelta(days=days)
                         new_amount = product.promo.amount + amount
                         new_balance = product.promo.balance + amount
-                        ProductPromotion.objects.filter(product=product).update(end_date=new_end_date, amount=new_amount, balance=new_balance)
+                        ProductPromotion.objects.filter(product=product, active=True).update(end_date=new_end_date, amount=new_amount, balance=new_balance)
                         balance = seller_wallet.balance
                         seller_wallet.balance = balance - amount
                         seller_wallet.save()
@@ -863,7 +863,7 @@ class PromoteProduct(graphene.Mutation):
                             amount=amount,
                             balance=amount,
                             start_date = timezone.now(),
-                            end_date = timezone.now() + timedelta(days),
+                            end_date = timezone.now() + timezone.timedelta(days=days),
                         )
                         product.promoted = True
                         product.save()
@@ -919,8 +919,7 @@ class CancelProductPromotion(graphene.Mutation):
 
 
 def unpromote():
-    print("unpromoting started")
-    from datetime import timedelta, datetime
+    from datetime import datetime
     now = timezone.now() # now = datetime.now()
     filter = (Q(promo__end_date__lte = now)
             | Q(promo__balance__lte=0))
@@ -938,7 +937,7 @@ def unpromote():
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
   
-sched.add_job(unpromote, 'interval', minutes=0.5)
+sched.add_job(unpromote, 'interval', minutes=0.16)
 sched.start()
 
 
