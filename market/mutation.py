@@ -862,7 +862,8 @@ class PromoteProduct(graphene.Mutation):
                             days=days,
                             amount=amount,
                             balance=amount,
-                            start_date = timezone.now()
+                            start_date = timezone.now(),
+                            end_date = timezone.now() + timedelta(days)
                         )
                         product.promoted = True
                         product.save()
@@ -924,6 +925,7 @@ def unpromote():
     filter = (Q(promo__end_date__lte = now)
             | Q(promo__balance__lte=0))
     all_products = Product.objects.filter(filter, promoted=True)
+    print("expired promotions", all_products)
     for product in all_products:
         seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
         Product.objects.filter(id=product.id).update(promoted=False)
@@ -936,7 +938,7 @@ def unpromote():
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
   
-sched.add_job(unpromote, 'interval', minutes=20)
+sched.add_job(unpromote, 'interval', minutes=0.5)
 sched.start()
 
 
