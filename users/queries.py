@@ -60,7 +60,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
     cartitem = graphene.Field(CartItemType, id=graphene.String(required=True))
-    deals_of_the_day = graphene.List(
+    deals_of_the_day = graphene.Field(
         ProductPaginatedType,
         page=graphene.Int(),
         page_size=graphene.Int(),
