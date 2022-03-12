@@ -841,7 +841,6 @@ class PromoteProduct(graphene.Mutation):
                         )
                 if product.promoted:
                     try:
-                        from datetime import timedelta
                         new_end_date = product.promo.end_date + timedelta(days=days)
                         new_amount = product.promo.amount + amount
                         new_balance = product.promo.balance + amount
@@ -864,7 +863,7 @@ class PromoteProduct(graphene.Mutation):
                             amount=amount,
                             balance=amount,
                             start_date = timezone.now(),
-                            end_date = timezone.now() + timedelta(days)
+                            end_date = timezone.now() + timedelta(days),
                         )
                         product.promoted = True
                         product.save()
