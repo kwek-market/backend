@@ -844,7 +844,7 @@ class PromoteProduct(graphene.Mutation):
                         # new_end_date = product.promo.end_date + timezone.timedelta(days=days)
                         # new_amount = product.promo.amount + amount
                         # new_balance = product.promo.balance + amount
-                        ProductPromotion.objects.filter(product=product, active=True).update(end_date=F("end_date")+ timezone.timedelta(days=days), amount=F("amount")+ amount, balance=F("balance")+ amount)
+                        ProductPromotion.objects.filter(product=product, active=True).update(end_date=F("end_date")+ timezone.timedelta(days=days), amount=F("amount")+ amount, balance=F("balance")+ amount, days=F("days")+ days)
                         balance = seller_wallet.balance
                         seller_wallet.balance = balance - amount
                         seller_wallet.save()
