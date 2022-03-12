@@ -60,7 +60,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
     cartitem = graphene.Field(CartItemType, id=graphene.String(required=True))
-    deals_of_the_day = graphene.List(ProductType)
+    deals_of_the_day = graphene.List(
+        ProductPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+    )
     get_seller_products = graphene.Field(
         ProductPaginatedType,
         token=graphene.String(required=True),
@@ -215,8 +219,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     def resolve_cartitem(root, info, id):
         return CartItem.objects.get(id=id)
 
-    def resolve_deals_of_the_day(root, info):
-        return Product.objects.filter(promoted=True)
+    def resolve_deals_of_the_day(root, info, page=1, page_size=5):
+        return get_paginator(
+            Product.objects.filter(promoted=True).order_by("?"), page_size, page, ProductPaginatedType
+        )
 
     def resolve_user_data(root, info, token):
         auth = authenticate_user(token)
@@ -616,16 +622,15 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             if StoreDetail.objects.filter(user=user).exists():
-                invoice = Invoice.objects.filter(store=StoreDetail.objects.get(user=user))
-                return get_paginator(
-                    invoice, page_size, page, InvoicePaginatedType
+                invoice = Invoice.objects.filter(
+                    store=StoreDetail.objects.get(user=user)
                 )
+                return get_paginator(invoice, page_size, page, InvoicePaginatedType)
             else:
                 raise GraphQLError("Store detail invalid")
 
         else:
             raise GraphQLError("Not a seller")
-
 
     def resolve_get_seller_invoice(root, info, invoice_id, token):
         auth = authenticate_user(token)
@@ -660,10 +665,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            transactions = WalletTransaction.objects.filter(wallet=Wallet.objects.get(owner=user))
+            transactions = WalletTransaction.objects.filter(
+                wallet=Wallet.objects.get(owner=user)
+            )
             return get_paginator(
-                    transactions, page_size, page, WalletTransactionPaginatedType
-                )
+                transactions, page_size, page, WalletTransactionPaginatedType
+            )
         else:
             raise GraphQLError("Not a seller")
 
