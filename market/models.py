@@ -91,7 +91,7 @@ class ProductPromotion(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.product
+        return self.product.product_title
 
     def save(self, *args, **kwargs):
         from datetime import timedelta
