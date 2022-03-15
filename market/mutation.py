@@ -889,29 +889,32 @@ class CancelProductPromotion(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
-        promotion_id = graphene.String(required=True)
+        product_id = graphene.String(required=True)
         
     
     @staticmethod
-    def mutate(self, info, token, promotion_id):
+    def mutate(self, info, token, product_id):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PromoteProduct(status=auth["status"],message=auth["message"])
         user = auth["user"]
-        promotion = ProductPromotion.objects.get(id=promotion_id)
-        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=promotion.product.user.id))
-        if promotion.product.user == user:
-            wallet_balance = seller_wallet.balance + promotion.balance
+        product = Product.objects.get(id=product_id)
+        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
+        if product.user == user:
+            promotions = ProductPromotion.objects.filter(product=product, active=True)
+            wallet_balance = seller_wallet.balance
+            for promotion in promotions:
+                wallet_balance += promotion.balance
+                promotion.balance = 0
+                promotion.active = False
+                promotion.save()
             seller_wallet.balance = wallet_balance
-            promotion.balance = 0
-            promotion.active = False
             seller_wallet.save()
-            promotion.save()
-            if ProductPromotion.objects.filter(product=promotion.product, active=True).count() < 1:
-                Product.objects.filter(id=promotion.product.id).update(promoted=False)
+            product.promoted=False
+            product.save()
             return CancelProductPromotion(
                             status=True,
-                            message="Product promoted",
+                            message="Protion Cancelled",
                             promotion=promotion
                         )
         else:
