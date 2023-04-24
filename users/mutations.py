@@ -58,6 +58,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     billing_address_update = BillingAddressUpdate.Field()
     billing_address_delete = BillingAddressDelete.Field()
     cancel_order = CancelOrder.Field()
+    cancel_product_promotion = CancelProductPromotion.Field()
     change_password = ChangePassword.Field()
     clicks_update = ProductClick.Field()
     complete_seller_verification = CompleteSellerVerification.Field()

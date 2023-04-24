@@ -36,7 +36,7 @@ incremental==21.3.0
 Markdown==3.3.6
 msgpack==1.0.3
 ndg-httpsclient==0.5.1
-Pillow==8.4.0
+Pillow==9.0.1
 promise==2.3
 psycopg2-binary==2.9.3
 pusher==3.1.0

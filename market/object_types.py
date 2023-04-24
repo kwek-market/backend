@@ -56,6 +56,7 @@ class ProductPromotionType(DjangoObjectType):
             "amount",
             "reach",
             "link_clicks",
+            "balance",
         )
 
 class RatingType(DjangoObjectType):
