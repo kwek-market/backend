@@ -6,7 +6,6 @@ async-timeout>=4.0.2
 attrs>=21.4.0
 autobahn>=22.2.2
 Automat>=20.2.0
-backports.zoneinfo>=0.2.1
 certifi>=2020.12.5
 cffi>=1.15.0
 channels>=3.0.4
