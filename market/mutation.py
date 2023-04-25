@@ -940,8 +940,5 @@ def unpromote():
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
   
-sched.add_job(unpromote, 'interval', minutes=0.16)
+sched.add_job(unpromote, 'interval', minutes=10)
 sched.start()
-
-
-
