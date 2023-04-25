@@ -65,6 +65,8 @@ class PopulateCategory(View):
     def get(self, request):
         thread = threading.Thread(target=populate_categories)
         thread.start()
+        return JsonResponse({"status": True, "message": "started populating"})
+
 
 def populate_categories():
     category_count = 1
