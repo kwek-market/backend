@@ -85,12 +85,13 @@ class ProductPromotion(models.Model):
     days = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
     amount = models.FloatField(default=0)
+    balance = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
     link_clicks = models.IntegerField(default=0)
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.keyword
+        return self.product.product_title
 
     def save(self, *args, **kwargs):
         from datetime import timedelta

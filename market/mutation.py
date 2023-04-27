@@ -17,6 +17,7 @@ from django.utils import timezone
 from wallet.models import Wallet
 from django.db.models import (
     F,
+    Q,
     Count,
     Subquery,
     OuterRef,
@@ -27,6 +28,7 @@ from django.db.models import (
     ExpressionWrapper,
     Prefetch,
 )
+from datetime import timedelta
 
 
 from .post_offices import post_offices
@@ -268,19 +270,18 @@ class ProductClick(graphene.Mutation):
         product = Product.objects.get(id=product_id)
         if product:
             if product.promoted:
-                ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
-                try: 
-                    seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
-                    balance = seller_wallet.balance
-                    new_balance = balance - settings.PROMOTION_CLICK_CHARGE
-                    if new_balance <= 0:
-                        new_balance = 0
-                        ProductPromotion.objects.filter(product=product).update(active=False)
-                        Product.objects.filter(id=product.id).update(promoted=False)
-                    seller_wallet.balance = new_balance
-                    seller_wallet.save()
-                except Exception as e:
-                    print(e)       
+                promos = ProductPromotion.objects.filter(product=product, active=True)
+                # ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
+                for pr in promos:
+                    c_clicks, active = pr.link_clicks +1, True
+                    c_balance = pr.balance - settings.PROMOTION_CLICK_CHARGE
+                    if c_balance <= 0:
+                        c_balance, active = 0, False
+                    pr.link_clicks, pr.balance, pr.active =c_clicks, c_balance, active
+                    pr.save()
+                if ProductPromotion.objects.filter(product=product, active=True).count() < 1:
+                    Product.objects.filter(id=product.id).update(promoted=False)
+                          
             clicks = product.clicks + 1
             product.clicks = clicks
             product.save()
@@ -840,9 +841,13 @@ class PromoteProduct(graphene.Mutation):
                         )
                 if product.promoted:
                     try:
-                        from datetime import timedelta
-                        new_end_date = product.promo.end_date + timedelta(days=days)
-                        ProductPromotion.objects.filter(product=product).update(end_date=new_end_date)
+                        # new_end_date = product.promo.end_date + timezone.timedelta(days=days)
+                        # new_amount = product.promo.amount + amount
+                        # new_balance = product.promo.balance + amount
+                        ProductPromotion.objects.filter(product=product, active=True).update(end_date=F("end_date")+ timezone.timedelta(days=days), amount=F("amount")+ amount, balance=F("balance")+ amount, days=F("days")+ days)
+                        balance = seller_wallet.balance
+                        seller_wallet.balance = balance - amount
+                        seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Promotion extended",
@@ -856,10 +861,15 @@ class PromoteProduct(graphene.Mutation):
                             product=product,
                             days=days,
                             amount=amount,
-                            start_date = timezone.now()
+                            balance=amount,
+                            start_date = timezone.now(),
+                            end_date = timezone.now() + timezone.timedelta(days=days),
                         )
                         product.promoted = True
                         product.save()
+                        balance = seller_wallet.balance
+                        seller_wallet.balance = balance - amount
+                        seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Product promoted",
@@ -872,24 +882,63 @@ class PromoteProduct(graphene.Mutation):
         else:
             return PromoteProduct(status=False,message="Product does not exist")
 
+class CancelProductPromotion(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    promotion = graphene.Field(ProductPromotionType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        product_id = graphene.String(required=True)
+        
+    
+    @staticmethod
+    def mutate(self, info, token, product_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return PromoteProduct(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        product = Product.objects.get(id=product_id)
+        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
+        if product.user == user:
+            promotions = ProductPromotion.objects.filter(product=product, active=True)
+            wallet_balance = seller_wallet.balance
+            for promotion in promotions:
+                wallet_balance += promotion.balance
+                promotion.balance = 0
+                promotion.active = False
+                promotion.save()
+            seller_wallet.balance = wallet_balance
+            seller_wallet.save()
+            product.promoted=False
+            product.save()
+            return CancelProductPromotion(
+                            status=True,
+                            message="Protion Cancelled",
+                            promotion=promotion
+                        )
+        else:
+            return CancelProductPromotion(status=False,message="Product does not belong to you")
 
 
 def unpromote():
-    from datetime import timedelta, datetime
-    # now = datetime.now()
-    now = timezone.now()
-    all_products = Product.objects.filter(promoted=True, promo__end_date__lte = now)
+    from datetime import datetime
+    now = timezone.now() # now = datetime.now()
+    filter = (Q(promo__end_date__lte = now)
+            | Q(promo__balance__lte=0))
+    all_products = Product.objects.filter(filter, promoted=True)
+    print("expired promotions", all_products)
     for product in all_products:
-            # if (product.promo.start_date + now) > product.promo.end_date:
-                Product.objects.filter(id=product.id).update(promoted=False)
-                ProductPromotion.objects.filter(product=product).update(active=False)
-    
-    
-# trigger = CronTrigger(
-#     year="*", month="*", day="*", hour="8", minute="0", second="0"
-# )
-sched.add_job(unpromote, 'interval', minutes=20)
+        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
+        Product.objects.filter(id=product.id).update(promoted=False)
+        active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
+        for pr in active_promos:
+            sb = seller_wallet.balance
+            seller_wallet.balance = sb + pr.balance
+            seller_wallet.save()
+            pr.balance = 0
+            pr.save()
+        ProductPromotion.objects.filter(product=product).update(active=False)
+  
+sched.add_job(unpromote, 'interval', minutes=10)
 sched.start()
-
-
-
