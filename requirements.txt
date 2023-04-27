@@ -6,7 +6,7 @@ async-timeout==4.0.2
 attrs==21.4.0
 autobahn==22.2.2
 Automat==20.2.0
-backports.zoneinfo==0.2.1
+# backports.zoneinfo;python_version<"3.9"
 certifi==2020.12.5
 cffi==1.15.0
 channels==3.0.4
@@ -36,9 +36,9 @@ incremental==21.3.0
 Markdown==3.3.6
 msgpack==1.0.3
 ndg-httpsclient==0.5.1
-Pillow==8.4.0
+Pillow>=8.4.0
 promise==2.3
-psycopg2-binary==2.9.3 
+psycopg2-binary>=2.9.3 
 pusher==3.1.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
@@ -65,5 +65,5 @@ tzdata==2021.5
 tzlocal==4.1
 urllib3==1.26.4
 whitenoise==6.0.0
-zipp==3.7.0
-zope.interface==5.4.0
+zipp>=3.7.0
+zope.interface>=5.4.0
