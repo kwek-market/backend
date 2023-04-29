@@ -176,12 +176,12 @@ REGISTER_MUTATION_FIELDS = {
 
 EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
 DOMAIN = "www.kwekmarket.com"
-KWEK_EMAIL = "support@kwekmarket.com"
+KWEK_EMAIL = "support@kwekapi.com"
 PHPWEB = "kwekmailapiphpmailsystem"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = "gregoflash01@gmail.com"  # this is exactly the value 'apikey'
-EMAIL_HOST_PASSWORD = "greg1998"
+EMAIL_HOST_PASSWORD = ""
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 PROMOTION_CLICK_CHARGE = 1

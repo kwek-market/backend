@@ -11,6 +11,7 @@ from django.http import (
 )
 from django.contrib.auth import get_user_model
 import uuid
+import threading
 
 import mimetypes
 from PIL import Image
@@ -62,22 +63,34 @@ class FileAssetView(View):
 
 class PopulateCategory(View):
     def get(self, request):
-        for array in data:
-            if Category.objects.filter(name=array[0]).exists():
+        thread = threading.Thread(target=populate_categories)
+        thread.start()
+        return JsonResponse({"status": True, "message": "started populating"})
+
+
+def populate_categories():
+    category_count = 1
+    sub_category_count = 1
+    for array in data:
+        print("category count", category_count)
+        category_count+= 1
+        if Category.objects.filter(name=array[0]).exists():
+            pass
+        else:
+            Category.objects.create(name=array[0])
+        count = 1
+        while count < len(array):
+            print("sub category count", sub_category_count)
+            sub_category_count+=1
+            print("total category count", sub_category_count+category_count)
+            parent = Category.objects.get(name=array[count - 1])
+            if Category.objects.filter(name=array[count]).exists():
                 pass
             else:
-                Category.objects.create(name=array[0])
-            count = 1
-            while count < len(array):
-                parent = Category.objects.get(name=array[count - 1])
-                if Category.objects.filter(name=array[count]).exists():
-                    pass
-                else:
-                    Category.objects.create(name=array[count], parent=parent)
-                count += 1
-        return JsonResponse(
-            {"status": True, "message": "Categories and Subcategories populated"}
-        )
+                Category.objects.create(name=array[count], parent=parent)
+            count += 1
+
+    print("population done")
 
 
 class ImageAssetView(View):
