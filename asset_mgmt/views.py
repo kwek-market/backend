@@ -162,9 +162,7 @@ class PopulateProduct(View):
             if Product.objects.filter(product_title=product["productTitle"]).exists():
                 continue
             else:
-                keyword = []
-                keyword.append(product["productTitle"])
-                keyword.append(product["brand"])
+                keyword = product["keyword"]
                 for word in keyword:
                     if not Keyword.objects.filter(keyword=word).exists():
                         Keyword.objects.create(keyword=word)
@@ -200,38 +198,21 @@ class PopulateProduct(View):
                         price=34,
                         discounted_price=30,
                     )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-
+                image_url = product["productImageUrl"]
+                for i in range(5):
+                    ProductImage.objects.create(product=created_product,image_url=image_url,)
                 rates = [1, 2, 3, 4, 5]
                 user_to_review = ExtendUser.objects.all()
 
-                Rating.objects.create(
-                    product=created_product,
-                    rating=random.choice(rates),
-                    review="This is a very good product",
-                    user=random.choice(user_to_review),
-                    likes=random.choice(range(1, 41)),
-                    dislikes=random.choice(range(1, 21)),
-                )
+                for i in range(3):
+                    Rating.objects.create(
+                        product=created_product,
+                        rating=random.choice(rates),
+                        review="This is a very good product",
+                        user=random.choice(user_to_review),
+                        likes=random.choice(range(1, 41)),
+                        dislikes=random.choice(range(1, 21)),
+                    )
         half_products = Product.objects.all().count() / 2
         i = 0
         while i < half_products:
