@@ -11,6 +11,7 @@ from django.http import (
 )
 from django.contrib.auth import get_user_model
 import uuid
+import threading
 
 import mimetypes
 from PIL import Image
@@ -62,22 +63,34 @@ class FileAssetView(View):
 
 class PopulateCategory(View):
     def get(self, request):
-        for array in data:
-            if Category.objects.filter(name=array[0]).exists():
+        thread = threading.Thread(target=populate_categories)
+        thread.start()
+        return JsonResponse({"status": True, "message": "started populating"})
+
+
+def populate_categories():
+    category_count = 1
+    sub_category_count = 1
+    for array in data:
+        print("category count", category_count)
+        category_count+= 1
+        if Category.objects.filter(name=array[0]).exists():
+            pass
+        else:
+            Category.objects.create(name=array[0])
+        count = 1
+        while count < len(array):
+            print("sub category count", sub_category_count)
+            sub_category_count+=1
+            print("total category count", sub_category_count+category_count)
+            parent = Category.objects.get(name=array[count - 1])
+            if Category.objects.filter(name=array[count]).exists():
                 pass
             else:
-                Category.objects.create(name=array[0])
-            count = 1
-            while count < len(array):
-                parent = Category.objects.get(name=array[count - 1])
-                if Category.objects.filter(name=array[count]).exists():
-                    pass
-                else:
-                    Category.objects.create(name=array[count], parent=parent)
-                count += 1
-        return JsonResponse(
-            {"status": True, "message": "Categories and Subcategories populated"}
-        )
+                Category.objects.create(name=array[count], parent=parent)
+            count += 1
+
+    print("population done")
 
 
 class ImageAssetView(View):
@@ -149,9 +162,7 @@ class PopulateProduct(View):
             if Product.objects.filter(product_title=product["productTitle"]).exists():
                 continue
             else:
-                keyword = []
-                keyword.append(product["productTitle"])
-                keyword.append(product["brand"])
+                keyword = product["keyword"]
                 for word in keyword:
                     if not Keyword.objects.filter(keyword=word).exists():
                         Keyword.objects.create(keyword=word)
@@ -187,38 +198,21 @@ class PopulateProduct(View):
                         price=34,
                         discounted_price=30,
                     )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-
+                image_url = product["productImageUrl"]
+                for i in range(5):
+                    ProductImage.objects.create(product=created_product,image_url=image_url,)
                 rates = [1, 2, 3, 4, 5]
                 user_to_review = ExtendUser.objects.all()
 
-                Rating.objects.create(
-                    product=created_product,
-                    rating=random.choice(rates),
-                    review="This is a very good product",
-                    user=random.choice(user_to_review),
-                    likes=random.choice(range(1, 41)),
-                    dislikes=random.choice(range(1, 21)),
-                )
+                for i in range(3):
+                    Rating.objects.create(
+                        product=created_product,
+                        rating=random.choice(rates),
+                        review="This is a very good product",
+                        user=random.choice(user_to_review),
+                        likes=random.choice(range(1, 41)),
+                        dislikes=random.choice(range(1, 21)),
+                    )
         half_products = Product.objects.all().count() / 2
         i = 0
         while i < half_products:

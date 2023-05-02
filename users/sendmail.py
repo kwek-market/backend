@@ -113,7 +113,8 @@ def send_email_through_PHP(payload_dictionary):
         else:
             return False, "error occured"
     except Exception as e:
-        return False,response.json()['message'] 
+        print(e)
+        return False,e 
 
 
 # send_password_reset_email("gregoflash05@gmail.com")
