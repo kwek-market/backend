@@ -77,7 +77,7 @@ def send_confirmation_email(email,full_name):
 
 
 def send_password_reset_email(email):
-    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN,"Kwek Market"
+    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username, "validity": True, 'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
                         'origIat': int(('{}'.format(time.time())).split('.')[0])},
                        SECRET_KEY,
