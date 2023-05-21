@@ -41,7 +41,7 @@ from wallet.object_types import (
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, ExtendUser, SellerProfile
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
@@ -965,11 +965,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
 ###################################################################################        #
     def resolve_get_total_orders(root, info, start_date, end_date, token):
-        auth = authenticate_user(token)
+        auth = authenticate_admin(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
-        if user.is_admin:
+        if user:
             start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
@@ -994,11 +994,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
 
     def resolve_get_total_sales(root, info, start_date, end_date, token):
-        auth = authenticate_user(token)
+        auth = authenticate_admin(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
-        if user.is_admin:
+        if user:
             start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
@@ -1030,11 +1030,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
             
     def resolve_get_average_sales(root, info, start_date, end_date, token):
-        auth = authenticate_user(token)
+        auth = authenticate_admin(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
-        if user.is_admin:
+        if user:
             start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
@@ -1074,11 +1074,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
         
     def resolve_get_total_active_customers(root, info, start_date, end_date, token):
-        auth = authenticate_user(token)
+        auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
-        if user.is_admin:
+        if user:
             start_datetime = timezone.make_aware(
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
