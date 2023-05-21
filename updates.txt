@@ -1,0 +1,25 @@
+ISSUES
+Email verification -- solved
+country codes for seller profile
+Found issue on the cart: Unexpected Error occured -- frontend client issue
+
+#################################################################################
+
+##########
+changed pages
+
+Sell on kwek
+footer
+
+
+
+checked 50 pages out of 62
+
+###################################################################################
+new functionalities
+
+Filters --- Are they product Options?
+Additional items on product detail page**
+payment methods
+
+

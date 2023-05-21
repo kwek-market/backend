@@ -9,8 +9,11 @@ from graphql_auth.schema import UserQuery, MeQuery
 from market.post_offices import get_paginator
 from notifications.models import Message, Notification
 from graphql import GraphQLError
+from django.utils import timezone
 from django.db.models import Sum
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from kwek_admin.models import *
 from django.db.models import (
     F,
     Count,
@@ -25,6 +28,7 @@ from django.db.models import (
 )
 
 from notifications.object_types import MessageType
+from kwek_admin.object_types import *
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
 from wallet.object_types import (
     InvoiceType,
@@ -37,7 +41,7 @@ from wallet.object_types import (
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, ExtendUser, SellerProfile
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
@@ -191,6 +195,33 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     user_notifications = graphene.List(
         MessageType, token=graphene.String(required=True)
     )
+    get_total_orders = graphene.Field(
+        GetTotalOrdersType,
+        start_date = graphene.String(required=True),
+        end_date = graphene.String(required=True),
+        token = graphene.String(required=True)
+
+    )
+    get_total_sales = graphene.Field(
+        GetTotalSalesType,
+        start_date=graphene.String(required=True),
+        end_date=graphene.String(required=True),
+        token=graphene.String(required=True)
+    )
+
+    get_average_sales = graphene.Field(
+        GetAverageOrderValueType,
+        start_date=graphene.String(required=True),
+        end_date=graphene.String(required=True),
+        token=graphene.String(required=True)
+    )
+    get_total_active_customers = graphene.Field(
+        GetTotalActiveCustomersType,
+        start_date=graphene.String(required=True),
+        end_date=graphene.String(required=True),
+        token=graphene.String(required=True)
+    )
+
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
 
     def resolve_billing_address(root, info, address_id):
@@ -930,3 +961,130 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             return data
         else:
             raise GraphQLError("Not a seller")
+        
+
+###################################################################################        #
+    def resolve_get_total_orders(root, info, start_date, end_date, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+           raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_admin:
+            start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
+            previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
+            previous_month_end = start_datetime - timedelta(days=1)
+            prev_month_orders = Order.objects.filter(date_created__range=[previous_month_start, previous_month_end]).count()
+            this_month_orders = Order.objects.filter(date_created__range=[start_datetime, end_datetime]).count()
+            if prev_month_orders and this_month_orders != None:
+                if prev_month_orders > this_month_orders:
+                    percentage =  ((prev_month_orders - this_month_orders)/prev_month_orders)*100
+                    status = False
+                elif prev_month_orders < this_month_orders:
+                    percentage =  ((this_month_orders - prev_month_orders)/this_month_orders)*100
+                    status = True
+                else:
+                    percentage = 0
+                    status = False
+
+                return GetTotalOrdersType(this_month_orders or 0, prev_month_orders or 0, round(percentage, 2) or 0, status)
+            else:
+                return GetTotalOrdersType(this_month_orders or 0, prev_month_orders or 0, percentage = 0, status = False)
+        else:
+            raise GraphQLError("Not an admin")
+
+    def resolve_get_total_sales(root, info, start_date, end_date, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+           raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_admin:
+            start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
+            previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
+            previous_month_end = start_datetime - timedelta(days=1)
+            paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                 )["total_sum"]
+            prev_paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                 )["prev_total_sum"]
+            print(prev_paid_order)
+            if prev_paid_order and paid_order != None:
+                if prev_paid_order > paid_order:
+                    percentage =  ((prev_paid_order - paid_order)/prev_paid_order)*100
+                    status = False
+                elif prev_paid_order < paid_order:
+                    percentage =  ((paid_order - prev_paid_order)/paid_order)*100
+                    status = True
+                else:
+                    percentage = 0
+                    status = False
+
+                return GetTotalSalesType(paid_order or 0, prev_paid_order or 0, percentage, status)
+            else:
+                return GetTotalSalesType(paid_order or 0, prev_paid_order or 0, percentage = 0, status = False)
+        else:
+            raise GraphQLError("Not an admin")
+            
+    def resolve_get_average_sales(root, info, start_date, end_date, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+           raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_admin:
+            start_datetime = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
+            previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
+            previous_month_end = start_datetime - timedelta(days=1)
+            paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                 )["total_sum"]
+            prev_paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                 )["prev_total_sum"]
+            num_paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                    date_created__range=[start_datetime, end_datetime])).count()
+            prev_num_paid_order = Order.objects.filter(
+                Q(paid=True) & Q(
+                    date_created__range=[previous_month_start, previous_month_end])).count()
+            if paid_order != None:
+               average_sales = paid_order/num_paid_order
+               if prev_paid_order != None:
+                  prev_average_sales = prev_paid_order/prev_num_paid_order
+                  if prev_average_sales > average_sales:
+                        percentage =  ((prev_average_sales - average_sales)/prev_average_sales)*100
+                        status = False
+                  elif prev_average_sales < average_sales:
+                        percentage =  ((average_sales - prev_average_sales)/average_sales)*100
+                        status = True
+                  else:
+                        percentage = 0
+                        status = False
+
+               return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage, status)
+            else:
+                return GetAverageOrderValueType(round(average_sales, 3) or 0, prev_average_sales or 0, percentage = 0, status = False)
+        else:
+            raise GraphQLError("Not an admin")
+        
+    def resolve_get_total_active_customers(root, info, start_date, end_date, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user.is_admin:
+            start_datetime = timezone.make_aware(
+                datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(
+                datetime.strptime(end_date, '%Y-%m-%d'))
+            active_users = ExtendUser.objects.filter(Q(date_joined__range=[start_datetime, end_datetime]) & Q(is_active=True)).count()
+            return GetTotalActiveCustomersType(active_users or 0)
+        else:
+            raise GraphQLError("Not an admin")
+    

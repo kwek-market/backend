@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "users",
     "notifications",
     "wallet",
+    "kwek_admin",
 
 
     "graphene_django",
