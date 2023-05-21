@@ -1067,7 +1067,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
                return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage, status)
             else:
-                return GetAverageOrderValueType(round(average_sales, 3) or 0, prev_average_sales or 0, percentage = 0, status = False)
+                return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage = 0, status = False)
         
     def resolve_get_total_active_customers(root, info, start_date, end_date, token):
         auth = authenticate_admin(token)
