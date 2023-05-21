@@ -11,7 +11,7 @@ from notifications.models import Message, Notification
 from graphql import GraphQLError
 from django.utils import timezone
 from django.db.models import Sum
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from kwek_admin.models import *
 from django.db.models import (
@@ -41,7 +41,7 @@ from wallet.object_types import (
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, ExtendUser, SellerProfile
-from users.validate import authenticate_user, authenticate_admin
+from users.validate import authenticate_user
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
@@ -965,7 +965,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
 ###################################################################################        #
     def resolve_get_total_orders(root, info, start_date, end_date, token):
-        auth = authenticate_admin(token)
+        auth = authenticate_user(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
@@ -994,7 +994,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
 
     def resolve_get_total_sales(root, info, start_date, end_date, token):
-        auth = authenticate_admin(token)
+        auth = authenticate_user(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
@@ -1030,7 +1030,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
             
     def resolve_get_average_sales(root, info, start_date, end_date, token):
-        auth = authenticate_admin(token)
+        auth = authenticate_user(token)
         if not auth["status"]:
            raise GraphQLError(auth["message"])
         user = auth["user"]
@@ -1074,7 +1074,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError("Not an admin")
         
     def resolve_get_total_active_customers(root, info, start_date, end_date, token):
-        auth = authenticate_admin(token)
+        auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
