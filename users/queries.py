@@ -990,8 +990,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 return GetTotalOrdersType(this_month_orders or 0, prev_month_orders or 0, round(percentage, 2) or 0, status)
             else:
                 return GetTotalOrdersType(this_month_orders or 0, prev_month_orders or 0, percentage = 0, status = False)
-        else:
-            raise GraphQLError("Not an admin")
+ 
 
     def resolve_get_total_sales(root, info, start_date, end_date, token):
         auth = authenticate_admin(token)
@@ -1026,8 +1025,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 return GetTotalSalesType(paid_order or 0, prev_paid_order or 0, percentage, status)
             else:
                 return GetTotalSalesType(paid_order or 0, prev_paid_order or 0, percentage = 0, status = False)
-        else:
-            raise GraphQLError("Not an admin")
+
             
     def resolve_get_average_sales(root, info, start_date, end_date, token):
         auth = authenticate_admin(token)
@@ -1070,8 +1068,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage, status)
             else:
                 return GetAverageOrderValueType(round(average_sales, 3) or 0, prev_average_sales or 0, percentage = 0, status = False)
-        else:
-            raise GraphQLError("Not an admin")
         
     def resolve_get_total_active_customers(root, info, start_date, end_date, token):
         auth = authenticate_admin(token)
@@ -1085,6 +1081,4 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(end_date, '%Y-%m-%d'))
             active_users = ExtendUser.objects.filter(Q(date_joined__range=[start_datetime, end_datetime]) & Q(is_active=True)).count()
             return GetTotalActiveCustomersType(active_users or 0)
-        else:
-            raise GraphQLError("Not an admin")
     
