@@ -1064,8 +1064,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                   else:
                         percentage = 0
                         status = False
+                
 
-               return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage, status)
+                  return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage, status)
+               else:
+                    return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage = 0, status = False)
             else:
                 return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage = 0, status = False)
         
