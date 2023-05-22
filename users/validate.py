@@ -52,17 +52,10 @@ def authenticate_user(token:str):
         return {"status":False, "message": "invalid authentication token", "user":ExtendUser()}
     
 def authenticate_admin(token:str):
-    try:
-        dt = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        exp = int("{}".format(dt['exp']))
-        if time.time() < exp:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-            user = ExtendUser.objects.get(email=email)
-            if user.is_admin:
-               return {"status":True, "message": "authenticated", "user":user}
-            else:
-                return {"status":False, "message": "Not an admin", "user":ExtendUser()}
-        else:
-            return {"status":False, "message": "token expired", "user":ExtendUser()}
-    except Exception as e:
-        return {"status":False, "message": "invalid authentication token", "user":ExtendUser()}
+    auth = authenticate_user(token)
+    user = auth["user"]
+    if user.is_admin:
+        return {"status":True, "message": "authenticated", "user":user}
+    else:
+        return {"status":False, "message": "Not an admin", "user":ExtendUser()}
+
