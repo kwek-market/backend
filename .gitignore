@@ -145,3 +145,5 @@ dmypy.json
 .vscode
 asset
 user_token.txt
+
+updates.txt

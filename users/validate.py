@@ -50,3 +50,12 @@ def authenticate_user(token:str):
             return {"status":False, "message": "token expired", "user":ExtendUser()}
     except Exception as e:
         return {"status":False, "message": "invalid authentication token", "user":ExtendUser()}
+    
+def authenticate_admin(token:str):
+    auth = authenticate_user(token)
+    user = auth["user"]
+    if user.is_admin:
+        return {"status":True, "message": "authenticated", "user":user}
+    else:
+        return {"status":False, "message": "Not an admin", "user":ExtendUser()}
+
