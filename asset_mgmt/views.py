@@ -67,6 +67,24 @@ class PopulateCategory(View):
         thread.start()
         return JsonResponse({"status": True, "message": "started populating"})
 
+def get_icon(category_name:str) -> str:
+    switch = {
+        "Automotive & Industrial": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/car_1_eymdl8.svg",
+        "Baby and Toddler Toys": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/toys_1_tg5gsv.svg",
+        "Health, Beauty and Personal care": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/stones_1_jlcfsd.svg",
+        "Books & Media Library": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Computer Electronics and Accessories": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Foods, Drinks & Groceries": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Electronics": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Protectors & Skins": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/stones_1_jlcfsd.svg",
+        "Home and Kitchen": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Kwek Fashion and Style": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/dress_1_sjs5ac.svg",
+        "Kwek Phones and Tablets": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Office & School Supplies": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/house_1_s9j3uo.svg",
+        "Sports and Fitness": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/sports_1_bbdtco.svg",
+        "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
+    }
+    return ""
 
 def populate_categories():
     category_count = 1
@@ -74,10 +92,13 @@ def populate_categories():
     for array in data:
         print("category count", category_count)
         category_count+= 1
+        icon = get_icon(array[0])
         if Category.objects.filter(name=array[0]).exists():
-            pass
+            cate = Category.objects.get(name=array[0])
+            cate.icon = icon
+            cate.save()
         else:
-            Category.objects.create(name=array[0])
+            Category.objects.create(name=array[0], icon=icon)
         count = 1
         while count < len(array):
             print("sub category count", sub_category_count)

@@ -27,7 +27,7 @@ $ pip install -r requirements.txt
 4. make migrations and migrate
 
 ```bash
-$ python manage.py makemigrations bill kwek_auth market notifications users wallet
+$ python manage.py makemigrations bill kwek_auth market notifications users wallet kwek_admin
 ```
 
 ```bash
