@@ -10,7 +10,7 @@ pusher_client = pusher.Pusher(
     secret=config("PUSHER_SECRET"),
     cluster=config("PUSHER_CLUSTER"),
     ssl=True,
-)
+)  
 
 
 def push_to_client(channel: str, data: dict):

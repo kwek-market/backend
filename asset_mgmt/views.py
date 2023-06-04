@@ -82,9 +82,12 @@ def get_icon(category_name:str) -> str:
         "Kwek Phones and Tablets": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
         "Office & School Supplies": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/house_1_s9j3uo.svg",
         "Sports and Fitness": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/sports_1_bbdtco.svg",
-        "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
+        "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
     }
-    return switch[category_name]
+
+    icon = switch[category_name]
+    return icon if icon != "" else switch[""]
 
 def populate_categories():
     category_count = 1
