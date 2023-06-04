@@ -84,7 +84,7 @@ def get_icon(category_name:str) -> str:
         "Sports and Fitness": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/sports_1_bbdtco.svg",
         "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
     }
-    return ""
+    return switch[category_name]
 
 def populate_categories():
     category_count = 1
