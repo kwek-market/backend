@@ -83,6 +83,7 @@ def get_icon(category_name:str) -> str:
         "Office & School Supplies": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/house_1_s9j3uo.svg",
         "Sports and Fitness": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/sports_1_bbdtco.svg",
         "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Accessories": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
         "": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
     }
 
@@ -93,9 +94,9 @@ def populate_categories():
     category_count = 1
     sub_category_count = 1
     for array in data:
-        print("category count", category_count)
+        print("category count", category_count, array[0])
         category_count+= 1
-        icon = get_icon(array[0])
+        icon = get_icon(array[0]) 
         if Category.objects.filter(name=array[0]).exists():
             cate = Category.objects.get(name=array[0])
             cate.icon = icon
