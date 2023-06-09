@@ -15,6 +15,7 @@ pusher_client = pusher.Pusher(
 
 def push_to_client(channel: str, data: dict):
     pusher_client.trigger(str(channel), str(channel), data)
+    
 
 
 class SendEmailNotification():

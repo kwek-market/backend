@@ -5,6 +5,7 @@ import graphene
 import uuid
 import random, math
 from graphene_django import DjangoListField
+from graphene.types.generic import GenericScalar
 from graphql_auth.schema import UserQuery, MeQuery
 from market.post_offices import get_paginator
 from notifications.models import Message, Notification
@@ -68,6 +69,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         ProductPaginatedType,
         page=graphene.Int(),
         page_size=graphene.Int(),
+    )
+    get_seller = graphene.List(
+        UserType, token=graphene.String(required=True)
     )
     get_seller_products = graphene.Field(
         ProductPaginatedType,
@@ -221,6 +225,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         end_date=graphene.String(required=True),
         token=graphene.String(required=True)
     )
+    get_total_revenue = GenericScalar(
+        token=graphene.String(required=True))
+    
+    get_recent_transactions = GenericScalar(
+        token=graphene.String(required=True))
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
 
@@ -1003,12 +1012,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
             previous_month_end = start_datetime - timedelta(days=1)
             paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[start_datetime, end_datetime]).aggregate(total_sum=Sum('order_price_total')
                  )["total_sum"]
             prev_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[previous_month_start, previous_month_end]).aggregate(prev_total_sum=Sum('order_price_total')
                  )["prev_total_sum"]
             print(prev_paid_order)
             if prev_paid_order and paid_order != None:
@@ -1038,19 +1047,19 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
             previous_month_end = start_datetime - timedelta(days=1)
             paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[start_datetime, end_datetime]).aggregate(total_sum=Sum('order_price_total')
                  )["total_sum"]
             prev_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[previous_month_start, previous_month_end]).aggregate(prev_total_sum=Sum('order_price_total')
                  )["prev_total_sum"]
             num_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                    date_created__range=[start_datetime, end_datetime])).count()
+                paid=True,
+                    date_created__range=[start_datetime, end_datetime]).count()
             prev_num_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                    date_created__range=[previous_month_start, previous_month_end])).count()
+                paid=True,
+                    date_created__range=[previous_month_start, previous_month_end]).count()
             if paid_order != None:
                average_sales = paid_order/num_paid_order
                if prev_paid_order != None:
@@ -1082,6 +1091,39 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
                 datetime.strptime(end_date, '%Y-%m-%d'))
-            active_users = ExtendUser.objects.filter(Q(date_joined__range=[start_datetime, end_datetime]) & Q(is_active=True)).count()
+            active_users = ExtendUser.objects.filter(date_joined__range=[start_datetime, end_datetime], is_active=True).count()
             return GetTotalActiveCustomersType(active_users or 0)
+    
+    def resolve_get_total_revenue(root, info, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            data = {}
+            for i in range(1, 13):
+                revenue = Order.objects.filter(paid=True, date_created__month=i, date_created__year=datetime.now().year).aggregate(monthly_revenue = Sum('order_price_total'))
+                if revenue["monthly_revenue"]:
+                  data[i] = revenue["monthly_revenue"]
+                else:
+                  data[i] = 0
+            return data
+
+    def resolve_get_recent_transactions(root, info, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            data = {}
+            timeframe = timezone.now() - timedelta(days=7)
+            recent_transactions = Order.objects.filter(date_created__lte=timeframe, paid=True)
+    def resolve_get_seller(root, info, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        sellers = User.objects.filter(is_active=True, is_seller=True).all()
+        
+        return sellers
     
