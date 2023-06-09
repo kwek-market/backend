@@ -753,8 +753,8 @@ class CancelOrder(graphene.Mutation):
                     email_send.send_only_one_paragraph(
                         notification_message.subject, notification_message.message
                     )
-                    for item_id in order.cart_items:
-                        seller_item = CartItem.objects.get(id=item_id)
+                    for seller_item in order.cart_items.all():
+                        # seller_item = CartItem.objects.get(id=item)
                         cart_item_seller = seller_item.product.user
                         if Notification.objects.filter(user=cart_item_seller).exists():
                             notification = Notification.objects.get(
@@ -853,7 +853,7 @@ class ApplyCoupon(graphene.Mutation):
         coupon_id = graphene.String(required=True)
 
     @staticmethod
-    def mutate(info, token, coupon_id):
+    def mutate(self, info, token, coupon_id):
         auth = authenticate_user(token)
         if not auth["status"]:
             return ApplyCoupon(status=auth["status"], message=auth["message"])
