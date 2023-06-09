@@ -904,7 +904,7 @@ class UnapplyCoupon(graphene.Mutation):
         token = graphene.String(required=True)
 
     @staticmethod
-    def mutate(info, token, coupon_ids):
+    def mutate(self, info, token, coupon_ids):
         auth = authenticate_user(token)
         if not auth["status"]:
             return ApplyCoupon(status=auth["status"], message=auth["message"])
