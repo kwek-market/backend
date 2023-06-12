@@ -11,6 +11,7 @@ class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255, blank=False, null=True, unique=True)
     icon = models.URLField(blank=True, null=True)
+    visibility = models.CharField(max_length=255, null=True, default="published")
     parent = models.ForeignKey("self", blank=True, null=True, related_name="child", on_delete=models.CASCADE)
     class Meta:
         verbose_name_plural = "categories"

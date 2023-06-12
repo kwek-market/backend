@@ -60,7 +60,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         PickupType, address_id=graphene.String(required=True)
     )
     billing_addresses = DjangoListField(BillingType)
-    categories = graphene.List(CategoryType)
+    categories = graphene.List(CategoryType, search=graphene.String(required=False))
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
@@ -247,7 +247,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 billing_addresses.append(address)
         return billing_addresses
 
-    def resolve_categories(root, info):
+    def resolve_categories(root, info, search=None):
+        if search:
+            name = Category.objects.filter(name__icontains=search)
+            return name
+
         return Category.objects.filter(parent=None)
 
     def resolve_category(root, info, id):
