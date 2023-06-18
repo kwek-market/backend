@@ -3,11 +3,12 @@ import json
 
 
 def get_post_office_data():
-    url = "https://services3.arcgis.com/BU6Aadhn6tbBEdyk/arcgis/rest/services/GRID3_NGA_Post_Offices/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
-    payload, headers={},{}
-    response = requests.request("GET", url, headers=headers, data=payload)
-    res_content = json.loads(response.content)
-    return res_content["features"]
+    # url = "https://services3.arcgis.com/BU6Aadhn6tbBEdyk/arcgis/rest/services/GRID3_NGA_Post_Offices/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json"
+    # payload, headers={},{}
+    # response = requests.request("GET", url, headers=headers, data=payload)
+    # res_content = json.loads(response.content)
+    # return res_content["features"]
+    pass
 
 class PostOffices():
     def __init__(self):

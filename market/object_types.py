@@ -10,6 +10,7 @@ class CategoryType(DjangoObjectType):
     class Meta:
         model = Category
         fields = "__all__"
+        convert_choices_to_enum = False
 
 
 class KeywordType(DjangoObjectType):
@@ -123,7 +124,7 @@ class GetSellerOrdersType(graphene.ObjectType):
 
 class GetSellerOrdersPaginatedType(graphene.ObjectType):
     page = graphene.Int()
-    pages = graphene.Int()
+    pages = graphene.Int()                                     
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(GetSellerOrdersType)

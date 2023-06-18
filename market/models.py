@@ -1,5 +1,6 @@
 from django.db import models
 import django
+from datetime import datetime, timedelta
 from django.contrib.postgres.fields import ArrayField
 from users.models import ExtendUser as User
 import uuid
@@ -8,16 +9,22 @@ import uuid
 
 
 class Category(models.Model):
+    class Visibility(models.TextChoices):
+        PUBLISHED = "published", "Published"
+        SCHEDULED = "scheduled", "Scheduled"
+        HIDDEN = 'hidden', "Hidden"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255, blank=False, null=True, unique=True)
     icon = models.URLField(blank=True, null=True)
-    visibility = models.CharField(max_length=255, null=True, default="published")
+    visibility = models.CharField(max_length=255, choices=Visibility.choices, default=Visibility.PUBLISHED)
+    publish_date = models.DateField(null=True, blank=True)
     parent = models.ForeignKey("self", blank=True, null=True, related_name="child", on_delete=models.CASCADE)
     class Meta:
         verbose_name_plural = "categories"
+        
 
     def __str__(self):
-        return self.name
+        return self.name + " " + self.visibility
 
 class Keyword(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)

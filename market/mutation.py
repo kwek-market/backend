@@ -71,15 +71,16 @@ class AddCategory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
         visibility = graphene.String(required=True)
+        publish_date = graphene.Date()
         parent = graphene.String()
     @staticmethod
-    def mutate(self, info, name, visibility, parent=None):
+    def mutate(self, info, name, visibility, parent=None, publish_date=None):
         if Category.objects.filter(name=name).exists() and parent is None:
             return AddCategory(status=False,message="Category already exists")
         else:
             try:
                 if parent is None:
-                    category = Category.objects.create(name=name, visibility=visibility)
+                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date)
                     return AddCategory(
                         category=category,
                         status=True,
@@ -88,7 +89,7 @@ class AddCategory(graphene.Mutation):
                 else:
                     if Category.objects.filter(name=parent).exists():
                         parent = Category.objects.get(name=parent)
-                        category = Category.objects.create(name=name, parent=parent, visibility=visibility)
+                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date)
                         return AddCategory(
                             category=category,
                             status=True,
@@ -105,28 +106,33 @@ class UpdateCategory(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        id = graphene.Int(required=True)
+        id = graphene.String(required=True)
         name = graphene.String(required=True)
-        visibility = graphene.String(required=True)
+        visibility = graphene.String()
+        publish_date = graphene.Date()
         parent = graphene.String()
 
     @staticmethod
-    def mutate(self, info, name=None, parent=None, id=None, visibility=None):
+    def mutate(self, info, name=None, parent=None, id=None, visibility=None, publish_date=None):
         try:
             if Category.objects.filter(id=id).exists():
                 if name is not None:
-                    category = Category.objects.filter(id=id).update(name)
-                    return UpdateCategory(category=category, status=True, message="Name updated successfully")
-                elif parent is not None:
-                    category = Category.objects.filter(id=id).update(parent)
-                    return UpdateCategory(category=category, status=True, message="Parent updated successfully")
-                elif visibility is not None:
-                    category = Category.objects.filter(id=id).update(visibility)
-                    return UpdateCategory(category=category, status=True, message="Visibility updated successfully")
+                    category = Category.objects.filter(id=id).update(name=name)
+                    UpdateCategory(category=category, status=True)
+                if parent is not None:
+                    category = Category.objects.filter(id=id).update(parent=parent)
+                    UpdateCategory(category=category, status=True)
+                if visibility is not None:
+                    category = Category.objects.filter(id=id).update(visibility=visibility)
+                    UpdateCategory(category=category, status=True)
+                if publish_date is not None:
+                    category = Category.objects.filter(id=id).update(publish_date=publish_date)
+                    UpdateCategory(category=category, status=True)
                 else:
                     return UpdateCategory(status=False,message="Invalid name or parent or visibility")
             else:
                 return UpdateCategory(status=False,message="Invalid id")
+            return UpdateCategory(status=True, message="Successfully Updated")
         except Exception as e:
             return UpdateCategory(status=False,message=e)
             
@@ -136,7 +142,7 @@ class DeleteCategory(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        id = graphene.Int(required=True)
+        id = graphene.String(required=True)
 
     @staticmethod
     def mutate(self, info, id):
