@@ -4,17 +4,19 @@ from users.models import ExtendUser
 from django.conf import settings
 from users.sendmail import send_email_through_PHP
 
-pusher_client = pusher.Pusher(
-    app_id=config("PUSHER_APP_ID"),
-    key=config("PUSHER_KEY"),
-    secret=config("PUSHER_SECRET"),
-    cluster=config("PUSHER_CLUSTER"),
-    ssl=True,
-)  
+# pusher_client = pusher.Pusher(
+#     app_id=config("PUSHER_APP_ID"),
+#     key=config("PUSHER_KEY"),
+#     secret=config("PUSHER_SECRET"),
+#     cluster=config("PUSHER_CLUSTER"),
+#     ssl=True,
+# )  
 
 
 def push_to_client(channel: str, data: dict):
-    pusher_client.trigger(str(channel), str(channel), data)
+    # pusher_client.trigger(str(channel), str(channel), data)
+    pass
+    
 
 
 class SendEmailNotification():

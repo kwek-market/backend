@@ -12,7 +12,7 @@ from .models import (
 )
 from django.apps import apps
 
-admin.site.register(Category)
+
 admin.site.register(Product)
 admin.site.register(ProductImage)
 admin.site.register(ProductOption)
@@ -22,3 +22,9 @@ admin.site.register(Rating)
 admin.site.register(Cart)
 admin.site.register(CartItem)
 # Register your models here.
+
+class CustomCategoryAdmin(admin.ModelAdmin):
+    search_fields = ("visibility__exact", )
+    list_filter = ("visibility", )
+admin.site.register(Category, CustomCategoryAdmin)    
+    

@@ -5,6 +5,7 @@ import graphene
 import uuid
 import random, math
 from graphene_django import DjangoListField
+from graphene.types.generic import GenericScalar
 from graphql_auth.schema import UserQuery, MeQuery
 from market.post_offices import get_paginator
 from notifications.models import Message, Notification
@@ -59,13 +60,21 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         PickupType, address_id=graphene.String(required=True)
     )
     billing_addresses = DjangoListField(BillingType)
-    categories = graphene.List(CategoryType)
+    categories = graphene.List(CategoryType, search=graphene.String())
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
     cartitem = graphene.Field(CartItemType, id=graphene.String(required=True))
     deals_of_the_day = graphene.Field(
         ProductPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+    )
+    get_user_type = graphene.Field(
+        GetUsersPaginatedType, token=graphene.String(required=True),
+        seller = graphene.Boolean(),
+        active = graphene.Boolean(),
+        red_flagged = graphene.Boolean(),
         page=graphene.Int(),
         page_size=graphene.Int(),
     )
@@ -202,6 +211,29 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         token = graphene.String(required=True)
 
     )
+    get_customer_orders = graphene.Field(
+        GetCustomerOrdersType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True),
+    )
+    get_customer_orders_paginated = graphene.Field(
+        GetCustomerOrdersPaginatedType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+
+    )
+    get_customer_average_order = graphene.Field(
+        GetCustomerAverageOrderType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True)
+    )
+    get_customer_total_expense = graphene.Field(
+        GetCustomerTotalSpentType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True)
+    )
     get_total_sales = graphene.Field(
         GetTotalSalesType,
         start_date=graphene.String(required=True),
@@ -221,6 +253,23 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         end_date=graphene.String(required=True),
         token=graphene.String(required=True)
     )
+    get_total_revenue = GenericScalar(
+        token=graphene.String(required=True))
+    
+    get_recent_transactions = graphene.Field(GetRecentTransactionsPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True))
+    get_seller_number_of_sales = graphene.Field(
+        GetSellerSalesType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True)
+    )
+    get_seller_avg_sales = graphene.Field(
+        GetAverageSellerType,
+        token = graphene.String(required=True),
+        id = graphene.String(required=True)
+    )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
 
@@ -238,11 +287,16 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 billing_addresses.append(address)
         return billing_addresses
 
-    def resolve_categories(root, info):
+    def resolve_categories(root, info, search=None):
+        Category.objects.filter(visibility=Category.Visibility.SCHEDULED , publish_date__lte=datetime.now().date()).update(visibility=Category.Visibility.PUBLISHED)
+        if search:
+            name = Category.objects.filter(name__icontains=search)
+            return name
+       
         return Category.objects.filter(parent=None)
 
-    def resolve_category(root, info, id):
-        return Category.objects.get(id=id)
+    # def resolve_category(root, info, id):
+    #     return Category.objects.get(id=id)
 
     def resolve_contact_us(root, info):
         return ContactMessage.objects.all().order_by("-sent_at")
@@ -267,11 +321,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
 
-    def resolve_category(root, info, id):
-        return Category.objects.get(id=id)
+    # def resolve_category(root, info, id):
+    #     return Category.objects.get(id=id)
 
-    def resolve_categories(root, info):
-        return Category.objects.filter(parent=None)
+    # def resolve_categories(root, info):
+    #     return Category.objects.filter(parent=None)
 
     def resolve_subcategories(root, info):
         categories, cat_list = Category.objects.all(), []
@@ -1003,12 +1057,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
             previous_month_end = start_datetime - timedelta(days=1)
             paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[start_datetime, end_datetime]).aggregate(total_sum=Sum('order_price_total')
                  )["total_sum"]
             prev_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[previous_month_start, previous_month_end]).aggregate(prev_total_sum=Sum('order_price_total')
                  )["prev_total_sum"]
             print(prev_paid_order)
             if prev_paid_order and paid_order != None:
@@ -1038,19 +1092,19 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             previous_month_start = (start_datetime.replace(day=1) - timedelta(days=1)).replace(day=1)
             previous_month_end = start_datetime - timedelta(days=1)
             paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[start_datetime, end_datetime])).aggregate(total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[start_datetime, end_datetime]).aggregate(total_sum=Sum('order_price_total')
                  )["total_sum"]
             prev_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                date_created__range=[previous_month_start, previous_month_end])).aggregate(prev_total_sum=Sum('order_price_total')
+                paid=True,
+                date_created__range=[previous_month_start, previous_month_end]).aggregate(prev_total_sum=Sum('order_price_total')
                  )["prev_total_sum"]
             num_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                    date_created__range=[start_datetime, end_datetime])).count()
+                paid=True,
+                    date_created__range=[start_datetime, end_datetime]).count()
             prev_num_paid_order = Order.objects.filter(
-                Q(paid=True) & Q(
-                    date_created__range=[previous_month_start, previous_month_end])).count()
+                paid=True,
+                    date_created__range=[previous_month_start, previous_month_end]).count()
             if paid_order != None:
                average_sales = paid_order/num_paid_order
                if prev_paid_order != None:
@@ -1082,6 +1136,113 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
                 datetime.strptime(end_date, '%Y-%m-%d'))
-            active_users = ExtendUser.objects.filter(Q(date_joined__range=[start_datetime, end_datetime]) & Q(is_active=True)).count()
+            active_users = ExtendUser.objects.filter(date_joined__range=[start_datetime, end_datetime], is_active=True).count()
             return GetTotalActiveCustomersType(active_users or 0)
+    
+    def resolve_get_total_revenue(root, info, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            data = {}
+            for i in range(1, 13):
+                revenue = Order.objects.filter(paid=True, date_created__month=i, date_created__year=datetime.now().year).aggregate(monthly_revenue = Sum('order_price_total'))
+                if revenue["monthly_revenue"]:
+                  data[i] = revenue["monthly_revenue"]
+                else:
+                  data[i] = 0
+            return data
+
+    def resolve_get_recent_transactions(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            timeframe = timezone.now() - timedelta(days=7)
+            recent_transactions = Order.objects.filter(date_created__gte=timeframe, paid=True).all()
+            return get_paginator(
+                recent_transactions, page_size, page, GetRecentTransactionsPaginatedType
+            )
+        
+    def resolve_get_user_type(
+            root, info, token, 
+            seller=False, active=True, red_flagged=False, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+           sellers = ExtendUser.objects.filter(is_active=active, 
+                                               is_seller=seller, is_flagged=red_flagged).all()
+        #    price_sum = Order.objects.filter(paid=True).aggregate(order_total=Sum('order_price_total'))["order_total"]
+           return get_paginator(sellers, page_size, page, GetUsersPaginatedType)
+    
+    def resolve_get_customer_orders(root, info, token, id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+
+            customer_orders = Order.objects.filter(user_id=id).count()
+            return GetCustomerOrdersType(customer_orders)
+            
+    def resolve_get_customer_orders_paginated(root, info, token, id, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+                customer_orders = Order.objects.filter(user_id=id)
+                return get_paginator(customer_orders, page_size, page, GetCustomerOrdersPaginatedType)
+            
+    
+    def resolve_get_customer_average_order(root, info, token, id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            customer_order_no = Order.objects.filter(user_id=id, paid=True).count()
+            customer_orders = Order.objects.filter(user_id=id, paid=True).aggregate(total_sum=Sum('order_price_total'))["total_sum"]
+            average_order_value = customer_orders/customer_order_no
+            return GetCustomerAverageOrderType(round(average_order_value, 3) or 0)
+            
+    
+    def resolve_get_customer_total_expense(root, info, token, id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            customer_total_expense = Order.objects.filter(user_id=id, paid=True).aggregate(total_sum=Sum('order_price_total'))["total_sum"]
+            return GetCustomerTotalSpentType(round(customer_total_expense, 3) or 0)
+    
+    def resolve_get_seller_number_of_sales(root, info, token, id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            seller_sales = Sales.objects.filter(
+                product__user=id,
+            ).count()
+            return seller_sales or 0
+    
+    def resolve_seller_avg_sales(root, info, token, id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            seller_sales = Sales.objects.filter(
+                product__user=id,
+            ).count()
+            seller_total_sales = Sales.objects.filter(
+                product__user=id
+            ).aggregate(total_sales=Sum("amount"))["total_sales"]
+            avg_sales = seller_total_sales/seller_sales
+            return round(avg_sales, 3) or 0
     

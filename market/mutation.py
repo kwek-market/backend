@@ -70,15 +70,17 @@ class AddCategory(graphene.Mutation):
 
     class Arguments:
         name = graphene.String(required=True)
+        visibility = graphene.String(required=True)
+        publish_date = graphene.Date()
         parent = graphene.String()
     @staticmethod
-    def mutate(self, info, name, parent=None):
+    def mutate(self, info, name, visibility, parent=None, publish_date=None):
         if Category.objects.filter(name=name).exists() and parent is None:
             return AddCategory(status=False,message="Category already exists")
         else:
             try:
                 if parent is None:
-                    category = Category.objects.create(name=name)
+                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date)
                     return AddCategory(
                         category=category,
                         status=True,
@@ -87,7 +89,7 @@ class AddCategory(graphene.Mutation):
                 else:
                     if Category.objects.filter(name=parent).exists():
                         parent = Category.objects.get(name=parent)
-                        category = Category.objects.create(name=name, parent=parent)
+                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date)
                         return AddCategory(
                             category=category,
                             status=True,
@@ -104,24 +106,33 @@ class UpdateCategory(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        id = graphene.Int(required=True)
+        id = graphene.String(required=True)
         name = graphene.String(required=True)
+        visibility = graphene.String()
+        publish_date = graphene.Date()
         parent = graphene.String()
 
     @staticmethod
-    def mutate(self, info, name=None, parent=None, id=None):
+    def mutate(self, info, name=None, parent=None, id=None, visibility=None, publish_date=None):
         try:
             if Category.objects.filter(id=id).exists():
                 if name is not None:
-                    category = Category.objects.filter(id=id).update(name)
-                    return UpdateCategory(category=category, status=True, message="Name updated successfully")
-                elif parent is not None:
-                    category = Category.objects.filter(id=id).update(parent)
-                    return UpdateCategory(category=category, status=True, message="Parent updated successfully")
+                    category = Category.objects.filter(id=id).update(name=name)
+                    UpdateCategory(category=category, status=True)
+                if parent is not None:
+                    category = Category.objects.filter(id=id).update(parent=parent)
+                    UpdateCategory(category=category, status=True)
+                if visibility is not None:
+                    category = Category.objects.filter(id=id).update(visibility=visibility)
+                    UpdateCategory(category=category, status=True)
+                if publish_date is not None:
+                    category = Category.objects.filter(id=id).update(publish_date=publish_date)
+                    UpdateCategory(category=category, status=True)
                 else:
-                    return UpdateCategory(status=False,message="Invalid name or parent")
+                    return UpdateCategory(status=False,message="Invalid name or parent or visibility")
             else:
                 return UpdateCategory(status=False,message="Invalid id")
+            return UpdateCategory(status=True, message="Successfully Updated")
         except Exception as e:
             return UpdateCategory(status=False,message=e)
             
@@ -131,7 +142,7 @@ class DeleteCategory(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        id = graphene.Int(required=True)
+        id = graphene.String(required=True)
 
     @staticmethod
     def mutate(self, info, id):
@@ -579,9 +590,10 @@ class CreateCartItem(graphene.Mutation):
         token = graphene.String()
         ip_address = graphene.String()
         product_option_id = graphene.String(required=True)
+        quantity = graphene.Int()
 
     @staticmethod
-    def mutate(self, info, product_option_id, token=None, ip_address=None):
+    def mutate(self, info, product_option_id, token=None, ip_address=None, quantity=1):
         option = ProductOption.objects.get(id=product_option_id)
         product = Product.objects.get(options__id=product_option_id)
         if token:
@@ -600,24 +612,25 @@ class CreateCartItem(graphene.Mutation):
                 if has_product:
                     cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option, ordered=False)
                     initial_price = cart_item.price/cart_item.quantity
-                    quantity = int(cart_item.quantity) + 1
+                    quantity = int(cart_item.quantity) + quantity
                     price = int(cart_item.price) + initial_price
                     cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
-                        message = "Added to cart"
+                        message = "Added to cart",
                     )
                 else:
                     try:
                         if option.discounted_price:
-                            cart_item = CartItem.objects.create(product=product, quantity=1, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
                         else:
-                            cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
-                            message = "Added to cart"
+                            message = "Added to cart",
+        
                         )
                     except Exception as e:
                         return CreateCartItem(status=False,message=e)
@@ -632,24 +645,26 @@ class CreateCartItem(graphene.Mutation):
             if has_product:
                 cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
                 initial_price = cart_item.price/cart_item.quantity
-                quantity = int(cart_item.quantity) + 1
+                quantity = int(cart_item.quantity) + quantity
                 price = int(cart_item.price) + initial_price
                 cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
                 return CreateCartItem(
                     cart_item=cart_item,
                     status = True,
-                    message = "Added to cart"
+                    message = "Added to cart",
+        
                 )
             else:
                 try:
                     if option.discounted_price:
-                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
                     else:
-                        cart_item = CartItem.objects.create(product=product, quantity=1, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
-                        message = "Added to cart"
+                        message = "Added to cart",
+                 
                     )
                 except Exception as e:
                     return CreateCartItem(status=False,message=e)

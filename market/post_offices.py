@@ -8,6 +8,7 @@ def get_post_office_data():
     response = requests.request("GET", url, headers=headers, data=payload)
     res_content = json.loads(response.content)
     return res_content["features"]
+    # pass
 
 class PostOffices():
     def __init__(self):

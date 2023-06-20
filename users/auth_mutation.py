@@ -8,7 +8,7 @@ from market.mutation import verify_cart
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
 from wallet.models import StoreDetail, Wallet
-from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user
+from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user, authenticate_admin
 from .sendmail import (
     send_confirmation_email,
     user_loggedIN,
@@ -538,45 +538,49 @@ class CompleteSellerVerification(graphene.Mutation):
 
     class Arguments:
         email = graphene.String(required=True)
+        is_verified = graphene.Boolean(required=True)
 
     @staticmethod
-    def mutate(self, info, email):
+    def mutate(self, info, email, is_verified):
         try:
             c_user = ExtendUser.objects.get(email=email)
             userid = c_user.id
 
             seller = SellerProfile.objects.get(user=userid)
-            seller.seller_is_verified = True
+            seller.seller_is_verified = is_verified
             seller.save()
-            StoreDetail.objects.create(
-                user = c_user,
-                store_name = seller.shop_name,
-                email=c_user.email,
-                address = seller.shop_address
-            )
-            Wallet.objects.create(
-                owner = seller.user
-            )
-            if Notification.objects.filter(user=c_user).exists():
-                notification = Notification.objects.get(
-                    user=c_user
+            if is_verified == True:
+                StoreDetail.objects.create(
+                    user = c_user,
+                    store_name = seller.shop_name,
+                    email=c_user.email,
+                    address = seller.shop_address
                 )
+                Wallet.objects.create(
+                    owner = seller.user
+                )
+                if Notification.objects.filter(user=c_user).exists():
+                    notification = Notification.objects.get(
+                        user=c_user
+                    )
+                else:
+                    notification = Notification.objects.create(
+                        user=c_user
+                    )
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Login successful",
+                    subject="New Login"
+                )
+                notification_info = {"notification":str(notification_message.notification.id),
+                    "message":notification_message.message, 
+                    "subject":notification_message.subject}
+                push_to_client(c_user.id, notification_info)
+                email_send = SendEmailNotification(c_user.email)
+                email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+                return CompleteSellerVerification(status=True, message="Successful")
             else:
-                notification = Notification.objects.create(
-                    user=c_user
-                )
-            notification_message = Message.objects.create(
-                notification=notification,
-                message=f"Login successful",
-                subject="New Login"
-            )
-            notification_info = {"notification":str(notification_message.notification.id),
-                "message":notification_message.message, 
-                "subject":notification_message.subject}
-            push_to_client(c_user.id, notification_info)
-            email_send = SendEmailNotification(c_user.email)
-            email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
-            return CompleteSellerVerification(status=True, message="Successful")
+                return CompleteSellerVerification(status=False, message="Not Accepted as a Seller")
         except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
 
@@ -584,7 +588,7 @@ class CompleteSellerVerification(graphene.Mutation):
 class UserAccountUpdate(graphene.Mutation):
     message = graphene.String()
     token = graphene.String()
-    status = graphene.Boolean()
+    status = graphene.Boolean() 
 
     class Arguments:
         token = graphene.String(required=True)
@@ -852,3 +856,26 @@ class StoreBanner(graphene.Mutation):
             
         else:
             return StoreBanner(status=False,message="User is not a seller")
+
+class FlagVendor(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+    
+    class Arguments:
+        token=graphene.String(required=True),
+        id=graphene.String(required=True),
+        red_flagged_vendor = graphene.Boolean(required=True)
+    
+    @staticmethod
+    def mutate(self, info, token, id, red_flagged_vendor):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          return FlagVendor(status=auth["status"], message=auth["message"])
+        user = auth["user"]
+        if user:
+            vendor = ExtendUser.objects.get(id=id)
+            vendor.is_flagged= red_flagged_vendor
+            vendor.save()
+            return FlagVendor(status=True, message="Successfully changed vendor status")
+        return FlagVendor(status=False, message="Wrong token provided")
+       

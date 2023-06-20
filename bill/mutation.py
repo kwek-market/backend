@@ -1,6 +1,6 @@
 import graphene
 from datetime import timedelta, datetime
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
@@ -904,7 +904,7 @@ class UnapplyCoupon(graphene.Mutation):
         token = graphene.String(required=True)
 
     @staticmethod
-    def mutate(info, token, coupon_ids):
+    def mutate(self, info, token, coupon_ids):
         auth = authenticate_user(token)
         if not auth["status"]:
             return ApplyCoupon(status=auth["status"], message=auth["message"])
@@ -923,3 +923,32 @@ class UnapplyCoupon(graphene.Mutation):
                 )
             except Exception as e:
                 return UnapplyCoupon(status=False, message=e)
+            
+
+class DeleteCoupon(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        coupon_id = graphene.String(required=True)
+        token = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, coupon_id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return DeleteCoupon(status=auth["status"], message=auth["message"])
+        else:
+            user = auth["user"]
+            if user:
+                try:
+                    coupon = Coupon.objects.get(id=coupon_id)
+                except Coupon.DoesNotExist:
+                    return DeleteCoupon(status=False, message="Coupon does not exist")
+                try:
+                    CouponUser.objects.filter(coupon=coupon).delete()
+                    return DeleteCoupon(
+                        status=True, message="Coupon unapplied", coupon=coupon
+                    )
+                except Exception as e:
+                    return DeleteCoupon(status=False, message=e)
