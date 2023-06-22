@@ -2,7 +2,7 @@
 
 Kwek Market's Django Graphql Backend
 
-## start application
+## start the application
 
 1. create .env file from example.env
 
