@@ -1,7 +1,8 @@
 import uuid
 from django.db import models
 from users.models import ExtendUser
-
+from bill.models import Order
+from market.models import CartItem
 
 # Create your models here.
 
@@ -62,3 +63,13 @@ class WalletTransaction(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     transaction_type = models.CharField(max_length=10)
     status = models.BooleanField(default=False)
+
+class WalletRefund(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)    
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    account_number = models.CharField(max_length=255)
+    bank_name = models.CharField(max_length=255)
+    product = models.ForeignKey(CartItem, on_delete=models.CASCADE, null=True)
+    number_of_product = models.IntegerField(default=1)
+    status = models.BooleanField(default=False)
+    date_created = models.DateTimeField(auto_now_add=True)
