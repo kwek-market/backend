@@ -172,7 +172,7 @@ class WishListItem(models.Model):
 
 class FlashSales(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(ProductOption, on_delete=models.CASCADE)
     start_date = models.DateField(auto_now_add=True)
     number_of_days = models.IntegerField(default=1)
     discount_percent = models.IntegerField(default=1)

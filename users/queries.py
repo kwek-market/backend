@@ -1220,7 +1220,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             refund_requests = WalletRefund.objects.filter(status=False).all()
             if refund_requests:
                return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
-            raise GraphQLError("No refunds")
+            
     
     def resolve_get_refunds(root, info, token, page=1, page_size=50):
         auth = authenticate_admin(token)
@@ -1231,7 +1231,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             refund_requests = WalletRefund.objects.filter(status=True).all()
             if refund_requests:
                return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
-            raise GraphQLError("No refund History")
+           
     
     def resolve_get_flash_sales(root, info, token, page=1, page_size=50):
         auth = authenticate_admin(token)
@@ -1247,13 +1247,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 end_date = start_date + timedelta(days=days)
 
                 # Get the current date and time
-                current_datetime = datetime.now()
+                current_datetime = datetime.now().date()
 
                 if current_datetime > end_date:
                         active_flash_sale.status = True
                         active_flash_sale.save()
                 return get_paginator( flash_sales, page_size, page, FlashSalesPaginatedType)
-            raise GraphQLError("No Flash sales")
+            
     
     def resolve_get_customer_average_order(root, info, token, id):
         auth = authenticate_admin(token)
