@@ -17,8 +17,8 @@ class ExtendUser(AbstractUser):
         blank=True, max_length=255, verbose_name="full_name"
     )
     is_verified = models.BooleanField(default=False, verbose_name="is_verified")
-    is_seller = models.BooleanField(default=True, verbose_name="is_seller")
-    is_admin = models.BooleanField(default=True, verbose_name="is_admin" )
+    is_seller = models.BooleanField(default=False, verbose_name="is_seller")
+    is_admin = models.BooleanField(default=False, verbose_name="is_admin" )
     is_flagged = models.BooleanField(default=False, verbose_name="red_flagged")
 
     USERNAME_FIELD = "username"
