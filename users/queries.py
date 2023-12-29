@@ -1107,6 +1107,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     date_created__range=[previous_month_start, previous_month_end]).count()
             if paid_order != None:
                average_sales = paid_order/num_paid_order
+               prev_average_sales = 0
                if prev_paid_order != None:
                   prev_average_sales = prev_paid_order/prev_num_paid_order
                   if prev_average_sales > average_sales:
