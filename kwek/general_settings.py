@@ -175,7 +175,9 @@ REGISTER_MUTATION_FIELDS = {
     "full_name": "String",
 }
 
-EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
+# EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
+EMAIL_BACKEND_DOMAIN = os.getenv("EMAIL_BACKEND_DOMAIN")
+APP_DOMAIN = os.getenv("APP_DOMAIN")
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = "support@kwekapi.com"
 PHPWEB = "kwekmailapiphpmailsystem"
