@@ -54,11 +54,11 @@ def expire_token(token):
 
 
 def send_confirmation_email(email,full_name):
-    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN,"Kwek Market"
+    username, SECRET_KEY, EMAIL_DOMAIN,APP_DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN, settings.APP_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode("utf-8")
     token_path = "?token={}".format(token)
-    link = "{}/email_verification/{}".format(DOMAIN, token_path)
+    link = "{}/email_verification/{}".format(APP_DOMAIN, token_path)
     payload = {
         "email": email,"name": full_name,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
         "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "email_verification",
@@ -77,13 +77,13 @@ def send_confirmation_email(email,full_name):
 
 
 def send_password_reset_email(email):
-    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN,"Kwek Market"
+    username, SECRET_KEY, EMAIL_DOMAIN,APP_DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN, settings.APP_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username, "validity": True, 'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
                         'origIat': int(('{}'.format(time.time())).split('.')[0])},
                        SECRET_KEY,
                        algorithm='HS256').decode('utf-8')
     token_path = "?token={}".format(token)
-    link = "{}/change_password/{}".format(DOMAIN, token_path)
+    link = "{}/change_password/{}".format(APP_DOMAIN, token_path)
     payload = {
         "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
         "from_email": settings.KWEK_EMAIL,"subject": 'Password Reset',"event": "forgot_password",

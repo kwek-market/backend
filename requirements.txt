@@ -69,4 +69,4 @@ urllib3==2.0.2
 whitenoise==6.4.0
 zipp==3.15.0
 zope.interface==6.0
-django-heroku
+# django-heroku
