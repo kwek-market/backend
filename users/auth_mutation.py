@@ -499,7 +499,12 @@ class SellerVerification(graphene.Mutation):
         c_user = auth["user"]
         userid = c_user.id
 
-        seller = SellerProfile.objects.get(user=userid)
+        seller = {}
+
+        try:
+            seller = SellerProfile.objects.get(user=userid)
+        except Exception as e:
+            return CompleteSellerVerification(status=False, message="you are not yet a seller")
 
         if seller.seller_is_verified == False:
             if seller.accepted_vendor_policy == False:
@@ -545,8 +550,14 @@ class CompleteSellerVerification(graphene.Mutation):
         try:
             c_user = ExtendUser.objects.get(email=email)
             userid = c_user.id
+            print
 
-            seller = SellerProfile.objects.get(user=userid)
+            seller = {}
+            try:
+                seller = SellerProfile.objects.get(user=userid)
+            except Exception as e:
+                return CompleteSellerVerification(status=False, message="you are not a seller")
+            
             seller.seller_is_verified = is_verified
             seller.save()
             if is_verified == True:
