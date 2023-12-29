@@ -18,7 +18,7 @@ $ virtualenv env
 $ source env/bin/activate
 ```
 
-3. install dependencies
+3. install app dependencies
 
 ```bash
 $ pip install -r requirements.txt
