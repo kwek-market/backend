@@ -1162,7 +1162,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
             timeframe = timezone.now() - timedelta(days=7)
-            recent_transactions = Order.objects.filter(date_created__gte=timeframe, paid=True).all()
+            recent_transactions = Order.objects.filter(date_created__gte=timeframe, paid=True)
             return get_paginator(
                 recent_transactions, page_size, page, GetRecentTransactionsPaginatedType
             )
@@ -1176,7 +1176,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
            sellers = ExtendUser.objects.filter(is_active=active, 
-                                               is_seller=seller, is_flagged=red_flagged).all()
+                                               is_seller=seller, is_flagged=red_flagged)
         #    price_sum = Order.objects.filter(paid=True).aggregate(order_total=Sum('order_price_total'))["order_total"]
            return get_paginator(sellers, page_size, page, GetUsersPaginatedType)
     
