@@ -295,8 +295,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
        
         return Category.objects.filter(parent=None)
 
-    # def resolve_category(root, info, id):
-    #     return Category.objects.get(id=id)
+    def resolve_category(root, info, id):
+        return Category.objects.get(id=id)
 
     def resolve_contact_us(root, info):
         return ContactMessage.objects.all().order_by("-sent_at")
