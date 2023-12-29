@@ -5,4 +5,6 @@ source env/bin/activate
 pip install -r requirements.txt
 python manage.py collectstatic
 deactivate
+ls -a
 rm -rf .next
+ls -a
