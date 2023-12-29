@@ -15,7 +15,7 @@ STATICFILES_DIRS = [BASE_DIR, "static"]
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 BACKEND_DOMAIN = "http://127.0.0.1:8000"
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles', "static")
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_ROOT  = os.path.join(BASE_DIR, 'media')
