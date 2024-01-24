@@ -64,7 +64,7 @@ class SellerProfile(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.user
+        return self.user.full_name
     
     @property
     def since(self):
