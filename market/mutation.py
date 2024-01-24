@@ -71,19 +71,23 @@ class AddCategory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
         visibility = graphene.String(required=True)
+        icon = graphene.String()
         publish_date = graphene.Date()
         parent = graphene.String()
     @staticmethod
-    def mutate(self, info, name, visibility, parent=None, publish_date=None):
+    def mutate(self, info, name, visibility, parent=None, icon=None, publish_date=None):
         if Category.objects.filter(name=name).exists() and parent is None:
             return AddCategory(status=False,message="Category already exists")
         else:
             try:
                 if parent is None:
+                    if icon is None:
+                        return AddCategory(status=False,message="Icon is required for Category")
                     category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date)
                     return AddCategory(
                         category=category,
                         status=True,
+                        icon=icon,
                         message="Category added successfully"
                     )
                 else:
@@ -111,28 +115,48 @@ class UpdateCategory(graphene.Mutation):
         visibility = graphene.String()
         publish_date = graphene.Date()
         parent = graphene.String()
+        icon = graphene.String()
 
     @staticmethod
-    def mutate(self, info, name=None, parent=None, id=None, visibility=None, publish_date=None):
+    def mutate(self, info, name=None, parent=None, icon=None, id=None, visibility=None, publish_date=None):
         try:
             if Category.objects.filter(id=id).exists():
+                updated_fields = {}
+
+                if icon is not None:
+                    updated_fields['icon'] = icon
+
                 if name is not None:
-                    category = Category.objects.filter(id=id).update(name=name)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['name'] = name
+                    # category = Category.objects.filter(id=id).update(name=name)
+                    # UpdateCategory(category=category, status=True)
                 if parent is not None:
-                    category = Category.objects.filter(id=id).update(parent=parent)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['parent'] = parent
+                    # category = Category.objects.filter(id=id).update(parent=parent)
+                    # UpdateCategory(category=category, status=True)
                 if visibility is not None:
-                    category = Category.objects.filter(id=id).update(visibility=visibility)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['visibility'] = visibility
+                    # category = Category.objects.filter(id=id).update(visibility=visibility)
+                    # UpdateCategory(category=category, status=True)
                 if publish_date is not None:
-                    category = Category.objects.filter(id=id).update(publish_date=publish_date)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['publish_date'] = publish_date
+                    # category = Category.objects.filter(id=id).update(publish_date=publish_date)
+                    # UpdateCategory(category=category, status=True)
+                # else:
+                #     return UpdateCategory(status=False,message="Invalid name or parent or visibility")
+                    
+                if updated_fields:
+                    try:
+                        category = Category.objects.filter(id=id).update(**updated_fields)
+                        return UpdateCategory(status=True, message="Category updated successfully")
+                    except Exception as e:
+                        return UpdateCategory(status=False, message=e)
                 else:
-                    return UpdateCategory(status=False,message="Invalid name or parent or visibility")
+                    return UpdateCategory(status=False, message="No valid fields to update")
+                       
             else:
                 return UpdateCategory(status=False,message="Invalid id")
-            return UpdateCategory(status=True, message="Successfully Updated")
+            # return UpdateCategory(status=True, message="Successfully Updated")
         except Exception as e:
             return UpdateCategory(status=False,message=e)
             
