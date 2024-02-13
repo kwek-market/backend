@@ -96,6 +96,13 @@ class OrderType(DjangoObjectType):
     class Meta:
         model=Order
 
+class OrderPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(OrderType)
+
 class SalesType(DjangoObjectType):
     class Meta:
         model = Sales
