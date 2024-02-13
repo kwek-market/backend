@@ -95,6 +95,7 @@ class WishlistItemType(DjangoObjectType):
 class OrderType(DjangoObjectType):
     class Meta:
         model=Order
+        fields = "__all__"
 
 class OrderPaginatedType(graphene.ObjectType):
     page = graphene.Int()

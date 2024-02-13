@@ -595,16 +595,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return user_orders
 
-    def resolve_all_orders(root, info, token, page, page_size=50, search=None, order_by=None):
+    def resolve_all_orders(root, info, token, page, page_size=50, search=None, order_by='-date_created'):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
-        order = "-date_created"
-        if order_by:
-            order = order_by
-
-        orders = Order.objects.all().order_by(order)
+        orders = Order.objects.all().order_by(order_by)
         if search:
             search_filter = (
             Q(order_id__icontains=search)
