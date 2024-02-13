@@ -30,7 +30,7 @@ def build_users_query(
             red_flagged=False, 
             search=None,
 ):
-    users = {}
+    users = ExtendUser.objects.all().order_by('-date_joined')
     search_filter, user_type_filter = Q(), Q()
     has_search, has_user_filter = False, False
     if search:
@@ -55,13 +55,13 @@ def build_users_query(
         user_type_filter = Q(is_seller=False, is_active=active, is_flagged=red_flagged)
 
     if has_user_filter and has_search:
-        users = ExtendUser.filter(search_filter, user_type_filter)
+        users = users.filter(search_filter, user_type_filter)
     elif not has_user_filter and has_search:
-        users = ExtendUser.filter(search_filter)
+        users = users.filter(search_filter)
     elif has_user_filter and not has_search:
-        users = ExtendUser.filter(user_type_filter)
+        users = users.filter(user_type_filter)
     else:
-        users = ExtendUser.objects.all().order_by('-date_joined')
+        users = users
     
     return users
 
