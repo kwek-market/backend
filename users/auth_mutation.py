@@ -596,6 +596,55 @@ class CompleteSellerVerification(graphene.Mutation):
             return CompleteSellerVerification(status=False, message=e)
 
 
+class RejectSellerVerification(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        email = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, email):
+        try:
+            c_user = ExtendUser.objects.get(email=email)
+            userid = c_user.id
+            print
+
+            seller = {}
+            try:
+                seller = SellerProfile.objects.get(user=userid)
+            except Exception as e:
+                return CompleteSellerVerification(status=False, message="you are not a seller")
+            
+            seller.seller_is_verified = False
+            seller.seller_is_rejected = True
+            seller.save()
+            
+            
+            if Notification.objects.filter(user=c_user).exists():
+                notification = Notification.objects.get(
+                    user=c_user
+                )
+            else:
+                notification = Notification.objects.create(
+                    user=c_user
+                )
+            notification_message = Message.objects.create(
+                notification=notification,
+                message=f"Seller Verification Failed",
+                subject="Failed Verification"
+            )
+            notification_info = {"notification":str(notification_message.notification.id),
+                "message":notification_message.message, 
+                "subject":notification_message.subject}
+            push_to_client(c_user.id, notification_info)
+            email_send = SendEmailNotification(c_user.email)
+            email_send.send_only_one_paragraph(notification_message.subject, notification_message.message)
+            return CompleteSellerVerification(status=True, message="Successful")
+        except Exception as e:
+            return CompleteSellerVerification(status=False, message=e)
+
+
 class UserAccountUpdate(graphene.Mutation):
     message = graphene.String()
     token = graphene.String()

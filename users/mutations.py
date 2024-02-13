@@ -62,6 +62,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     change_password = ChangePassword.Field()
     clicks_update = ProductClick.Field()
     complete_seller_verification = CompleteSellerVerification.Field()
+    reject_seller_verification = RejectSellerVerification.Field()
     contact_us = ContactUs.Field()
     create_user = CreateUser.Field()
     create_product = CreateProduct.Field()

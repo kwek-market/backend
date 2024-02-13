@@ -156,7 +156,7 @@ class OrderProgress(models.Model):
 
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(ExtendUser, related_name="order", on_delete=models.CASCADE)
     order_id = models.CharField(max_length=30)
     cart_items = models.ManyToManyField(CartItem,related_name='order_cart_items')
     payment_method = models.CharField(max_length=30)

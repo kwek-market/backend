@@ -27,7 +27,7 @@ class ExtendUser(AbstractUser):
 
 class SellerProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(ExtendUser, related_name="seller_profile", on_delete=models.CASCADE, null=True)
     firstname = models.CharField(max_length=255, blank=False, null=True)
     lastname = models.CharField(max_length=255, blank=False, null=True)
     phone_number = models.CharField(max_length=255, blank=False, null=True)
@@ -52,6 +52,9 @@ class SellerProfile(models.Model):
     bank_account_name = models.CharField(max_length=255, blank=True, null=True)
     seller_is_verified = models.BooleanField(
         default=False, verbose_name="seller_is_verified"
+    )
+    seller_is_rejected = models.BooleanField(
+        default=False, verbose_name="seller_is_rejected"
     )
     bank_account_is_verified = models.BooleanField(
         default=False, verbose_name="bank_account_is_verified"

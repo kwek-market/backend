@@ -46,13 +46,10 @@ from users.validate import authenticate_user, authenticate_admin
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
+from .queries_build import build_products_query, build_users_query
 
 
-def get_price_range(range):
-    try:
-        return range[0], range[1]
-    except:
-        raise GraphQLError("wrong price range data")
+
 
 
 class Query(UserQuery, MeQuery, graphene.ObjectType):
@@ -73,10 +70,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_user_type = graphene.Field(
         GetUsersPaginatedType, token=graphene.String(required=True),
         seller = graphene.Boolean(),
+        seller_is_rejected = graphene.Boolean(),
+        customer = graphene.Boolean(),
         active = graphene.Boolean(),
         red_flagged = graphene.Boolean(),
         page=graphene.Int(),
         page_size=graphene.Int(),
+        search=graphene.String()
     )
     get_seller_products = graphene.Field(
         ProductPaginatedType,
@@ -505,89 +505,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         rating=None,
         sizes=None,
     ):
-        prods = Product.objects.all().order_by("?")
-        search_filter, keyword_filter = Q(), Q()
-        price_filter, sizes_filter = Q(), Q()
-        search_status, price_status, sizes_status = False, False, False
-        if search:
-            search_status = True
-            search_filter = (
-                Q(product_title__icontains=search)
-                | Q(color__iexact=search)
-                | Q(brand__iexact=search)
-                | Q(gender__iexact=search)
-                | Q(category__name__icontains=search)
-                | Q(subcategory__name__icontains=search)
-                | Q(short_description__icontains=search)
-                | Q(options__price__icontains=search)
-            )
-            # prods = prods.filter(search_filter).distinct()
-        if keyword:
-            keyword_filter = Q(keyword__overlap=keyword)
-        if price_range:
-            from_price, to_price = get_price_range(price_range)
-            price_filter = (
-                Q(options__price__gte=from_price) & Q(options__price__lte=to_price)
-            ) | (
-                Q(options__discounted_price__gte=from_price)
-                & Q(options__discounted_price__lte=to_price)
-            )
-            price_status = True
-
-        if sizes:
-            sizes_filter, sizes_status = Q(options__size__in=sizes), True
-
-        if search_status or price_status or sizes_status:
-            prods = prods.filter(
-                search_filter, keyword_filter, price_filter, sizes_filter
-            ).distinct()
-        else:
-            prods = prods.filter(keyword_filter)
-
-        if sort_by:
-            if sort_by in ["date_created", "-date_created", "clicks", "-clicks"]:
-                prods = prods.order_by(sort_by)
-            elif sort_by in ["sales", "-sales"]:
-                sort_key = "{}_count".format(sort_by)
-                prods = prods.annotate(sales_count=Count("sales")).order_by(sort_key)
-            elif sort_by in ["price", "-price"]:
-                v1, v2 = "{}_average".format(sort_by), "{}_discounted_average".format(
-                    sort_by
-                )
-                prods = prods.annotate(
-                    price_average=ExpressionWrapper(
-                        Sum("options__price") / Count("options__price"),
-                        output_field=FloatField(),
-                    ),
-                    price_discounted_average=ExpressionWrapper(
-                        Sum("options__discounted_price")
-                        / Count("options__discounted_price"),
-                        output_field=FloatField(),
-                    ),
-                ).order_by(v1, v2)
-            elif sort_by in ["rating", "-rating"]:
-                sort_key = "rate" if sort_by == "rating" else "-rate"
-                if rating:
-                    if rating >= 0:
-                        prods = (
-                            prods.annotate(
-                                rate=Sum("product_rating__rating")
-                                / Count("product_rating__rating")
-                            )
-                            .filter(rate__lte=rating)
-                            .order_by(sort_key)
-                        )
-                    else:
-                        prods = (
-                            prods.annotate(
-                                rate=Sum("product_rating__rating")
-                                / Count("product_rating__rating")
-                            )
-                            .filter(rate__gte=abs(rating))
-                            .order_by(sort_key)
-                        )
-            else:
-                prods = prods
+        prods = build_products_query(search, sort_by, keyword, price_range, rating, sizes)
         return get_paginator(prods, page_size, page, ProductPaginatedType)
 
     def resolve_review(root, info, review_id):
@@ -1168,17 +1086,26 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             )
         
     def resolve_get_user_type(
-            root, info, token, 
-            seller=False, active=True, red_flagged=False, page=1, page_size=50):
+            root, info, 
+            token, 
+            seller=None, 
+            seller_is_rejected=None,
+            customer=None, 
+            active=True,
+            red_flagged=False, 
+            page=1, 
+            page_size=50,
+            search=None
+            ):
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-           sellers = ExtendUser.objects.filter(is_active=active, 
-                                               is_seller=seller, is_flagged=red_flagged)
-        #    price_sum = Order.objects.filter(paid=True).aggregate(order_total=Sum('order_price_total'))["order_total"]
-           return get_paginator(sellers, page_size, page, GetUsersPaginatedType)
+           users = build_users_query(seller, seller_is_rejected, customer, active, red_flagged, search)
+           return get_paginator(users, page_size, page, GetUsersPaginatedType)
+        else:
+            raise GraphQLError("invalid authentication")
     
     def resolve_get_customer_orders(root, info, token, id):
         auth = authenticate_admin(token)
