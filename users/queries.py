@@ -159,12 +159,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     )
     least_subcategories = graphene.List(CategoryType)
     orders = graphene.List(OrderType, token=graphene.String(required=True))
-    all_orders = graphene.List(
+    all_orders = graphene.Field(
         OrderPaginatedType, 
         token=graphene.String(required=True), 
         page=graphene.Int(),
         page_size=graphene.Int(),
         search=graphene.String(),
+        product_id=graphene.String(),
         order_by=graphene.String()
         )
     order = graphene.Field(
@@ -595,7 +596,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
         return user_orders
 
-    def resolve_all_orders(root, info, token, page, page_size=50, search=None, order_by='-date_created'):
+    def resolve_all_orders(root, info, token, page, page_size=50, search=None,product_id=None, order_by='-date_created'):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
@@ -606,7 +607,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             Q(order_id__icontains=search)
             | Q(user__full_name__icontains=search)
             )
-            orders.filter(search_filter)
+            orders = orders.filter(search_filter)
+
+        if product_id:
+            orders = orders.filter(cart_items__product__id=product_id).distinct()
         return get_paginator(orders, page_size, page, OrderPaginatedType)
 
     def resolve_order(root, info, token, id):
