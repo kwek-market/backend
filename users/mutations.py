@@ -5,6 +5,7 @@ from users.auth_mutation import (
     AccountNameRetrieval,
     SellerVerification,
     CompleteSellerVerification,
+    RejectSellerVerification,
     UserAccountUpdate,
     UserPasswordUpdate,
     StoreUpdate,
