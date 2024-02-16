@@ -46,9 +46,7 @@ from users.validate import authenticate_user, authenticate_admin
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
-from .queries_build import build_products_query, build_users_query
-
-
+from .queries_build import build_products_query, build_users_query, get_price_range
 
 
 
@@ -268,6 +266,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_recent_transactions = graphene.Field(GetRecentTransactionsPaginatedType,
         page=graphene.Int(),
         page_size=graphene.Int(),
+        start_date= graphene.String(required=True),
+        end_date=graphene.String(required=True),
         token=graphene.String(required=True))
     get_seller_number_of_sales = graphene.Field(
         GetSellerSalesType,
@@ -278,6 +278,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         GetAverageSellerType,
         token = graphene.String(required=True),
         id = graphene.String(required=True)
+    )
+    get_promoted_products_paginated = graphene.Field(
+        ProductPaginatedType, 
+        token=graphene.String(required=True),
+        search=graphene.String(),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
     )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
@@ -1099,14 +1106,17 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                   data[i] = 0
             return data
 
-    def resolve_get_recent_transactions(root, info, token, page=1, page_size=50):
+    def resolve_get_recent_transactions(root, info, token,start_date, end_date, page=1, page_size=50):
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            timeframe = timezone.now() - timedelta(days=7)
-            recent_transactions = Order.objects.filter(date_created__gte=timeframe, paid=True)
+            start_datetime = timezone.make_aware(
+                datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(
+                datetime.strptime(end_date, '%Y-%m-%d'))
+            recent_transactions = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True)
             return get_paginator(
                 recent_transactions, page_size, page, GetRecentTransactionsPaginatedType
             )
@@ -1199,4 +1209,23 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             ).aggregate(total_sales=Sum("amount"))["total_sales"]
             avg_sales = seller_total_sales/seller_sales
             return round(avg_sales, 3) or 0
-    
+        
+    def resolve_get_promoted_products_paginated(root, info, token, page=1, page_size=50, search=None, ):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            promoted_products = Product.objects.filter(promoted=True)
+            search_filter = Q()
+            search_status = False
+            if search:
+                search_status = True
+                search_filter=(
+                    Q(user__full_name__icontains=search)
+                    |Q(product_title__icontains=search)
+                )
+            if search_status:
+                promoted_products = promoted_products.filter(search_filter)
+            return get_paginator(promoted_products,page_size,page, ProductPaginatedType)
+            
