@@ -1071,7 +1071,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             else:
                 return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage = 0, status = False)
         
-    def resolve_get_total_active_customers(root, info, start_date, end_date, token):
+    def resolve_get_total_active_customers(root, info, token, start_date, end_date):
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
@@ -1081,7 +1081,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
                 datetime.strptime(end_date, '%Y-%m-%d'))
-            active_users = ExtendUser.objects.filter(date_joined__range=[start_datetime, end_datetime], is_active=True).count()
+            active_users = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True).order_by("user_id").distinct("user_id").count()
             return GetTotalActiveCustomersType(active_users or 0)
     
     def resolve_get_total_revenue(root, info, token):
