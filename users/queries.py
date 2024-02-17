@@ -31,14 +31,7 @@ from django.db.models import (
 from notifications.object_types import MessageType
 from kwek_admin.object_types import *
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
-from wallet.object_types import (
-    InvoiceType,
-    StoreDetailType,
-    WalletTransactionType,
-    WalletType,
-    InvoicePaginatedType,
-    WalletTransactionPaginatedType,
-)
+from wallet.object_types import *
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, ExtendUser, SellerProfile
@@ -46,9 +39,7 @@ from users.validate import authenticate_user, authenticate_admin
 from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
-from .queries_build import build_products_query, build_users_query
-
-
+from .queries_build import build_products_query, build_users_query, get_price_range
 
 
 
@@ -127,6 +118,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_seller_wallet_transactions = graphene.Field(
         WalletTransactionPaginatedType,
         token=graphene.String(required=True),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+    )
+    get_wallet_transactions = graphene.Field(
+        WalletTransactionPaginatedType,
+        token=graphene.String(required=True),
+        search=graphene.String(),
+        sort_by=graphene.String(),
         page=graphene.Int(),
         page_size=graphene.Int(),
     )
@@ -268,7 +267,27 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_recent_transactions = graphene.Field(GetRecentTransactionsPaginatedType,
         page=graphene.Int(),
         page_size=graphene.Int(),
+        start_date= graphene.String(required=True),
+        end_date=graphene.String(required=True),
         token=graphene.String(required=True))
+    get_refund_requests = graphene.Field(
+        WalletRefundPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
+    get_flash_sales = graphene.Field(
+        FlashSalesPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
+    get_refunds = graphene.Field(
+        WalletRefundPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
     get_seller_number_of_sales = graphene.Field(
         GetSellerSalesType,
         token = graphene.String(required=True),
@@ -278,6 +297,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         GetAverageSellerType,
         token = graphene.String(required=True),
         id = graphene.String(required=True)
+    )
+    get_promoted_products_paginated = graphene.Field(
+        ProductPaginatedType, 
+        token=graphene.String(required=True),
+        search=graphene.String(),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
     )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
@@ -1049,6 +1075,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             prev_num_paid_order = Order.objects.filter(
                 paid=True,
                     date_created__range=[previous_month_start, previous_month_end]).count()
+            average_sales = 0
+            prev_average_sales = 0
             if paid_order != None:
                average_sales = paid_order/num_paid_order
                prev_average_sales = 0
@@ -1071,7 +1099,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             else:
                 return GetAverageOrderValueType(round(average_sales, 3) or 0, round(prev_average_sales, 3) or 0, percentage = 0, status = False)
         
-    def resolve_get_total_active_customers(root, info, start_date, end_date, token):
+    def resolve_get_total_active_customers(root, info, token, start_date, end_date):
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
@@ -1081,7 +1109,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
                 datetime.strptime(end_date, '%Y-%m-%d'))
-            active_users = ExtendUser.objects.filter(date_joined__range=[start_datetime, end_datetime], is_active=True).count()
+            active_users = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True).order_by("user_id").distinct("user_id").count()
             return GetTotalActiveCustomersType(active_users or 0)
     
     def resolve_get_total_revenue(root, info, token):
@@ -1099,14 +1127,17 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                   data[i] = 0
             return data
 
-    def resolve_get_recent_transactions(root, info, token, page=1, page_size=50):
+    def resolve_get_recent_transactions(root, info, token,start_date, end_date, page=1, page_size=50):
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            timeframe = timezone.now() - timedelta(days=7)
-            recent_transactions = Order.objects.filter(date_created__gte=timeframe, paid=True)
+            start_datetime = timezone.make_aware(
+                datetime.strptime(start_date, '%Y-%m-%d'))
+            end_datetime = timezone.make_aware(
+                datetime.strptime(end_date, '%Y-%m-%d'))
+            recent_transactions = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True)
             return get_paginator(
                 recent_transactions, page_size, page, GetRecentTransactionsPaginatedType
             )
@@ -1151,6 +1182,50 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user:
                 customer_orders = Order.objects.filter(user_id=id)
                 return get_paginator(customer_orders, page_size, page, GetCustomerOrdersPaginatedType)
+            
+
+    def resolve_get_refund_requests(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            refund_requests = WalletRefund.objects.filter(status=False).all()
+            if refund_requests:
+               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+            
+    
+    def resolve_get_refunds(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            refund_requests = WalletRefund.objects.filter(status=True).all()
+            if refund_requests:
+               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+           
+    
+    def resolve_get_flash_sales(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            flash_sales = FlashSales.objects.all()
+            if flash_sales:
+                active_flash_sale = flash_sales.get(status=False)
+                start_date = active_flash_sale.start_date
+                days = active_flash_sale.number_of_days
+                end_date = start_date + timedelta(days=days)
+
+                # Get the current date and time
+                current_datetime = datetime.now().date()
+
+                if current_datetime > end_date:
+                        active_flash_sale.status = True
+                        active_flash_sale.save()
+                return get_paginator( flash_sales, page_size, page, FlashSalesPaginatedType)
             
     
     def resolve_get_customer_average_order(root, info, token, id):
@@ -1199,4 +1274,51 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             ).aggregate(total_sales=Sum("amount"))["total_sales"]
             avg_sales = seller_total_sales/seller_sales
             return round(avg_sales, 3) or 0
-    
+        
+    def resolve_get_promoted_products_paginated(root, info, token, page=1, page_size=50, search=None, ):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            promoted_products = Product.objects.filter(promoted=True)
+            search_filter = Q()
+            search_status = False
+            if search:
+                search_status = True
+                search_filter=(
+                    Q(user__full_name__icontains=search)
+                    |Q(product_title__icontains=search)
+                )
+            if search_status:
+                promoted_products = promoted_products.filter(search_filter)
+            return get_paginator(promoted_products,page_size,page, ProductPaginatedType)
+        
+    def resolve_get_wallet_transactions(root, info, token, page=1, page_size=50, search=None, sort_by=None):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            transactions = WalletTransaction.objects.all()
+            search_filter = Q()
+            search_status = False
+            if search:
+                search_status = True
+                search_filter=(
+                    Q(id__icontains=search)
+                )   
+            if search_status:
+                transactions=transactions.filter(search_filter)
+            if sort_by:
+                if sort_by in [
+                    "deposit",
+                    "withdrawal",
+                ]:
+                    transactions=transactions.filter(transaction_type__icontains = sort_by)
+                else:
+                    transactions=transactions
+            return get_paginator(
+                transactions, page_size, page, WalletTransactionPaginatedType
+            )
+            

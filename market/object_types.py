@@ -24,6 +24,11 @@ class ProductType(DjangoObjectType):
         model = Product
         fields = "__all__"
 
+class FlashSalesType(DjangoObjectType):
+    class Meta:
+        model = FlashSales
+        fields = "__all__"
+
 class ProductImageType(DjangoObjectType):
     class Meta:
         model = ProductImage
@@ -114,12 +119,20 @@ class ProductPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(ProductType)
+
 class RatingPaginatedType(graphene.ObjectType):
     page = graphene.Int()
     pages = graphene.Int()
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(RatingType)
+
+class FlashSalesPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(FlashSalesType)
 
 class GetSellerOrdersType(graphene.ObjectType):
     order = graphene.Field(OrderType)

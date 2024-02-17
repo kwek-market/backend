@@ -8,7 +8,8 @@ from .models import (
     ProductPromotion,
     Rating,
     Cart,
-    CartItem
+    CartItem,
+
 )
 from django.apps import apps
 
