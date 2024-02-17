@@ -43,7 +43,10 @@ from bill.mutation import (
     UpdateDeliverystatus,
     UpdateOrderProgress
 )
-from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
+from wallet.mutation import (CreateInvoice,
+FundWallet, WalletTransactionSuccess,
+WithdrawFromWallet, RefundRequest,
+ForceRefund)
 
 class AuthMutation(graphene.ObjectType):
     pass
@@ -68,6 +71,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     create_user = CreateUser.Field()
     create_product = CreateProduct.Field()
     create_subscriber = CreateSubscriber.Field()
+    new_flash_sales = FlashSalesMutation.Field()
     create_invoice = CreateInvoice.Field()
     create_coupon = CreateCoupon.Field()
     delete_category = DeleteCategory.Field()
@@ -105,6 +109,8 @@ class Mutation(AuthMutation, graphene.ObjectType):
     verify_token = VerifyToken.Field()
     verify_payment = PaymentVerification.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
+    refund = RefundRequest.Field()
+    force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
     refund_request = CreateRefundRequest.Field()
     

@@ -31,14 +31,7 @@ from django.db.models import (
 from notifications.object_types import MessageType
 from kwek_admin.object_types import *
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
-from wallet.object_types import (
-    InvoiceType,
-    StoreDetailType,
-    WalletTransactionType,
-    WalletType,
-    InvoicePaginatedType,
-    WalletTransactionPaginatedType,
-)
+from wallet.object_types import *
 from .model_object_type import UserType, SellerProfileType
 from market.object_types import *
 from users.models import SellerCustomer, ExtendUser, SellerProfile
@@ -277,6 +270,24 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         start_date= graphene.String(required=True),
         end_date=graphene.String(required=True),
         token=graphene.String(required=True))
+    get_refund_requests = graphene.Field(
+        WalletRefundPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
+    get_flash_sales = graphene.Field(
+        FlashSalesPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
+    get_refunds = graphene.Field(
+        WalletRefundPaginatedType,
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+        token=graphene.String(required=True)
+    )
     get_seller_number_of_sales = graphene.Field(
         GetSellerSalesType,
         token = graphene.String(required=True),
@@ -1064,6 +1075,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             prev_num_paid_order = Order.objects.filter(
                 paid=True,
                     date_created__range=[previous_month_start, previous_month_end]).count()
+            average_sales = 0
+            prev_average_sales = 0
             if paid_order != None:
                average_sales = paid_order/num_paid_order
                prev_average_sales = 0
@@ -1169,6 +1182,50 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user:
                 customer_orders = Order.objects.filter(user_id=id)
                 return get_paginator(customer_orders, page_size, page, GetCustomerOrdersPaginatedType)
+            
+
+    def resolve_get_refund_requests(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            refund_requests = WalletRefund.objects.filter(status=False).all()
+            if refund_requests:
+               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+            
+    
+    def resolve_get_refunds(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            refund_requests = WalletRefund.objects.filter(status=True).all()
+            if refund_requests:
+               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+           
+    
+    def resolve_get_flash_sales(root, info, token, page=1, page_size=50):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            flash_sales = FlashSales.objects.all()
+            if flash_sales:
+                active_flash_sale = flash_sales.get(status=False)
+                start_date = active_flash_sale.start_date
+                days = active_flash_sale.number_of_days
+                end_date = start_date + timedelta(days=days)
+
+                # Get the current date and time
+                current_datetime = datetime.now().date()
+
+                if current_datetime > end_date:
+                        active_flash_sale.status = True
+                        active_flash_sale.save()
+                return get_paginator( flash_sales, page_size, page, FlashSalesPaginatedType)
             
     
     def resolve_get_customer_average_order(root, info, token, id):

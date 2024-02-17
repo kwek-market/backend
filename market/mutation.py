@@ -959,6 +959,39 @@ class CancelProductPromotion(graphene.Mutation):
         else:
             return CancelProductPromotion(status=False,message="Product does not belong to you")
 
+class FlashSalesMutation(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    flash_sales = graphene.Field(FlashSalesType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        productOption_id = graphene.String(required=True)
+        days = graphene.Int(required=True)
+        discount_percent = graphene.Int(required=True) 
+        
+    
+    @staticmethod
+    def mutate(self, info, token, productOption_id, discount_percent, days=1):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return FlashSalesMutation(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        try:
+            discounted_product = ProductOption.objects.get(id=productOption_id)
+            if discounted_product:
+                if discounted_product.product.user == user:
+                    if not FlashSales.objects.filter(product=discounted_product).exists():
+                            new_flash_sales = FlashSales.objects.create(
+                                product=discounted_product,
+                                number_of_days=days,
+                                discount_percent = discount_percent
+                            )
+                            return FlashSalesMutation(status=False,message="Flash Sale created successfully", flash_sales = new_flash_sales ) 
+                    return FlashSalesMutation(status=False,message="Flash Sale already created") 
+                return FlashSalesMutation(status=False,message="Product does not belong to you") 
+        except Exception as e:
+            return FlashSalesMutation(status=False,message=e) 
 
 def unpromote():
     from datetime import datetime
