@@ -112,5 +112,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     refund = RefundRequest.Field()
     force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
-    refund_request = CreateRefundRequest.Field()
     

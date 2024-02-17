@@ -149,15 +149,3 @@ class GetSellerOrdersPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(GetSellerOrdersType)
-
-class RefundRequest(DjangoObjectType):
-    class Meta:
-        model=Refund
-        fields = "__all__"
-
-class GetRefundRequestPaginated(graphene.ObjectType):
-    page = graphene.Int()
-    pages = graphene.Int()                                     
-    has_next = graphene.Boolean()
-    has_prev = graphene.Boolean()
-    objects = graphene.List(RefundRequest)
