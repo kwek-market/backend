@@ -128,6 +128,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page=graphene.Int(),
         page_size=graphene.Int(),
     )
+    get_wallet_transactions = graphene.Field(
+        WalletTransactionPaginatedType,
+        token=graphene.String(required=True),
+        search=graphene.String(),
+        sort_by=graphene.String(),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+    )
     # locations = graphene.List()
     get_seller_successful_sales = graphene.JSONString(
         token=graphene.String(required=True), this_month=graphene.Boolean()
@@ -1228,4 +1236,32 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             if search_status:
                 promoted_products = promoted_products.filter(search_filter)
             return get_paginator(promoted_products,page_size,page, ProductPaginatedType)
+        
+    def resolve_get_wallet_transactions(root, info, token, page=1, page_size=50, search=None, sort_by=None):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        if user:
+            transactions = WalletTransaction.objects.all()
+            search_filter = Q()
+            search_status = False
+            if search:
+                search_status = True
+                search_filter=(
+                    Q(id__icontains=search)
+                )   
+            if search_status:
+                transactions=transactions.filter(search_filter)
+            if sort_by:
+                if sort_by in [
+                    "deposit",
+                    "withdrawal",
+                ]:
+                    transactions=transactions.filter(transaction_type__icontains = sort_by)
+                else:
+                    transactions=transactions
+            return get_paginator(
+                transactions, page_size, page, WalletTransactionPaginatedType
+            )
             

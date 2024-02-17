@@ -106,4 +106,5 @@ class Mutation(AuthMutation, graphene.ObjectType):
     verify_payment = PaymentVerification.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
+    refund_request = CreateRefundRequest.Field()
     

@@ -8,7 +8,9 @@ from .models import (
     ProductPromotion,
     Rating,
     Cart,
-    CartItem
+    CartItem,
+    Refund
+
 )
 from django.apps import apps
 
@@ -21,6 +23,7 @@ admin.site.register(ProductPromotion)
 admin.site.register(Rating)
 admin.site.register(Cart)
 admin.site.register(CartItem)
+admin.site.register(Refund)
 # Register your models here.
 
 class CustomCategoryAdmin(admin.ModelAdmin):

@@ -981,3 +981,28 @@ def unpromote():
   
 sched.add_job(unpromote, 'interval', minutes=10)
 sched.start()
+
+class CreateRefundRequest(graphene.Mutation):
+    status=graphene.Boolean()
+    message=graphene.String()
+    refund = graphene.Field(RefundRequest)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        product_id = graphene.UUID(required=True)
+        reason = graphene.String(required=True)
+        quantity = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, token, product_id,reason,quantity=1):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return CreateRefundRequest(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        if user:
+            product = Product.objects.get(id=product_id)
+            user = ExtendUser.objects.get(id=user.id)
+            refund = Refund.objects.create(product=product, user=user, reason=reason, quantity=quantity)
+            return CreateRefundRequest(status=True, message="Your Refund has been submitted for review!", refund=refund)
+        
+

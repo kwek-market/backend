@@ -169,3 +169,14 @@ class WishListItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="products_wished", on_delete=models.CASCADE)
     wishlist = models.ForeignKey(Wishlist, related_name="wishlist_item", on_delete=models.CASCADE)
+
+class Refund(models.Model):
+    id=models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    product = models.ForeignKey(Product, related_name="product_refund", on_delete = models.CASCADE)
+    user = models.ForeignKey(User, related_name = "user_refund", on_delete=models.CASCADE)
+    reason=models.CharField(max_length=255)
+    quantity = models.PositiveBigIntegerField(default=1)
+    status = models.BooleanField(default=False)
+    date_created = models.DateTimeField(auto_now_add=True)
+    
+
