@@ -1,7 +1,7 @@
 import graphene
 import jwt
 from django.utils import timezone
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 from django.conf import settings
 
 from django.conf import settings
@@ -989,20 +989,40 @@ class CreateRefundRequest(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
-        product_id = graphene.UUID(required=True)
+        cart_item_id = graphene.UUID(required=True)
         reason = graphene.String(required=True)
         quantity = graphene.String()
 
     @staticmethod
-    def mutate(self, info, token, product_id,reason,quantity=1):
+    def mutate(self, info, token, cart_item_id,reason,quantity=1):
         auth = authenticate_user(token)
         if not auth["status"]:
             return CreateRefundRequest(status=auth["status"],message=auth["message"])
         user = auth["user"]
         if user:
-            product = Product.objects.get(id=product_id)
+            product = CartItem.objects.get(id=cart_item_id)
             user = ExtendUser.objects.get(id=user.id)
             refund = Refund.objects.create(product=product, user=user, reason=reason, quantity=quantity)
             return CreateRefundRequest(status=True, message="Your Refund has been submitted for review!", refund=refund)
+        
+class ApproveRefundRequest(graphene.Mutation):
+    status=graphene.Boolean()
+    message=graphene.String()
+    refund = graphene.Field(RefundRequest)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        refund_id = graphene.UUID(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, refund_id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return ApproveRefundRequest(status=auth["status"],message=auth["message"])
+        refund = Refund.objects.get(id=refund_id)
+     
+
+
+
         
 

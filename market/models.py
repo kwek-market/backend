@@ -172,7 +172,7 @@ class WishListItem(models.Model):
 
 class Refund(models.Model):
     id=models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product = models.ForeignKey(Product, related_name="product_refund", on_delete = models.CASCADE)
+    product = models.ForeignKey(CartItem, related_name="product_refund", on_delete = models.CASCADE)
     user = models.ForeignKey(User, related_name = "user_refund", on_delete=models.CASCADE)
     reason=models.CharField(max_length=255)
     quantity = models.PositiveBigIntegerField(default=1)
