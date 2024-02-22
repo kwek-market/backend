@@ -42,6 +42,7 @@ def build_users_query(
             | Q(seller_profile__lastname__icontains=search)
             | Q(seller_profile__state__icontains=search)
             | Q(seller_profile__city__icontains=search)
+            | Q(seller_profile__shop_name__icontains=search)
         )
 
     if seller:
