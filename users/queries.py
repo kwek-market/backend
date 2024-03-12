@@ -49,6 +49,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     )
     billing_addresses = DjangoListField(BillingType)
     categories = graphene.List(CategoryType, search=graphene.String())
+    get_user_by_id = graphene.Field(UserType, id=graphene.String(required=True), token=graphene.String(required=True))
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
     coupons = DjangoListField(CouponType)
@@ -307,7 +308,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
-
+    
+    def resolve_get_user_by_id(root, info, id, token):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        return User.objects.get(id=id)
+    
     def resolve_billing_address(root, info, address_id):
         return Billing.objects.get(id=address_id)
 
