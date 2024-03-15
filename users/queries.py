@@ -363,11 +363,6 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
 
-    # def resolve_category(root, info, id):
-    #     return Category.objects.get(id=id)
-
-    # def resolve_categories(root, info):
-    #     return Category.objects.filter(parent=None)
 
     def resolve_subcategories(root, info):
         categories, cat_list = Category.objects.all(), []
@@ -1144,7 +1139,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 datetime.strptime(start_date, '%Y-%m-%d'))
             end_datetime = timezone.make_aware(
                 datetime.strptime(end_date, '%Y-%m-%d'))
-            recent_transactions = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True)
+            recent_transactions = Order.objects.filter(date_created__range=[start_datetime, end_datetime], paid=True).order_by("-date_created")
             return get_paginator(
                 recent_transactions, page_size, page, GetRecentTransactionsPaginatedType
             )
@@ -1187,7 +1182,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-                customer_orders = Order.objects.filter(user_id=id)
+                customer_orders = Order.objects.filter(user_id=id).order_by("-date_created")
                 return get_paginator(customer_orders, page_size, page, GetCustomerOrdersPaginatedType)
             
 
@@ -1197,7 +1192,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            refund_requests = WalletRefund.objects.filter(status=False).all()
+            refund_requests = WalletRefund.objects.filter(status=False).order_by("-date_created")
             if refund_requests:
                return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
             
@@ -1208,7 +1203,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            refund_requests = WalletRefund.objects.filter(status=True).all()
+            refund_requests = WalletRefund.objects.filter(status=True).order_by("-date_created")
             if refund_requests:
                return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
            
@@ -1219,7 +1214,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            flash_sales = FlashSales.objects.all()
+            flash_sales = FlashSales.objects.all().order_by("-start_date")
             if flash_sales:
                 active_flash_sale = flash_sales.get(status=False)
                 start_date = active_flash_sale.start_date
@@ -1288,7 +1283,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            promoted_products = Product.objects.filter(promoted=True)
+            promoted_products = Product.objects.filter(promoted=True).order_by("-date_created")
             search_filter = Q()
             search_status = False
             if search:
@@ -1307,7 +1302,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            transactions = WalletTransaction.objects.all()
+            transactions = WalletTransaction.objects.all().order_by("-date")
             search_filter = Q()
             search_status = False
             if search:
