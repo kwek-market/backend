@@ -63,6 +63,10 @@ class WalletTransaction(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     transaction_type = models.CharField(max_length=10)
     status = models.BooleanField(default=False)
+    class Meta:
+        indexes = [
+            models.Index(fields=["-date"])
+        ]
 
 class WalletRefund(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)    

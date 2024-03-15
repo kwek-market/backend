@@ -193,3 +193,8 @@ class Order(models.Model):
     
     def __str__(self) -> str:
         return self.order_id
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["-date_created"])
+        ]
