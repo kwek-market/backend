@@ -83,17 +83,16 @@ class AddCategory(graphene.Mutation):
                 if parent is None:
                     if icon is None:
                         return AddCategory(status=False,message="Icon is required for Category")
-                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date)
+                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date, icon=icon)
                     return AddCategory(
                         category=category,
                         status=True,
-                        icon=icon,
                         message="Category added successfully"
                     )
                 else:
                     if Category.objects.filter(name=parent).exists():
                         parent = Category.objects.get(name=parent)
-                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date)
+                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date, icon=icon)
                         return AddCategory(
                             category=category,
                             status=True,

@@ -156,7 +156,5 @@ def build_products_query(
                         .filter(rate__gte=abs(rating))
                         .order_by(sort_key)
                     )
-        else:
-            prods = prods
 
-        return prods
+    return prods
