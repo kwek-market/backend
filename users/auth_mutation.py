@@ -3,6 +3,7 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from market.models import Cart, Wishlist
+import uuid
 
 from market.mutation import verify_cart
 from market.pusher import SendEmailNotification, push_to_client
@@ -561,15 +562,23 @@ class CompleteSellerVerification(graphene.Mutation):
             seller.seller_is_verified = is_verified
             seller.save()
             if is_verified == True:
-                StoreDetail.objects.create(
-                    user = c_user,
-                    store_name = seller.shop_name,
-                    email=c_user.email,
-                    address = seller.shop_address
-                )
-                Wallet.objects.create(
-                    owner = seller.user
-                )
+                store_name = seller.shop_name
+                if not StoreDetail.objects.filter(user = c_user).exists():
+                    while StoreDetail.objects.filter(store_name = store_name).exists():
+                        random_suffix = str(uuid.uuid4())[:8]
+                        store_name = f"{store_name} {random_suffix}"
+
+                    StoreDetail.objects.create(
+                        user = c_user,
+                        store_name = store_name,
+                        email=c_user.email,
+                        address = seller.shop_address
+                    )
+                
+                if not Wallet.objects.filter(owner = seller.user).exists():
+                    Wallet.objects.create(
+                        owner = seller.user
+                    )
                 if Notification.objects.filter(user=c_user).exists():
                     notification = Notification.objects.get(
                         user=c_user
@@ -580,8 +589,8 @@ class CompleteSellerVerification(graphene.Mutation):
                     )
                 notification_message = Message.objects.create(
                     notification=notification,
-                    message=f"Login successful",
-                    subject="New Login"
+                    message=f"your seller verification has been completed",
+                    subject="Seller Verification Completed"
                 )
                 notification_info = {"notification":str(notification_message.notification.id),
                     "message":notification_message.message, 

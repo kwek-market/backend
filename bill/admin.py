@@ -5,7 +5,9 @@ from django.contrib import admin
 
 from .models import Order, Payment, Billing, Pickup
 
-admin.site.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    readonly_fields = ('id','pk', '__str__',)
+admin.site.register(Order, OrderAdmin)
 admin.site.register(Payment)
 admin.site.register(Billing)
 admin.site.register(Pickup)

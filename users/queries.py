@@ -646,7 +646,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
-        user_order = Order.objects.get(user=user, id=id)
+        user_order = Order.objects.get( id=id)
         return user_order
 
     def resolve_user_notifications(root, info, token):
@@ -1238,7 +1238,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if user:
             customer_order_no = Order.objects.filter(user_id=id, paid=True).count()
             customer_orders = Order.objects.filter(user_id=id, paid=True).aggregate(total_sum=Sum('order_price_total'))["total_sum"]
-            average_order_value = customer_orders/customer_order_no
+            average_order_value = (customer_orders if customer_orders else 0 /customer_order_no) if customer_order_no else 0
+            print("average_order_value", average_order_value)
             return GetCustomerAverageOrderType(round(average_order_value, 3) or 0)
             
     
@@ -1249,7 +1250,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
             customer_total_expense = Order.objects.filter(user_id=id, paid=True).aggregate(total_sum=Sum('order_price_total'))["total_sum"]
-            return GetCustomerTotalSpentType(round(customer_total_expense, 3) or 0)
+            return GetCustomerTotalSpentType(round(customer_total_expense if customer_total_expense else 0, 3) or 0)
     
     def resolve_get_seller_number_of_sales(root, info, token, id):
         auth = authenticate_admin(token)

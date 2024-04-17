@@ -6,3 +6,4 @@ from django.apps import apps
 # Register your models here.
 admin.site.register(WalletTransaction) 
 admin.site.register(Wallet) 
+admin.site.register(StoreDetail) 
