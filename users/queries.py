@@ -52,7 +52,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_user_by_id = graphene.Field(UserType, id=graphene.String(required=True), token=graphene.String(required=True))
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
-    coupons = DjangoListField(CouponType)
+    coupons = DjangoListField(CouponPaginatedType, page=graphene.Int(), page_size=graphene.Int(),)
     cartitem = graphene.Field(CartItemType, id=graphene.String(required=True))
     deals_of_the_day = graphene.Field(
         ProductPaginatedType,
@@ -342,6 +342,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_contact_us(root, info):
         return ContactMessage.objects.all().order_by("-sent_at")
+
+    def resolve_coupons(root, info, page=1, page_size=5):
+        return get_paginator(Coupon.objects.all(), page_size, page, CouponPaginatedType)
 
     def resolve_cartitem(root, info, id):
         return CartItem.objects.get(id=id)
