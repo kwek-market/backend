@@ -52,7 +52,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_user_by_id = graphene.Field(UserType, id=graphene.String(required=True), token=graphene.String(required=True))
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
-    coupons = DjangoListField(CouponPaginatedType, page=graphene.Int(), page_size=graphene.Int(),)
+    coupons = graphene.Field(CouponPaginatedType, page=graphene.Int(), page_size=graphene.Int(),)
     cartitem = graphene.Field(CartItemType, id=graphene.String(required=True))
     deals_of_the_day = graphene.Field(
         ProductPaginatedType,
