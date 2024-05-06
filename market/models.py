@@ -93,6 +93,7 @@ class ProductPromotion(models.Model):
     end_date = models.DateTimeField(default=django.utils.timezone.now)
     days = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
     amount = models.FloatField(default=0)
     balance = models.FloatField(default=0)
     reach = models.IntegerField(default=0)

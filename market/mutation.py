@@ -857,20 +857,20 @@ class PromoteProduct(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         product_id = graphene.String(required=True)
-        amount = graphene.Float(required=True)
+        amount = graphene.Float()
         days = graphene.Int(required=True)
     
     @staticmethod
-    def mutate(self, info, token, product_id, amount, days):
+    def mutate(self, info, token, product_id, days,amount=0.00):
 
         auth = authenticate_user(token)
         if not auth["status"]:
             return PromoteProduct(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+        req_user = auth["user"]
         if Product.objects.filter(id=product_id).exists():
             product = Product.objects.get(id=product_id)
-            if product.user == user:
-                seller_wallet = Wallet.objects.get(owner=user)
+            if product.user == req_user or req_user.is_admin:
+                seller_wallet = Wallet.objects.get(owner=product.user)
                 if seller_wallet.balance < amount:
                     return PromoteProduct(
                             status=False,
@@ -883,9 +883,10 @@ class PromoteProduct(graphene.Mutation):
                         # new_amount = product.promo.amount + amount
                         # new_balance = product.promo.balance + amount
                         ProductPromotion.objects.filter(product=product, active=True).update(end_date=F("end_date")+ timezone.timedelta(days=days), amount=F("amount")+ amount, balance=F("balance")+ amount, days=F("days")+ days)
-                        balance = seller_wallet.balance
-                        seller_wallet.balance = balance - amount
-                        seller_wallet.save()
+                        if not req_user.is_admin:
+                            balance = seller_wallet.balance
+                            seller_wallet.balance = balance - amount
+                            seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Promotion extended",
@@ -900,14 +901,16 @@ class PromoteProduct(graphene.Mutation):
                             days=days,
                             amount=amount,
                             balance=amount,
+                            is_admin= True if req_user.is_admin else False,
                             start_date = timezone.now(),
                             end_date = timezone.now() + timezone.timedelta(days=days),
                         )
                         product.promoted = True
                         product.save()
-                        balance = seller_wallet.balance
-                        seller_wallet.balance = balance - amount
-                        seller_wallet.save()
+                        if not req_user.is_admin:
+                            balance = seller_wallet.balance
+                            seller_wallet.balance = balance - amount
+                            seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Product promoted",
@@ -935,14 +938,15 @@ class CancelProductPromotion(graphene.Mutation):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PromoteProduct(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+        req_user = auth["user"]
         product = Product.objects.get(id=product_id)
         seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
-        if product.user == user:
+        if product.user == req_user or req_user.is_admin:
             promotions = ProductPromotion.objects.filter(product=product, active=True)
             wallet_balance = seller_wallet.balance
             for promotion in promotions:
-                wallet_balance += promotion.balance
+                if not promotion.is_admin:
+                    wallet_balance += promotion.balance
                 promotion.balance = 0
                 promotion.active = False
                 promotion.save()
@@ -996,7 +1000,7 @@ def unpromote():
     from datetime import datetime
     now = timezone.now() # now = datetime.now()
     filter = (Q(promo__end_date__lte = now)
-            | Q(promo__balance__lte=0))
+            | Q(promo__balance__lte=1))
     all_products = Product.objects.filter(filter, promoted=True)
     print("expired promotions", all_products)
     for product in all_products:
@@ -1004,9 +1008,10 @@ def unpromote():
         Product.objects.filter(id=product.id).update(promoted=False)
         active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
         for pr in active_promos:
-            sb = seller_wallet.balance
-            seller_wallet.balance = sb + pr.balance
-            seller_wallet.save()
+            if not pr.is_admin:
+                sb = seller_wallet.balance
+                seller_wallet.balance = sb + pr.balance
+                seller_wallet.save()
             pr.balance = 0
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
