@@ -556,7 +556,7 @@ class CompleteSellerVerification(graphene.Mutation):
             try:
                 seller = SellerProfile.objects.get(user=userid)
             except Exception as e:
-                return CompleteSellerVerification(status=False, message="you are not a seller")
+                return CompleteSellerVerification(status=False, message="user is not a seller")
             
             seller.seller_is_verified = True
             seller.save()
@@ -622,7 +622,7 @@ class RejectSellerVerification(graphene.Mutation):
             try:
                 seller = SellerProfile.objects.get(user=userid)
             except Exception as e:
-                return CompleteSellerVerification(status=False, message="you are not a seller")
+                return CompleteSellerVerification(status=False, message="user is not a seller")
             
             seller.seller_is_verified = False
             seller.seller_is_rejected = True
