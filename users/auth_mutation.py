@@ -544,10 +544,9 @@ class CompleteSellerVerification(graphene.Mutation):
 
     class Arguments:
         email = graphene.String(required=True)
-        is_verified = graphene.Boolean(required=True)
 
     @staticmethod
-    def mutate(self, info, email, is_verified):
+    def mutate(self, info, email):
         try:
             c_user = ExtendUser.objects.get(email=email)
             userid = c_user.id
@@ -559,9 +558,9 @@ class CompleteSellerVerification(graphene.Mutation):
             except Exception as e:
                 return CompleteSellerVerification(status=False, message="you are not a seller")
             
-            seller.seller_is_verified = is_verified
+            seller.seller_is_verified = True
             seller.save()
-            if is_verified == True:
+            if seller.seller_is_verified == True:
                 store_name = seller.shop_name
                 if not StoreDetail.objects.filter(user = c_user).exists():
                     while StoreDetail.objects.filter(store_name = store_name).exists():
@@ -931,8 +930,8 @@ class FlagVendor(graphene.Mutation):
     status = graphene.Boolean()
     
     class Arguments:
-        token=graphene.String(required=True),
-        id=graphene.String(required=True),
+        token=graphene.String(required=True)
+        id=graphene.String(required=True)
         red_flagged_vendor = graphene.Boolean(required=True)
     
     @staticmethod

@@ -38,8 +38,10 @@ class SellerProfileType(DjangoObjectType):
             "bank_account_name",
             "seller_is_verified",
             "bank_account_is_verified",
+            "seller_is_rejected",
             "bank_sort_code",
             "accepted_vendor_policy",
+            "date"
         )
 
 class SellerCustomerType(DjangoObjectType):

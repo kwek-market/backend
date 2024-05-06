@@ -1,6 +1,7 @@
 import graphene
 from notifications.mutation import ReadNotification
 from users.auth_mutation import (
+    FlagVendor,
     StoreBanner,
     AccountNameRetrieval,
     SellerVerification,
@@ -67,6 +68,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     clicks_update = ProductClick.Field()
     complete_seller_verification = CompleteSellerVerification.Field()
     reject_seller_verification = RejectSellerVerification.Field()
+    flag_vendor = FlagVendor.Field()
     contact_us = ContactUs.Field()
     create_user = CreateUser.Field()
     create_product = CreateProduct.Field()
