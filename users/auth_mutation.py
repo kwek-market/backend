@@ -559,6 +559,7 @@ class CompleteSellerVerification(graphene.Mutation):
                 return CompleteSellerVerification(status=False, message="user is not a seller")
             
             seller.seller_is_verified = True
+            seller.seller_is_rejected = False
             seller.save()
             if seller.seller_is_verified == True:
                 store_name = seller.shop_name
