@@ -48,7 +48,7 @@ def build_users_query(
     if seller:
         has_user_filter = True
         user_type_filter = Q(is_seller=seller, is_active=active, is_flagged=red_flagged) 
-        if seller_is_rejected:
+        if seller_is_rejected != None:
             user_type_filter = user_type_filter & Q(seller_profile__seller_is_rejected=seller_is_rejected)
 
     if customer:
