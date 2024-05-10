@@ -1198,8 +1198,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
             refund_requests = WalletRefund.objects.filter(status=False).order_by("-date_created")
-            if refund_requests:
-               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+            return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
             
     
     def resolve_get_refunds(root, info, token, page=1, page_size=50):
@@ -1209,8 +1208,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
             refund_requests = WalletRefund.objects.filter(status=True).order_by("-date_created")
-            if refund_requests:
-               return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
+            return get_paginator( refund_requests, page_size, page, WalletRefundPaginatedType)
            
     
     def resolve_get_flash_sales(root, info, token, page=1, page_size=50):
