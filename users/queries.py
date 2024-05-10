@@ -63,6 +63,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         GetUsersPaginatedType, token=graphene.String(required=True),
         seller = graphene.Boolean(),
         seller_is_rejected = graphene.Boolean(),
+        seller_is_verified = graphene.Boolean(),
         customer = graphene.Boolean(),
         active = graphene.Boolean(),
         red_flagged = graphene.Boolean(),
@@ -1152,6 +1153,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             token, 
             seller=None, 
             seller_is_rejected=None,
+            seller_is_verified=None,
             customer=None, 
             active=True,
             red_flagged=False, 
@@ -1164,7 +1166,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-           users = build_users_query(seller, seller_is_rejected, customer, active, red_flagged, search)
+           users = build_users_query(seller, seller_is_rejected,seller_is_verified, customer, active, red_flagged, search)
            return get_paginator(users, page_size, page, GetUsersPaginatedType)
         else:
             raise GraphQLError("invalid authentication")

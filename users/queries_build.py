@@ -25,6 +25,7 @@ def get_price_range(range):
 def build_users_query(
         seller=None, 
             seller_is_rejected=None,
+            seller_is_verified=None,
             customer=None, 
             active=True,
             red_flagged=False, 
@@ -50,6 +51,9 @@ def build_users_query(
         user_type_filter = Q(is_seller=seller, is_active=active, is_flagged=red_flagged) 
         if seller_is_rejected != None:
             user_type_filter = user_type_filter & Q(seller_profile__seller_is_rejected=seller_is_rejected)
+        if seller_is_verified != None:
+            user_type_filter = user_type_filter & Q(seller_profile__seller_is_verified=seller_is_verified)
+
 
     if customer:
         has_user_filter = True
