@@ -971,7 +971,7 @@ class FlashSalesMutation(graphene.Mutation):
         token = graphene.String(required=True)
         productOption_id = graphene.String(required=True)
         days = graphene.Int(required=True)
-        discount_percent = graphene.Int(required=True) 
+        discount_percent = graphene.Float(required=True) 
         
     
     @staticmethod
@@ -983,12 +983,13 @@ class FlashSalesMutation(graphene.Mutation):
         try:
             discounted_product = ProductOption.objects.get(id=productOption_id)
             if discounted_product:
-                if discounted_product.product.user == user:
-                    if not FlashSales.objects.filter(product=discounted_product).exists():
+                if discounted_product.product.user == user or user.is_admin:
+                    if not FlashSales.objects.filter(product=discounted_product, status=True).exists():
                             new_flash_sales = FlashSales.objects.create(
                                 product=discounted_product,
                                 number_of_days=days,
-                                discount_percent = discount_percent
+                                discount_percent = discount_percent,
+                                status=True
                             )
                             return FlashSalesMutation(status=False,message="Flash Sale created successfully", flash_sales = new_flash_sales ) 
                     return FlashSalesMutation(status=False,message="Flash Sale already created") 

@@ -1217,20 +1217,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
           raise GraphQLError(auth["message"])
         user = auth["user"]
         if user:
-            flash_sales = FlashSales.objects.all().order_by("-start_date")
-            if flash_sales:
-                active_flash_sale = flash_sales.get(status=False)
-                start_date = active_flash_sale.start_date
-                days = active_flash_sale.number_of_days
-                end_date = start_date + timedelta(days=days)
-
-                # Get the current date and time
-                current_datetime = datetime.now().date()
-
-                if current_datetime > end_date:
-                        active_flash_sale.status = True
-                        active_flash_sale.save()
-                return get_paginator( flash_sales, page_size, page, FlashSalesPaginatedType)
+            FlashSales.objects.filter(
+                start_date__gte=timezone.now() - timezone.timedelta(days=F('number_of_days')),
+                status=True
+            ).update(status=False)
+            flash_sales = FlashSales.objects.filter(status=True).order_by("-start_date")
+            return get_paginator( flash_sales, page_size, page, FlashSalesPaginatedType)
             
     
     def resolve_get_customer_average_order(root, info, token, id):
