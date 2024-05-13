@@ -971,7 +971,7 @@ class FlashSalesMutation(graphene.Mutation):
         token = graphene.String(required=True)
         productOption_id = graphene.String(required=True)
         days = graphene.Int(required=True)
-        discount_percent = graphene.Float(required=True) 
+        discount_percent = graphene.Int(required=True) 
         
     
     @staticmethod
