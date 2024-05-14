@@ -179,3 +179,6 @@ class FlashSales(models.Model):
     discount_percent = models.IntegerField(default=1)
     status = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f"{self.product.product_title} - {self.number_of_days}"
+
