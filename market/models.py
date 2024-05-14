@@ -180,5 +180,5 @@ class FlashSales(models.Model):
     status = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.product.product_title} - {self.number_of_days}"
+        return f"{self.product.product.product_title} - {self.number_of_days}"
 
