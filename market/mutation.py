@@ -991,8 +991,8 @@ class FlashSalesMutation(graphene.Mutation):
                                 discount_percent = discount_percent,
                                 status=True
                             )
-                            return FlashSalesMutation(status=False,message="Flash Sale created successfully", flash_sales = new_flash_sales ) 
-                    return FlashSalesMutation(status=False,message="Flash Sale already created") 
+                            return FlashSalesMutation(status=True,message="Flash Sale created successfully", flash_sales = new_flash_sales ) 
+                    return FlashSalesMutation(status=True,message="Flash Sale already created") 
                 return FlashSalesMutation(status=False,message="Product does not belong to you") 
         except Exception as e:
             return FlashSalesMutation(status=False,message=e) 
