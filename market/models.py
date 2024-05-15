@@ -70,7 +70,7 @@ class ProductImage(models.Model):
     image_url = models.TextField(blank=False, null=True)
 
     def __str__(self):
-        return self.product
+        return self.product.product_title
 
 
 class ProductOption(models.Model):
@@ -83,7 +83,7 @@ class ProductOption(models.Model):
     option_total_price = models.FloatField(blank=False, null=True)
 
     def __str__(self):
-        return self.product
+        return self.product.product_title
 
 
 class ProductPromotion(models.Model):
@@ -176,7 +176,7 @@ class FlashSales(models.Model):
     product = models.ForeignKey(ProductOption, on_delete=models.CASCADE)
     start_date = models.DateField(auto_now_add=True)
     number_of_days = models.IntegerField(default=1)
-    discount_percent = models.IntegerField(default=1)
+    discount_percent = models.FloatField(default=1)
     status = models.BooleanField(default=False)
 
     def __str__(self):
