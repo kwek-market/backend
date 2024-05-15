@@ -83,7 +83,7 @@ class ProductOption(models.Model):
     option_total_price = models.FloatField(blank=False, null=True)
 
     def __str__(self):
-        return self.product.product_title
+        return self.id
 
 
 class ProductPromotion(models.Model):
@@ -180,5 +180,5 @@ class FlashSales(models.Model):
     status = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.product.product.product_title} - {self.number_of_days}"
+        return f"{self.id} - {self.number_of_days}"
 
