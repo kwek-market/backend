@@ -83,7 +83,7 @@ class ProductOption(models.Model):
     option_total_price = models.FloatField(blank=False, null=True)
 
     def __str__(self):
-        return self.id
+        return f"{self.id}"
 
 
 class ProductPromotion(models.Model):
