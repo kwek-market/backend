@@ -1219,7 +1219,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user:
             FlashSales.objects.filter(
-                start_date__gte=timezone.now() - (timedelta(days=1) * F('number_of_days')),
+                start_date__lte=timezone.now() - (timedelta(days=1) * F('number_of_days')),
                 status=True
             ).update(status=False)
             flash_sales = FlashSales.objects.filter(status=True).order_by("-start_date")
