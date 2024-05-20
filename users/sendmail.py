@@ -1,3 +1,4 @@
+from typing import List
 import jwt
 import time
 from django.core.mail import send_mail, EmailMultiAlternatives
@@ -8,6 +9,7 @@ from django.conf import settings
 import datetime
 import requests
 import json
+import base64
 from .models import ExtendUser, SellerProfile
 
 
@@ -103,7 +105,7 @@ def send_password_reset_email(email):
 
 
 def send_email_through_PHP(payload_dictionary):
-    url, payload, headers = "https://emailapi.kwekapi.com/", json.dumps(
+    url, payload, headers = "http://emailapi.kwekapi.com/", json.dumps(
         payload_dictionary), {'Content-Type': 'application/json'}
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
@@ -116,5 +118,38 @@ def send_email_through_PHP(payload_dictionary):
         print(e)
         return False,e 
 
+def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
+    url, payload, headers = "http://emailapi.kwekapi.com/generic-mail/", json.dumps(
+        {   "email_template": get_base64(template),
+            "send_kwek_email": "",
+            "emails": to,
+            "api_key": settings.PHPWEB,
+            "from_email": settings.KWEK_EMAIL,
+            "subject": subject,
+            "product_name": "Kwek Market",
+         }), {'Content-Type': 'application/json'}
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        print(response.json())
+        if response.json()["status"]:
+            return True,response.json()['message']
+        else:
+            return False, "error occured"
+    except Exception as e:
+        print(e)
+        return False,e 
+    
 
-# send_password_reset_email("gregoflash05@gmail.com")
+def get_base64(original_string:str) ->str :
+    # Convert the string to bytes
+    bytes_string = original_string.encode('utf-8')
+
+    # Encode the bytes to Base64
+    base64_bytes = base64.b64encode(bytes_string)
+
+    # Convert the Base64 bytes back to a string
+    base64_string = base64_bytes.decode('utf-8')
+
+    return base64_string
+
+
