@@ -1,10 +1,11 @@
 import graphene
 from datetime import timedelta, datetime
+from users.sendmail import send_coupon_code
 from users.validate import authenticate_user, authenticate_admin
 
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
-from users.models import SellerCustomer
+from users.models import ExtendUser, SellerCustomer
 from .models import Billing, Coupon, CouponUser, Payment, Pickup, Order, OrderProgress
 from .object_types import BillingType, CouponType, PaymentType, PickupType
 from .flutterwave import get_payment_url, verify_transaction
@@ -824,10 +825,15 @@ class CreateCoupon(graphene.Mutation):
                     code=code,
                     user_list=user_list,
                 )
+
+                emails = ExtendUser.get_emails_by_ids(user_list)
+                send_coupon_code(emails, coupon.code)
             elif user_list and (not code):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, user_list=user_list
                 )
+                emails = ExtendUser.get_emails_by_ids(user_list)
+                send_coupon_code(emails, coupon.code)
             elif code and (not user_list):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, code=code

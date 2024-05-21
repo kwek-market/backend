@@ -11,6 +11,7 @@ import requests
 import json
 import base64
 from .models import ExtendUser, SellerProfile
+from django.template.loader import render_to_string
 
 
 def user_loggedIN(token):
@@ -102,6 +103,21 @@ def send_password_reset_email(email):
     except Exception as e:
         print(e)
         return {"status": False, "message": e}
+    
+def send_coupon_code(to: List[str], code:str):
+    template_name = 'users/coupon.html'
+    context = {
+    'code': code,
+    'facebook': settings.FACEBOOK_URL,
+    'instagram': settings.INSTAGRAM_URL,
+    'twitter': settings.TWITTER_URL
+    }
+
+    html_string = render_to_string(template_name, context)
+    send_m = send_generic_email_through_PHP(to, html_string, "Kwek Market Coupon")
+    print("coupon m", send_m)
+
+
 
 
 def send_email_through_PHP(payload_dictionary):
@@ -117,6 +133,7 @@ def send_email_through_PHP(payload_dictionary):
     except Exception as e:
         print(e)
         return False,e 
+    
 
 def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
     url, payload, headers = "http://emailapi.kwekapi.com/generic-mail/", json.dumps(
@@ -151,5 +168,6 @@ def get_base64(original_string:str) ->str :
     base64_string = base64_bytes.decode('utf-8')
 
     return base64_string
+
 
 

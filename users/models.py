@@ -1,3 +1,4 @@
+from typing import List
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -24,6 +25,10 @@ class ExtendUser(AbstractUser):
 
     USERNAME_FIELD = "username"
     EmailField = "email"
+
+    @classmethod
+    def get_emails_by_ids(cls, ids:List[str])->List[str]:
+        return list(cls.objects.filter(id__in=ids).values_list('email', flat=True))
 
     def get_total_spent(self):
         total_spent = self.order.filter(paid=True).aggregate(
