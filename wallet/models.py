@@ -70,7 +70,7 @@ class WalletTransaction(models.Model):
 
 class WalletRefund(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)    
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='walletrefund')
     account_number = models.CharField(max_length=255)
     bank_name = models.CharField(max_length=255)
     product = models.ForeignKey(CartItem, on_delete=models.CASCADE, null=True)

@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone
+from django.db.models import Sum, F, FloatField, Q
 
 # Create your models here.
 
@@ -23,6 +24,31 @@ class ExtendUser(AbstractUser):
 
     USERNAME_FIELD = "username"
     EmailField = "email"
+
+    def get_total_spent(self):
+        total_spent = self.order.filter(paid=True).aggregate(
+            total=Sum(
+                F('order_price_total') - 
+                F('walletrefund__number_of_product') * 
+                F('walletrefund__product__price'),
+                output_field=FloatField(),
+                filter=Q(walletrefund__status=True)
+            )
+        )['total']
+        return total_spent if total_spent else 0
+
+    def to_representation(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'full_name': self.full_name,
+            'phone_number': self.phone_number,
+            'is_verified': self.is_verified,
+            'is_seller': self.is_seller,
+            'is_admin': self.is_admin,
+            'is_flagged': self.is_flagged,
+            'total_spent': self.get_total_spent()
+        }
 
 
 class SellerProfile(models.Model):

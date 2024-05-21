@@ -870,6 +870,10 @@ class PromoteProduct(graphene.Mutation):
         if Product.objects.filter(id=product_id).exists():
             product = Product.objects.get(id=product_id)
             if product.user == req_user or req_user.is_admin:
+                if not Wallet.objects.filter(owner = product.user).exists():
+                    Wallet.objects.create(
+                        owner = product.user
+                    )
                 seller_wallet = Wallet.objects.get(owner=product.user)
                 if seller_wallet.balance < amount:
                     return PromoteProduct(
