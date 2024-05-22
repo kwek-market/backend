@@ -835,11 +835,11 @@ class DeleteCartItem(graphene.Mutation):
 # Cart Migrate Function
 
 def verify_cart(ip, token):
-    cart = Cart.objects.get(ip=ip)
-    if cart:
+    email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
+    user = ExtendUser.objects.get(email=email)
+    if Cart.objects.filter(ip=ip).exists():
+        cart = Cart.objects.get(ip=ip)
         cartItems = CartItem.objects.filter(cart=cart)
-        email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
-        user = ExtendUser.objects.get(email=email)
         if Cart.objects.filter(user=user).exists():
             userCart = Cart.objects.get(user=user)
             cartItems.update(cart=userCart)
@@ -847,6 +847,9 @@ def verify_cart(ip, token):
         else:
             cart.update(user=user.id)
         Cart.objects.filter(ip=ip, user=None).delete()
+    
+    if not Cart.objects.filter(user=user).exists():
+        Cart.objects.create(user=user)
 # =====================================================================================================================
 
 
