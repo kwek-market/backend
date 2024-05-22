@@ -2,6 +2,7 @@ from django.db import models
 import django
 from datetime import datetime, timedelta
 from django.contrib.postgres.fields import ArrayField
+from bill.models import Order
 from users.models import ExtendUser as User
 import uuid
 
@@ -154,7 +155,8 @@ class CartItem(models.Model):
     product_option_id = models.CharField(max_length=225, default="lucky_cart")
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField(blank=False)
-    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
+    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE, null=True)
+    order = models.ForeignKey(Order, related_name="order_items", on_delete=models.CASCADE, null=True)
     ordered = models.BooleanField(default=False)
 
     def __str__(self):

@@ -1,11 +1,11 @@
 import uuid
 import secrets
 import string
+from django.apps import apps
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone
 from users.models import ExtendUser
-from market.models import Cart, CartItem, Product
 # Create your models here.
 
 
@@ -158,7 +158,7 @@ class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, related_name="order", on_delete=models.CASCADE)
     order_id = models.CharField(max_length=30)
-    cart_items = models.ManyToManyField(CartItem,related_name='order_cart_items')
+    cart_items = models.ManyToManyField('market.CartItem',related_name='order_cart_items')
     payment_method = models.CharField(max_length=30)
     delivery_method = models.CharField(max_length=30)
     delivery_status = models.CharField(max_length=30, default="Order in progress")
@@ -188,6 +188,14 @@ class Order(models.Model):
             object_with_similar_order_id = Order.objects.filter(order_id=order_id)
             if not object_with_similar_order_id.exists():
                 self.order_id = order_id
+
+        # Transfer CartItems from Cart to Order
+        if not self.cart_items.exists():
+            # Dynamically import CartItem to avoid circular import
+            CartItem = apps.get_model('market', 'CartItem')
+            cart_items = CartItem.objects.filter(cart__user=self.user, ordered=False)
+            self.cart_items.set(cart_items)
+            cart_items.update(ordered=True, cart=None, order=self)
         
         super().save(*args, **kwargs)
     
