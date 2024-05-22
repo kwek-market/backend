@@ -2,6 +2,7 @@ import graphene
 from notifications.mutation import ReadNotification
 from users.auth_mutation import (
     FlagVendor,
+    SendEmailToUsers,
     StoreBanner,
     AccountNameRetrieval,
     SellerVerification,
@@ -114,4 +115,5 @@ class Mutation(AuthMutation, graphene.ObjectType):
     refund = RefundRequest.Field()
     force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
+    send_email_to_users = SendEmailToUsers.Field()
     
