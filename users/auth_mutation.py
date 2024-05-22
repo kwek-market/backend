@@ -1,3 +1,4 @@
+from typing import Dict, List
 import graphene
 import jwt
 from django.conf import settings
@@ -12,6 +13,7 @@ from wallet.models import StoreDetail, Wallet
 from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user, authenticate_admin
 from .sendmail import (
     send_confirmation_email,
+    send_generic_email_through_PHP,
     user_loggedIN,
     expire_token,
     send_password_reset_email,
@@ -24,6 +26,7 @@ import time
 from .send_post import send_post_request
 from django.contrib.auth.hashers import check_password
 from .model_object_type import UserType, SellerProfileType
+from django.template import Template, Context
 
 
 class CreateUser(graphene.Mutation):
@@ -947,4 +950,50 @@ class FlagVendor(graphene.Mutation):
             vendor.save()
             return FlagVendor(status=True, message="Successfully changed vendor status")
         return FlagVendor(status=False, message="Wrong token provided")
+
+class SendEmailToUsers(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+    
+    class Arguments:
+        token=graphene.String(required=True)
+        user_list = graphene.List(graphene.String, required=True)
+        template = graphene.String(required=True)
+        subject = graphene.String(required=True)
+    
+    @staticmethod
+    def mutate(self, info, token, user_list: List[str], template:str, subject:str):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+          return SendEmailToUsers(status=auth["status"], message=auth["message"])
+        user = auth["user"]
+        if user:
+            html_template = Template(template)
+            userEmailToContent: Dict[str, Dict[str, str]] = {}
+            usersMap = ExtendUser.get_users_dict_by_ids(user_list)
+
+            for id in user_list:
+                if usersMap[id]:
+                    user_context = {'user': user}
+                    email = usersMap[id].email
+                    html_string = html_template.render(Context(user_context))
+                    emailContent: Dict[str, str] = {
+                        "template": html_string,
+                        "subject" : subject
+                    }
+                    userEmailToContent[email] = emailContent
+
+            send_emails_in_batches(userEmailToContent, 5, 1)       
+        return SendEmailToUsers(status=False, message="Wrong token provided")
+
+def send_emails_in_batches(userEmailToTemplate: Dict[str, Dict[str, str]], batch_size, delay):
+    actions = list(userEmailToTemplate.items())  # Convert dictionary to a list of tuples
+
+    for i in range(0, len(actions), batch_size):
+        batch = actions[i:i+batch_size]
+        print("batch", batch)
+        for email, content in batch:
+            send_generic_email_through_PHP([email], content["template"], content["subject"]) 
+        if i + batch_size < len(actions):
+            time.sleep(delay)
        

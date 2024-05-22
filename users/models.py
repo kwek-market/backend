@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -29,6 +29,11 @@ class ExtendUser(AbstractUser):
     @classmethod
     def get_emails_by_ids(cls, ids:List[str])->List[str]:
         return list(cls.objects.filter(id__in=ids).values_list('email', flat=True))
+    
+    @classmethod
+    def get_users_dict_by_ids(cls, ids: List[str]) -> Dict[str, 'ExtendUser']:
+        users = cls.objects.filter(id__in=ids)
+        return {str(user.id): user for user in users}
 
     def get_total_spent(self):
         total_spent = self.order.filter(paid=True).aggregate(
