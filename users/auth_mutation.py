@@ -983,7 +983,8 @@ class SendEmailToUsers(graphene.Mutation):
                     }
                     userEmailToContent[email] = emailContent
 
-            send_emails_in_batches(userEmailToContent, 5, 1)       
+            send_emails_in_batches(userEmailToContent, 5, 1)    
+            return SendEmailToUsers(status=True, message="email sent")  
         return SendEmailToUsers(status=False, message="Wrong token provided")
 
 def send_emails_in_batches(userEmailToTemplate: Dict[str, Dict[str, str]], batch_size, delay):
