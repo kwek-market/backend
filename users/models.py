@@ -31,9 +31,9 @@ class ExtendUser(AbstractUser):
         return list(cls.objects.filter(id__in=ids).values_list('email', flat=True))
     
     @classmethod
-    def get_users_dict_by_ids(cls, ids: List[str]) -> Dict[str, 'ExtendUser']:
+    def get_users_dict_by_ids(cls, ids: List[str]) -> Dict[str, Dict]:
         users = cls.objects.filter(id__in=ids)
-        return {str(user.id): user for user in users}
+        return {str(user.id): user.to_representation() for user in users}
 
     def get_total_spent(self):
         total_spent = self.order.filter(paid=True).aggregate(
@@ -52,11 +52,18 @@ class ExtendUser(AbstractUser):
             'id': self.id,
             'email': self.email,
             'full_name': self.full_name,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
             'phone_number': self.phone_number,
             'is_verified': self.is_verified,
             'is_seller': self.is_seller,
             'is_admin': self.is_admin,
             'is_flagged': self.is_flagged,
+            'username': self.username,
+            'email': self.email,
+            'is_staff': self.is_staff,
+            'is_active': self.is_active,
+            'date_joined': self.date_joined,
             'total_spent': self.get_total_spent()
         }
 
