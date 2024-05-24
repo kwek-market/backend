@@ -971,11 +971,10 @@ class SendEmailToUsers(graphene.Mutation):
             html_template = Template(template)
             userEmailToContent: Dict[str, Dict[str, str]] = {}
             usersMap = ExtendUser.get_users_dict_by_ids(user_list)
-
             for id in user_list:
                 if usersMap[id]:
                     user_context = {'user': user}
-                    email = usersMap[id].email
+                    email = usersMap[id]["email"]
                     html_string = html_template.render(Context(user_context))
                     emailContent: Dict[str, str] = {
                         "template": html_string,
@@ -983,7 +982,7 @@ class SendEmailToUsers(graphene.Mutation):
                     }
                     userEmailToContent[email] = emailContent
 
-            send_emails_in_batches(userEmailToContent, 5, 1)    
+            send_emails_in_batches(userEmailToContent, 15, 1)    
             return SendEmailToUsers(status=True, message="email sent")  
         return SendEmailToUsers(status=False, message="Wrong token provided")
 
@@ -992,7 +991,7 @@ def send_emails_in_batches(userEmailToTemplate: Dict[str, Dict[str, str]], batch
 
     for i in range(0, len(actions), batch_size):
         batch = actions[i:i+batch_size]
-        print("batch", batch)
+        # print("batch", batch)
         for email, content in batch:
             send_generic_email_through_PHP([email], content["template"], content["subject"]) 
         if i + batch_size < len(actions):

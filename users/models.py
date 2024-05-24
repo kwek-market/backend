@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -47,7 +47,7 @@ class ExtendUser(AbstractUser):
         )['total']
         return total_spent if total_spent else 0
 
-    def to_representation(self):
+    def to_representation(self) -> Dict[str, Any]:
         return {
             'id': self.id,
             'email': self.email,
