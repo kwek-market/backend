@@ -973,7 +973,7 @@ class SendEmailToUsers(graphene.Mutation):
             usersMap = ExtendUser.get_users_dict_by_ids(user_list)
             for id in user_list:
                 if usersMap[id]:
-                    user_context = {'user': user}
+                    user_context = {'user': usersMap[id]}
                     email = usersMap[id]["email"]
                     html_string = html_template.render(Context(user_context))
                     emailContent: Dict[str, str] = {
