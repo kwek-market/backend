@@ -403,7 +403,6 @@ class PlaceOrder(graphene.Mutation):
         payment_method = graphene.String(required=True)
         delivery_method = graphene.String(required=True)
         address_id = graphene.String(required=True)
-        product_options_id = graphene.List(graphene.String, required=True)
         payment_ref = graphene.String()
         coupon_ids = graphene.List(graphene.String)
 
@@ -416,7 +415,6 @@ class PlaceOrder(graphene.Mutation):
         payment_method,
         delivery_method,
         address_id,
-        product_options_id,
         coupon_ids=None,
         payment_ref=None,
     ):
@@ -502,33 +500,32 @@ class PlaceOrder(graphene.Mutation):
                             OrderProgress.objects.create(order=order)
                             for cart_item in cart_items:
                                 cart_item_quantity = cart_item.quantity
-                                for id in product_options_id:
-                                    product = ProductOption.objects.get(id=id)
-                                    product_quantity = product.quantity
-                                    for i in range(int(product_quantity)):
-                                        Sales.objects.create(
-                                            product=product.product,
-                                            amount=cart_item.price,
-                                        )
+                                product = ProductOption.objects.get(id=cart_item.product_option_id)
+                                product_quantity = product.quantity
+                                for i in range(int(product_quantity)):
+                                    Sales.objects.create(
+                                        product=product.product,
+                                        amount=cart_item.price,
+                                    )
 
-                                    new_quantity = int(product_quantity) - int(
-                                        cart_item_quantity
+                                new_quantity = int(product_quantity) - int(
+                                    cart_item_quantity
+                                )
+                                ProductOption.objects.filter(id=id).update(
+                                    quantity=new_quantity
+                                )
+                                if ProductPromotion.objects.filter(
+                                    product=product.product, active=True
+                                ).exists():
+                                    reach = (
+                                        ProductPromotion.objects.get(
+                                            product=product.product
+                                        ).reach
+                                        + 1
                                     )
-                                    ProductOption.objects.filter(id=id).update(
-                                        quantity=new_quantity
-                                    )
-                                    if ProductPromotion.objects.filter(
-                                        product=product.product, active=True
-                                    ).exists():
-                                        reach = (
-                                            ProductPromotion.objects.get(
-                                                product=product.product
-                                            ).reach
-                                            + 1
-                                        )
-                                        ProductPromotion.objects.filter(
-                                            product=cart_item.product
-                                        ).update(reach=reach)
+                                    ProductPromotion.objects.filter(
+                                        product=cart_item.product
+                                    ).update(reach=reach)
                             if payment_ref:
                                 Payment.objects.filter(ref=payment_ref).update(
                                     used=True
