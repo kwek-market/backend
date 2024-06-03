@@ -116,4 +116,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
     send_email_to_users = SendEmailToUsers.Field()
+    create_charge = CreateProductCharges.Field()
+    update_charge = UpdateProductCharges.Field()
+    update_state_delivery_fee = UpdateStateDeliveryCharge.Field()
     

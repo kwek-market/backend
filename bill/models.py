@@ -171,6 +171,7 @@ class Order(models.Model):
     order_price = models.PositiveBigIntegerField(default=0)
     order_price_total = models.PositiveBigIntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
+    delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
 
     def save(self, *args, **kwargs):
         total_coupon_price = 0
@@ -179,7 +180,7 @@ class Order(models.Model):
             for id in self.coupon:
                 coupon_item = Coupon.objects.get(id=id)
                 total_coupon_price += int(coupon_item.value)
-        self.order_price_total = self.order_price - total_coupon_price
+        self.order_price_total = (self.order_price - total_coupon_price) + self.delivery_fee
         if self.order_price_total < 0:
 
             self.order_price_total = 0

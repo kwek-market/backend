@@ -1030,3 +1030,93 @@ def unpromote():
 sched.add_job(unpromote, 'interval', minutes=10)
 sched.start()
 
+class CreateProductCharges(graphene.Mutation):
+    product_charge = graphene.Field(ProductChargeType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        has_fixed_amount = graphene.Boolean()
+        charge = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, has_fixed_amount, charge):
+        auth = authenticate_admin(token)
+
+        if not auth["status"]:
+            return CreateProductCharges(status=auth["status"], message=auth["message"])
+
+        try:
+            has_charge = ProductCharge.objects.exists()
+
+            if has_charge:
+                return CreateProductCharges(status=False, message="Already created a charge, you can only update!!!")
+
+            product_charge = ProductCharge.objects.create(
+                has_fixed_amount=has_fixed_amount,
+                charge=charge
+            )
+
+            return CreateProductCharges(status=True, message="Successfully created product charges", product_charge=product_charge)
+
+        except Exception as e:
+            return CreateProductCharges(status=False, message=str(e))
+        
+class UpdateProductCharges(graphene.Mutation):
+    product_charge = graphene.Field(ProductChargeType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+        has_fixed_amount = graphene.Boolean()
+        charge = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, charge, id,  has_fixed_amount=False):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return CreateProductCharges(status=auth["status"],message=auth["message"])
+        try: 
+            charges = ProductCharge.objects.get(id=id)
+            if charges:
+                charges.charge = charge
+                charges.has_fixed_amount = has_fixed_amount
+                charges.save()
+                return CreateProductCharges(status=True,message="successfully updated!", product_charge=charges)
+    
+            return CreateProductCharges(status=False,message="Cannot find charge..Please create before updating")
+        except Exception as e:
+            return CreateProductCharges(status=False,message=e) 
+        
+class UpdateStateDeliveryCharge(graphene.Mutation):
+    delivery_charge = graphene.Field(StateDeliveryType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        state = graphene.String(required=True)
+        fee = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, state, fee):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
+        try: 
+            state_fee = StateDeliveryFee.objects.get(state__iexact=state)
+            if state_fee:
+                state_fee.fee = fee
+                state_fee.save()
+                return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
+    
+            return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
+        except Exception as e:
+            return UpdateStateDeliveryCharge(status=False,message=e) 
+        
+
+
+

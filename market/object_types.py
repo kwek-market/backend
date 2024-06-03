@@ -28,6 +28,14 @@ class FlashSalesType(DjangoObjectType):
     class Meta:
         model = FlashSales
         fields = "__all__"
+class ProductChargeType(DjangoObjectType):
+    class Meta:
+        model = ProductCharge
+        fields = "__all__"
+class StateDeliveryType(DjangoObjectType):
+    class Meta:
+        model = StateDeliveryFee
+        fields = "__all__"
 
 class ProductImageType(DjangoObjectType):
     class Meta:
@@ -36,6 +44,7 @@ class ProductImageType(DjangoObjectType):
 
 
 class ProductOptionType(DjangoObjectType):
+    price = graphene.Float()
     class Meta:
         model = ProductOption
         fields = (
@@ -47,6 +56,8 @@ class ProductOptionType(DjangoObjectType):
             "discounted_price",
             "option_total_price",
         )
+    def resolve_price(self, info):
+        return self.get_product_price()
 
 
 class ProductPromotionType(DjangoObjectType):
@@ -149,3 +160,5 @@ class GetSellerOrdersPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(GetSellerOrdersType)
+
+

@@ -85,7 +85,14 @@ class ProductOption(models.Model):
 
     def __str__(self):
         return f"{self.id}"
-
+    
+    def get_product_price(self):
+        charge =  ProductCharge.objects.first()
+        charge_amount = charge.charge if charge.has_fixed_amount else self.price * (charge.charge/100)  
+        print(self.product.product_title)
+        print(self.price, charge_amount, self.price + charge_amount)
+        return self.price + charge_amount
+    
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -184,3 +191,13 @@ class FlashSales(models.Model):
     def __str__(self):
         return f"{self.id} - {self.number_of_days}"
 
+
+class StateDeliveryFee(models.Model):
+    state = models.CharField(max_length=255, primary_key=True, blank=False)
+    fee = models.FloatField(default=0.00)
+
+class ProductCharge(models.Model):
+     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+     has_fixed_amount= models.BooleanField(default=False)
+     charge=models.FloatField(default=0.00)
+    

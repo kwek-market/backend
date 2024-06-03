@@ -308,6 +308,16 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page=graphene.Int(),
         page_size=graphene.Int(),
     )
+    get_product_charge = graphene.List(
+        ProductChargeType, 
+    )
+    get_state_delivery_fee = graphene.List(
+        StateDeliveryType, 
+    )
+    get_delivery_fee_for_a_state = graphene.Field(
+        StateDeliveryType,
+        state=graphene.String(required=True)
+    )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
     
@@ -316,7 +326,19 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         return User.objects.get(id=id)
-    
+    def resolve_get_state_delivery_fee(root, info):
+        return StateDeliveryFee.objects.all()
+    def resolve_get_delivery_fee_for_a_state(root, info, state):  
+       try:
+        state_delivery_fee = StateDeliveryFee.objects.get(state__iexact=state)
+        return state_delivery_fee
+       except Exception as e:
+           raise GraphQLError(e)
+    def resolve_get_product_charge(root, info):
+        charge = ProductCharge.objects.all()
+        if charge.exists():
+            return charge
+        raise GraphQLError("No product charge has been set!!")
     def resolve_billing_address(root, info, address_id):
         return Billing.objects.get(id=address_id)
 

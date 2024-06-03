@@ -399,6 +399,7 @@ class PlaceOrder(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
+        delivery_fee= graphene.Float(required=True)
         cart_id = graphene.String(required=True)
         payment_method = graphene.String(required=True)
         delivery_method = graphene.String(required=True)
@@ -414,6 +415,7 @@ class PlaceOrder(graphene.Mutation):
         cart_id,
         payment_method,
         delivery_method,
+        delivery_fee,
         address_id,
         coupon_ids=None,
         payment_ref=None,
@@ -487,6 +489,8 @@ class PlaceOrder(graphene.Mutation):
                                     user=user,
                                     payment_method=payment_method,
                                     delivery_method=delivery_method,
+                                    delivery_fee=delivery_fee
+                            
                                 )
 
                             if delivery_method == "door step":
