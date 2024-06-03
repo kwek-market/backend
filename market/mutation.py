@@ -1,7 +1,7 @@
 import graphene
 import jwt
 from django.utils import timezone
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 from django.conf import settings
 
 from django.conf import settings
@@ -71,16 +71,19 @@ class AddCategory(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
         visibility = graphene.String(required=True)
+        icon = graphene.String()
         publish_date = graphene.Date()
         parent = graphene.String()
     @staticmethod
-    def mutate(self, info, name, visibility, parent=None, publish_date=None):
+    def mutate(self, info, name, visibility, parent=None, icon=None, publish_date=None):
         if Category.objects.filter(name=name).exists() and parent is None:
             return AddCategory(status=False,message="Category already exists")
         else:
             try:
                 if parent is None:
-                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date)
+                    if icon is None:
+                        return AddCategory(status=False,message="Icon is required for Category")
+                    category = Category.objects.create(name=name, visibility=visibility, publish_date=publish_date, icon=icon)
                     return AddCategory(
                         category=category,
                         status=True,
@@ -89,7 +92,7 @@ class AddCategory(graphene.Mutation):
                 else:
                     if Category.objects.filter(name=parent).exists():
                         parent = Category.objects.get(name=parent)
-                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date)
+                        category = Category.objects.create(name=name, parent=parent, visibility=visibility,  publish_date=publish_date, icon=icon)
                         return AddCategory(
                             category=category,
                             status=True,
@@ -111,28 +114,48 @@ class UpdateCategory(graphene.Mutation):
         visibility = graphene.String()
         publish_date = graphene.Date()
         parent = graphene.String()
+        icon = graphene.String()
 
     @staticmethod
-    def mutate(self, info, name=None, parent=None, id=None, visibility=None, publish_date=None):
+    def mutate(self, info, name=None, parent=None, icon=None, id=None, visibility=None, publish_date=None):
         try:
             if Category.objects.filter(id=id).exists():
+                updated_fields = {}
+
+                if icon is not None:
+                    updated_fields['icon'] = icon
+
                 if name is not None:
-                    category = Category.objects.filter(id=id).update(name=name)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['name'] = name
+                    # category = Category.objects.filter(id=id).update(name=name)
+                    # UpdateCategory(category=category, status=True)
                 if parent is not None:
-                    category = Category.objects.filter(id=id).update(parent=parent)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['parent'] = parent
+                    # category = Category.objects.filter(id=id).update(parent=parent)
+                    # UpdateCategory(category=category, status=True)
                 if visibility is not None:
-                    category = Category.objects.filter(id=id).update(visibility=visibility)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['visibility'] = visibility
+                    # category = Category.objects.filter(id=id).update(visibility=visibility)
+                    # UpdateCategory(category=category, status=True)
                 if publish_date is not None:
-                    category = Category.objects.filter(id=id).update(publish_date=publish_date)
-                    UpdateCategory(category=category, status=True)
+                    updated_fields['publish_date'] = publish_date
+                    # category = Category.objects.filter(id=id).update(publish_date=publish_date)
+                    # UpdateCategory(category=category, status=True)
+                # else:
+                #     return UpdateCategory(status=False,message="Invalid name or parent or visibility")
+                    
+                if updated_fields:
+                    try:
+                        category = Category.objects.filter(id=id).update(**updated_fields)
+                        return UpdateCategory(status=True, message="Category updated successfully")
+                    except Exception as e:
+                        return UpdateCategory(status=False, message=e)
                 else:
-                    return UpdateCategory(status=False,message="Invalid name or parent or visibility")
+                    return UpdateCategory(status=False, message="No valid fields to update")
+                       
             else:
                 return UpdateCategory(status=False,message="Invalid id")
-            return UpdateCategory(status=True, message="Successfully Updated")
+            # return UpdateCategory(status=True, message="Successfully Updated")
         except Exception as e:
             return UpdateCategory(status=False,message=e)
             
@@ -285,8 +308,8 @@ class ProductClick(graphene.Mutation):
                 # ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
                 for pr in promos:
                     c_clicks, active = pr.link_clicks +1, True
-                    c_balance = pr.balance - settings.PROMOTION_CLICK_CHARGE
-                    if c_balance <= 0:
+                    c_balance = pr.balance - settings.PROMOTION_CLICK_CHARGE if not pr.is_admin else pr.balance
+                    if c_balance <= 0 and not pr.is_admin:
                         c_balance, active = 0, False
                     pr.link_clicks, pr.balance, pr.active =c_clicks, c_balance, active
                     pr.save()
@@ -812,17 +835,21 @@ class DeleteCartItem(graphene.Mutation):
 # Cart Migrate Function
 
 def verify_cart(ip, token):
-    cart = Cart.objects.filter(ip=ip)
     email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["username"]
     user = ExtendUser.objects.get(email=email)
-    if cart:
-        for item in cart:
-            product = item.product
-            quantity = item.quantity
-            price = item.price
-            Cart.objects.create(user_id=user, product=product, quantity=quantity, price=price)
-        Cart.objects.filter(id=cart.id, ip=ip).delete()
-    pass
+    if Cart.objects.filter(ip=ip).exists():
+        cart = Cart.objects.get(ip=ip)
+        cartItems = CartItem.objects.filter(cart=cart)
+        if Cart.objects.filter(user=user).exists():
+            userCart = Cart.objects.get(user=user)
+            cartItems.update(cart=userCart)
+            cart.delete()
+        else:
+            cart.update(user=user.id)
+        Cart.objects.filter(ip=ip, user=None).delete()
+    
+    if not Cart.objects.filter(user=user).exists():
+        Cart.objects.create(user=user)
 # =====================================================================================================================
 
 
@@ -834,35 +861,42 @@ class PromoteProduct(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         product_id = graphene.String(required=True)
-        amount = graphene.Float(required=True)
+        amount = graphene.Float()
         days = graphene.Int(required=True)
     
     @staticmethod
-    def mutate(self, info, token, product_id, amount, days):
+    def mutate(self, info, token, product_id, days,amount=0.00):
 
         auth = authenticate_user(token)
         if not auth["status"]:
             return PromoteProduct(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+        req_user = auth["user"]
         if Product.objects.filter(id=product_id).exists():
             product = Product.objects.get(id=product_id)
-            if product.user == user:
-                seller_wallet = Wallet.objects.get(owner=user)
-                if seller_wallet.balance < amount:
-                    return PromoteProduct(
-                            status=False,
-                            message="Insufficient balance",
-                            product=product
+            if product.user == req_user or req_user.is_admin:
+                if not Wallet.objects.filter(owner = product.user).exists():
+                        Wallet.objects.create(
+                            owner = product.user
                         )
+                seller_wallet = Wallet.objects.get(owner=product.user)
+                
+                if not req_user.is_admin:
+                    if seller_wallet.balance < amount:
+                        return PromoteProduct(
+                                status=False,
+                                message="Insufficient balance",
+                                product=product
+                            )
                 if product.promoted:
                     try:
                         # new_end_date = product.promo.end_date + timezone.timedelta(days=days)
                         # new_amount = product.promo.amount + amount
                         # new_balance = product.promo.balance + amount
                         ProductPromotion.objects.filter(product=product, active=True).update(end_date=F("end_date")+ timezone.timedelta(days=days), amount=F("amount")+ amount, balance=F("balance")+ amount, days=F("days")+ days)
-                        balance = seller_wallet.balance
-                        seller_wallet.balance = balance - amount
-                        seller_wallet.save()
+                        if not req_user.is_admin:
+                            balance = seller_wallet.balance
+                            seller_wallet.balance = balance - amount
+                            seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Promotion extended",
@@ -877,14 +911,16 @@ class PromoteProduct(graphene.Mutation):
                             days=days,
                             amount=amount,
                             balance=amount,
+                            is_admin= True if req_user.is_admin else False,
                             start_date = timezone.now(),
                             end_date = timezone.now() + timezone.timedelta(days=days),
                         )
                         product.promoted = True
                         product.save()
-                        balance = seller_wallet.balance
-                        seller_wallet.balance = balance - amount
-                        seller_wallet.save()
+                        if not req_user.is_admin:
+                            balance = seller_wallet.balance
+                            seller_wallet.balance = balance - amount
+                            seller_wallet.save()
                         return PromoteProduct(
                             status=True,
                             message="Product promoted",
@@ -912,14 +948,15 @@ class CancelProductPromotion(graphene.Mutation):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PromoteProduct(status=auth["status"],message=auth["message"])
-        user = auth["user"]
+        req_user = auth["user"]
         product = Product.objects.get(id=product_id)
         seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
-        if product.user == user:
+        if product.user == req_user or req_user.is_admin:
             promotions = ProductPromotion.objects.filter(product=product, active=True)
             wallet_balance = seller_wallet.balance
             for promotion in promotions:
-                wallet_balance += promotion.balance
+                if not promotion.is_admin:
+                    wallet_balance += promotion.balance
                 promotion.balance = 0
                 promotion.active = False
                 promotion.save()
@@ -935,12 +972,46 @@ class CancelProductPromotion(graphene.Mutation):
         else:
             return CancelProductPromotion(status=False,message="Product does not belong to you")
 
+class FlashSalesMutation(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    flash_sales = graphene.Field(FlashSalesType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        productOption_id = graphene.String(required=True)
+        days = graphene.Int(required=True)
+        discount_percent = graphene.Float(required=True) 
+        
+    
+    @staticmethod
+    def mutate(self, info, token, productOption_id, discount_percent, days=1):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return FlashSalesMutation(status=auth["status"],message=auth["message"])
+        user = auth["user"]
+        try:
+            discounted_product = ProductOption.objects.get(id=productOption_id)
+            if discounted_product:
+                if discounted_product.product.user == user or user.is_admin:
+                    if not FlashSales.objects.filter(product=discounted_product, status=True).exists():
+                            new_flash_sales = FlashSales.objects.create(
+                                product=discounted_product,
+                                number_of_days=days,
+                                discount_percent = discount_percent,
+                                status=True
+                            )
+                            return FlashSalesMutation(status=True,message="Flash Sale created successfully", flash_sales = new_flash_sales ) 
+                    return FlashSalesMutation(status=True,message="Flash Sale already created") 
+                return FlashSalesMutation(status=False,message="Product does not belong to you") 
+        except Exception as e:
+            return FlashSalesMutation(status=False,message=e) 
 
 def unpromote():
     from datetime import datetime
     now = timezone.now() # now = datetime.now()
     filter = (Q(promo__end_date__lte = now)
-            | Q(promo__balance__lte=0))
+            | Q(promo__balance__lte=1))
     all_products = Product.objects.filter(filter, promoted=True)
     print("expired promotions", all_products)
     for product in all_products:
@@ -948,12 +1019,14 @@ def unpromote():
         Product.objects.filter(id=product.id).update(promoted=False)
         active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
         for pr in active_promos:
-            sb = seller_wallet.balance
-            seller_wallet.balance = sb + pr.balance
-            seller_wallet.save()
+            if not pr.is_admin:
+                sb = seller_wallet.balance
+                seller_wallet.balance = sb + pr.balance
+                seller_wallet.save()
             pr.balance = 0
             pr.save()
         ProductPromotion.objects.filter(product=product).update(active=False)
   
 sched.add_job(unpromote, 'interval', minutes=10)
 sched.start()
+

@@ -60,10 +60,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -181,6 +181,9 @@ APP_DOMAIN = os.getenv("APP_DOMAIN")
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = "support@kwekapi.com"
 PHPWEB = "kwekmailapiphpmailsystem"
+FACEBOOK_URL = "https://www.facebook.com/Kwekmarket/"
+INSTAGRAM_URL = "https://www.instagram.com/invites/contact/?i=lthbstut4tp&utm_content=6szcidd"
+TWITTER_URL = "https://twitter.com/kwekmarket?t=gFj8_Lp-EA2gJEZ0QZkEFQ&s=09"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = "gregoflash01@gmail.com"  # this is exactly the value 'apikey'

@@ -1,10 +1,11 @@
 import graphene
 from datetime import timedelta, datetime
+from users.sendmail import send_coupon_code
 from users.validate import authenticate_user, authenticate_admin
 
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
-from users.models import SellerCustomer
+from users.models import ExtendUser, SellerCustomer
 from .models import Billing, Coupon, CouponUser, Payment, Pickup, Order, OrderProgress
 from .object_types import BillingType, CouponType, PaymentType, PickupType
 from .flutterwave import get_payment_url, verify_transaction
@@ -402,7 +403,6 @@ class PlaceOrder(graphene.Mutation):
         payment_method = graphene.String(required=True)
         delivery_method = graphene.String(required=True)
         address_id = graphene.String(required=True)
-        product_options_id = graphene.List(graphene.String, required=True)
         payment_ref = graphene.String()
         coupon_ids = graphene.List(graphene.String)
 
@@ -415,7 +415,6 @@ class PlaceOrder(graphene.Mutation):
         payment_method,
         delivery_method,
         address_id,
-        product_options_id,
         coupon_ids=None,
         payment_ref=None,
     ):
@@ -423,10 +422,11 @@ class PlaceOrder(graphene.Mutation):
         if not auth["status"]:
             return PlaceOrder(status=auth["status"], message=auth["message"])
         else:
+            order = {}
             user = auth["user"]
             cart = Cart.objects.get(id=cart_id)
             cart_owner = cart.user
-            cart_items = CartItem.objects.filter(cart=cart)
+            cart_items = CartItem.objects.filter(cart=cart, ordered=False)
             if delivery_method == "door step":
                 shipping_address = Billing.objects.get(id=address_id)
             elif delivery_method == "pickup":
@@ -477,7 +477,6 @@ class PlaceOrder(graphene.Mutation):
                                             delivery_method=delivery_method,
                                             coupon=coupon_ids,
                                         )
-                                        order.cart_items.add(*cart_items)
                                     else:
                                         return PlaceOrder(
                                             status=False,
@@ -489,7 +488,6 @@ class PlaceOrder(graphene.Mutation):
                                     payment_method=payment_method,
                                     delivery_method=delivery_method,
                                 )
-                                order.cart_items.add(*cart_items)
 
                             if delivery_method == "door step":
                                 Order.objects.filter(id=order.id).update(
@@ -502,33 +500,32 @@ class PlaceOrder(graphene.Mutation):
                             OrderProgress.objects.create(order=order)
                             for cart_item in cart_items:
                                 cart_item_quantity = cart_item.quantity
-                                for id in product_options_id:
-                                    product = ProductOption.objects.get(id=id)
-                                    product_quantity = product.quantity
-                                    for i in range(int(product_quantity)):
-                                        Sales.objects.create(
-                                            product=product.product,
-                                            amount=cart_item.price,
-                                        )
+                                product = ProductOption.objects.get(id=cart_item.product_option_id)
+                                product_quantity = product.quantity
+                                for i in range(int(product_quantity)):
+                                    Sales.objects.create(
+                                        product=product.product,
+                                        amount=cart_item.price,
+                                    )
 
-                                    new_quantity = int(product_quantity) - int(
-                                        cart_item_quantity
+                                new_quantity = int(product_quantity) - int(
+                                    cart_item_quantity
+                                )
+                                ProductOption.objects.filter(id=id).update(
+                                    quantity=new_quantity
+                                )
+                                if ProductPromotion.objects.filter(
+                                    product=product.product, active=True
+                                ).exists():
+                                    reach = (
+                                        ProductPromotion.objects.get(
+                                            product=product.product
+                                        ).reach
+                                        + 1
                                     )
-                                    ProductOption.objects.filter(id=id).update(
-                                        quantity=new_quantity
-                                    )
-                                    if ProductPromotion.objects.filter(
-                                        product=product.product, active=True
-                                    ).exists():
-                                        reach = (
-                                            ProductPromotion.objects.get(
-                                                product=product.product
-                                            ).reach
-                                            + 1
-                                        )
-                                        ProductPromotion.objects.filter(
-                                            product=cart_item.product
-                                        ).update(reach=reach)
+                                    ProductPromotion.objects.filter(
+                                        product=cart_item.product
+                                    ).update(reach=reach)
                             if payment_ref:
                                 Payment.objects.filter(ref=payment_ref).update(
                                     used=True
@@ -590,7 +587,6 @@ class PlaceOrder(graphene.Mutation):
                                     notification_message.subject,
                                     notification_message.message,
                                 )
-                            CartItem.objects.filter(cart=cart).update(ordered=True)
                             return PlaceOrder(
                                 status=True,
                                 message="Order placed successfully",
@@ -824,10 +820,15 @@ class CreateCoupon(graphene.Mutation):
                     code=code,
                     user_list=user_list,
                 )
+
+                emails = ExtendUser.get_emails_by_ids(user_list)
+                send_coupon_code(emails, coupon.code)
             elif user_list and (not code):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, user_list=user_list
                 )
+                emails = ExtendUser.get_emails_by_ids(user_list)
+                send_coupon_code(emails, coupon.code)
             elif code and (not user_list):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, code=code

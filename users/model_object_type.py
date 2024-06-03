@@ -1,13 +1,20 @@
 from typing import Dict
 import graphene
 from graphene_django import DjangoObjectType
+
+total_paid = graphene.Float()
 from users.models import SellerCustomer, SellerProfile
 from django.contrib.auth import get_user_model
 
 
 class UserType(DjangoObjectType):
+    total_spent = graphene.Float()
     class Meta:
         model = get_user_model()
+
+    def resolve_total_spent(self, info):
+        return self.get_total_spent()
+
 
 
 class SellerProfileType(DjangoObjectType):
@@ -38,8 +45,10 @@ class SellerProfileType(DjangoObjectType):
             "bank_account_name",
             "seller_is_verified",
             "bank_account_is_verified",
+            "seller_is_rejected",
             "bank_sort_code",
             "accepted_vendor_policy",
+            "date"
         )
 
 class SellerCustomerType(DjangoObjectType):

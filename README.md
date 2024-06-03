@@ -2,7 +2,7 @@
 
 Kwek Market's Django Graphql Backend
 
-## start application
+## start the application
 
 1. create .env file from example.env
 
@@ -18,7 +18,7 @@ $ virtualenv env
 $ source env/bin/activate
 ```
 
-3. install dependencies
+3. install app dependencies
 
 ```bash
 $ pip install -r requirements.txt

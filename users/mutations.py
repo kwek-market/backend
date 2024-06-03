@@ -1,10 +1,13 @@
 import graphene
 from notifications.mutation import ReadNotification
 from users.auth_mutation import (
+    FlagVendor,
+    SendEmailToUsers,
     StoreBanner,
     AccountNameRetrieval,
     SellerVerification,
     CompleteSellerVerification,
+    RejectSellerVerification,
     UserAccountUpdate,
     UserPasswordUpdate,
     StoreUpdate,
@@ -42,7 +45,10 @@ from bill.mutation import (
     UpdateDeliverystatus,
     UpdateOrderProgress
 )
-from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
+from wallet.mutation import (CreateInvoice,
+FundWallet, WalletTransactionSuccess,
+WithdrawFromWallet, RefundRequest,
+ForceRefund)
 
 class AuthMutation(graphene.ObjectType):
     pass
@@ -62,10 +68,13 @@ class Mutation(AuthMutation, graphene.ObjectType):
     change_password = ChangePassword.Field()
     clicks_update = ProductClick.Field()
     complete_seller_verification = CompleteSellerVerification.Field()
+    reject_seller_verification = RejectSellerVerification.Field()
+    flag_vendor = FlagVendor.Field()
     contact_us = ContactUs.Field()
     create_user = CreateUser.Field()
     create_product = CreateProduct.Field()
     create_subscriber = CreateSubscriber.Field()
+    new_flash_sales = FlashSalesMutation.Field()
     create_invoice = CreateInvoice.Field()
     create_coupon = CreateCoupon.Field()
     delete_category = DeleteCategory.Field()
@@ -103,5 +112,8 @@ class Mutation(AuthMutation, graphene.ObjectType):
     verify_token = VerifyToken.Field()
     verify_payment = PaymentVerification.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
+    refund = RefundRequest.Field()
+    force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
+    send_email_to_users = SendEmailToUsers.Field()
     

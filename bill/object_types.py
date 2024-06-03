@@ -1,3 +1,4 @@
+import graphene
 from graphene_django import DjangoObjectType
 
 from .models import (
@@ -29,3 +30,10 @@ class PaymentType(DjangoObjectType):
 class CouponType(DjangoObjectType):
     class Meta:
         model = Coupon
+
+class CouponPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(CouponType)

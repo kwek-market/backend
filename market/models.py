@@ -2,6 +2,7 @@ from django.db import models
 import django
 from datetime import datetime, timedelta
 from django.contrib.postgres.fields import ArrayField
+from bill.models import Order
 from users.models import ExtendUser as User
 import uuid
 
@@ -70,7 +71,7 @@ class ProductImage(models.Model):
     image_url = models.TextField(blank=False, null=True)
 
     def __str__(self):
-        return self.product
+        return self.product.product_title
 
 
 class ProductOption(models.Model):
@@ -83,7 +84,7 @@ class ProductOption(models.Model):
     option_total_price = models.FloatField(blank=False, null=True)
 
     def __str__(self):
-        return self.product
+        return f"{self.id}"
 
 
 class ProductPromotion(models.Model):
@@ -93,6 +94,7 @@ class ProductPromotion(models.Model):
     end_date = models.DateTimeField(default=django.utils.timezone.now)
     days = models.IntegerField(default=1)
     active = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
     amount = models.FloatField(default=0)
     balance = models.FloatField(default=0)
     reach = models.IntegerField(default=0)
@@ -153,7 +155,8 @@ class CartItem(models.Model):
     product_option_id = models.CharField(max_length=225, default="lucky_cart")
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField(blank=False)
-    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE)
+    cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE, null=True)
+    order = models.ForeignKey(Order, related_name="order_items", on_delete=models.CASCADE, null=True)
     ordered = models.BooleanField(default=False)
 
     def __str__(self):
@@ -169,3 +172,15 @@ class WishListItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="products_wished", on_delete=models.CASCADE)
     wishlist = models.ForeignKey(Wishlist, related_name="wishlist_item", on_delete=models.CASCADE)
+
+class FlashSales(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    product = models.ForeignKey(ProductOption, on_delete=models.CASCADE)
+    start_date = models.DateTimeField(auto_now_add=True)
+    number_of_days = models.IntegerField(default=1)
+    discount_percent = models.FloatField(default=1)
+    status = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.id} - {self.number_of_days}"
+
