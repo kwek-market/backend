@@ -88,9 +88,9 @@ class ProductOption(models.Model):
     
     def get_product_price(self):
         charge =  ProductCharge.objects.first()
+        if not charge:
+            charge = ProductCharge.objects.create(has_fixed_amount=True, charge=0.00)
         charge_amount = charge.charge if charge.has_fixed_amount else self.price * (charge.charge/100)  
-        print(self.product.product_title)
-        print(self.price, charge_amount, self.price + charge_amount)
         return self.price + charge_amount
     
 
