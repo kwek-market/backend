@@ -508,7 +508,7 @@ class SellerVerification(graphene.Mutation):
         try:
             seller = SellerProfile.objects.get(user=userid)
         except Exception as e:
-            return CompleteSellerVerification(status=False, message="you are not yet a seller")
+            return SellerVerification(status=False, message="you are not yet a seller")
 
         if seller.seller_is_verified == False:
             if seller.accepted_vendor_policy == False:
@@ -527,18 +527,18 @@ class SellerVerification(graphene.Mutation):
                     ) = (bvn, bank_name, bank_sort_code, account_number)
                     seller.bank_account_name = account_name
                     seller.save()
-                    return StartSelling(
+                    return SellerVerification(
                         status=True,
                         message="Verification in progress, this might take a few hours",
                     )
                 except Exception as e:
-                    return StartSelling(status=True, message=e)
+                    return SellerVerification(status=True, message=e)
             else:
-                return StartSelling(
+                return SellerVerification(
                     status=False, message="Verification is still pending"
                 )
         else:
-            return StartSelling(status=False, message="Seller is already Verified")
+            return SellerVerification(status=False, message="Seller is already Verified")
 
 
 class CompleteSellerVerification(graphene.Mutation):
