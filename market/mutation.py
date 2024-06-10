@@ -1103,17 +1103,25 @@ class UpdateStateDeliveryCharge(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token, state, fee):
+        state = state.lower()
         auth = authenticate_admin(token)
         if not auth["status"]:
             return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
+        update_state_delivery_fees()
+        if state not in nigerian_states:
+                return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
         try: 
+            
             state_fee = StateDeliveryFee.objects.get(state__iexact=state)
             if state_fee:
                 state_fee.fee = fee
                 state_fee.save()
                 return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
-    
-            return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
+            else:
+                state_fee.state = state
+                state_fee.fee = fee
+                state_fee.save()
+                return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
         except Exception as e:
             return UpdateStateDeliveryCharge(status=False,message=e) 
         

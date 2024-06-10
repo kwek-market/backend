@@ -429,6 +429,9 @@ class PlaceOrder(graphene.Mutation):
             cart = Cart.objects.get(id=cart_id)
             cart_owner = cart.user
             cart_items = CartItem.objects.filter(cart=cart, ordered=False)
+            for cart_item in cart_items:
+                cart_item.check_and_update_quantity()
+            cart_items = CartItem.objects.filter(cart=cart, ordered=False)
             if delivery_method == "door step":
                 shipping_address = Billing.objects.get(id=address_id)
             elif delivery_method == "pickup":

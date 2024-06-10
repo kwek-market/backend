@@ -510,21 +510,18 @@ class SellerVerification(graphene.Mutation):
         except Exception as e:
             return SellerVerification(status=False, message="you are not yet a seller")
 
-        if seller.seller_is_verified == False:
-            if seller.accepted_vendor_policy == False:
-
+        if not seller.seller_is_verified:
+                if not accepted_vendor_policy:
+                    return SellerVerification(status=False, message="vendor policy must be accepted")
                 try:
-                    (
-                        seller.accepted_vendor_policy,
-                        seller.prefered_id,
-                        seller.prefered_id_url,
-                    ) = (accepted_vendor_policy, prefered_id, prefered_id_url)
-                    (
-                        seller.bvn,
-                        seller.bank_name,
-                        seller.bank_sort_code,
-                        seller.bank_account_number,
-                    ) = (bvn, bank_name, bank_sort_code, account_number)
+                    seller.accepted_vendor_policy = accepted_vendor_policy
+                    seller.prefered_id= prefered_id
+                    seller.prefered_id_url= prefered_id_url
+
+                    seller.bvn = bvn
+                    seller.bank_name = bank_name
+                    seller.bank_sort_code = bank_sort_code
+                    seller.bank_account_number = account_number
                     seller.bank_account_name = account_name
                     seller.save()
                     return SellerVerification(
@@ -533,10 +530,6 @@ class SellerVerification(graphene.Mutation):
                     )
                 except Exception as e:
                     return SellerVerification(status=True, message=e)
-            else:
-                return SellerVerification(
-                    status=False, message="Verification is still pending"
-                )
         else:
             return SellerVerification(status=False, message="Seller is already Verified")
 

@@ -168,6 +168,19 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.product.product_title} - {self.product.user}"
+    
+    def check_and_update_quantity(self):
+        try:
+            product_option = ProductOption.objects.get(id=self.product_option_id)
+        except ProductOption.DoesNotExist:
+            self.delete()
+            return
+
+        if product_option.quantity == 0:
+            self.delete()
+        elif self.quantity > int(product_option.quantity):
+            self.quantity = int(product_option.quantity)
+            self.save()
 
 
 class Wishlist(models.Model):
@@ -200,4 +213,21 @@ class ProductCharge(models.Model):
      id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
      has_fixed_amount= models.BooleanField(default=False)
      charge=models.FloatField(default=0.00)
+
+nigerian_states = [
+        "abia", "adamawa", "akwa ibom", "anambra", "bauchi", "bayelsa", "benue",
+        "borno", "cross river", "delta", "ebonyi", "edo", "ekiti", "enugu", "gombe",
+        "imo", "jigawa", "kaduna", "kano", "katsina", "kebbi", "kogi", "kwara", "lagos",
+        "nasarawa", "niger", "ogun", "ondo", "osun", "oyo", "plateau", "rivers",
+        "sokoto", "taraba", "yobe", "zamfara", "abuja"
+    ]
+def update_state_delivery_fees():
+    default_fee = 0.00
+
+    for state in nigerian_states:
+        created = StateDeliveryFee.objects.get_or_create(state=state, defaults={'fee': default_fee})
+        if created:
+            print(f'Created delivery fee for {state}')
+        else:
+            print(f'Delivery fee for {state} already exists')
     
