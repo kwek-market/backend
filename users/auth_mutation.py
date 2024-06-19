@@ -12,8 +12,9 @@ from notifications.models import Message, Notification
 from wallet.models import StoreDetail, Wallet
 from .validate import validate_email, validate_passwords, validate_user_passwords, authenticate_user, authenticate_admin
 from .sendmail import (
-    send_confirmation_email,
+    send_verification_email,
     send_generic_email_through_PHP,
+    send_welcome_email,
     user_loggedIN,
     expire_token,
     send_password_reset_email,
@@ -59,22 +60,20 @@ class CreateUser(graphene.Mutation):
                 message=validate_passwords(password1, password2)["message"],
             )
         else:
-            sen_m = send_confirmation_email(email, full_name)
-            if sen_m["status"] == True:
-                user.set_password(password1)
-                user.save()
-                Cart.objects.create(user=user)
-                Wishlist.objects.create(user=user)
-                Notification.objects.create(user=user)
-                return CreateUser(
-                    status=True,
-                    message="Successfully created account for, {}".format(
-                        user.username
-                    ),
-                )
-            else:
-                # raise GraphQLError("Email Verification not sent")
-                return CreateUser(status=False, message=sen_m["message"])
+            send_welcome_email(email, full_name)
+            send_verification_email(email, full_name)
+            
+            user.set_password(password1)
+            user.save()
+            Cart.objects.create(user=user)
+            Wishlist.objects.create(user=user)
+            Notification.objects.create(user=user)
+            return CreateUser(
+                status=True,
+                message="Successfully created account for, {}".format(
+                    user.username
+                ),
+            )
         # raise Exception('Invalid Link!')
 
 
@@ -89,15 +88,11 @@ class ResendVerification(graphene.Mutation):
     @staticmethod
     def mutate(self, info, email):
         f_user = ExtendUser.objects.get(email=email)
-        sen_m = send_confirmation_email(email, f_user.full_name)
-        if sen_m["status"] == True:
-            return ResendVerification(
-                status=True,
-                message="Successfully sent email to {}".format(email),
-            )
-        else:
-            # raise GraphQLError("Email Verification not sent")
-            return ResendVerification(status=False, message=sen_m["message"])
+        send_verification_email(email, f_user.full_name)
+        return ResendVerification(
+            status=True,
+            message="Successfully sent email to {}".format(email),
+        )
 
 
 class VerifyUser(graphene.Mutation):

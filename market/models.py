@@ -206,8 +206,16 @@ class FlashSales(models.Model):
 
 
 class StateDeliveryFee(models.Model):
-    state = models.CharField(max_length=255, primary_key=True, blank=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    state = models.CharField(max_length=255, blank=False)
+    city = models.CharField(max_length=255, blank=True)
     fee = models.FloatField(default=0.00)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['state'], name='state_idx'),
+            models.Index(fields=['city'], name='city_idx'),
+        ]
 
 class ProductCharge(models.Model):
      id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -221,6 +229,19 @@ nigerian_states = [
         "nasarawa", "niger", "ogun", "ondo", "osun", "oyo", "plateau", "rivers",
         "sokoto", "taraba", "yobe", "zamfara", "abuja"
     ]
+
+def get_delivery_fee(state:str,city:str)->float:
+    city_fee = StateDeliveryFee.objects.filter(state=state, city=city)
+    if city_fee.exists():
+        return city_fee[0].fee
+    else:
+        state_fee = StateDeliveryFee.objects.filter(state=state)
+        if state_fee.exists():
+            return state_fee[0].fee
+        else:
+            return 0
+
+
 def update_state_delivery_fees():
     default_fee = 0.00
 

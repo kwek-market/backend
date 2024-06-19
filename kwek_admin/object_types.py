@@ -1,4 +1,5 @@
 import graphene
+from bill.object_types import OrderType
 from market.object_types import *
 from users.model_object_type import *
 from graphene_django import DjangoObjectType

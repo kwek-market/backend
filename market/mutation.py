@@ -1091,7 +1091,7 @@ class UpdateProductCharges(graphene.Mutation):
         except Exception as e:
             return CreateProductCharges(status=False,message=e) 
         
-class UpdateStateDeliveryCharge(graphene.Mutation):
+class CreateStateDeliveryCharge(graphene.Mutation):
     delivery_charge = graphene.Field(StateDeliveryType)
     message = graphene.String()
     status = graphene.Boolean()
@@ -1099,29 +1099,66 @@ class UpdateStateDeliveryCharge(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         state = graphene.String(required=True)
+        city = graphene.String(required=True)
         fee = graphene.Float(required=True)
 
     @staticmethod
-    def mutate(self, info, token, state, fee):
-        state = state.lower()
+    def mutate(self, info, token, state=None, fee=None, city=None):
         auth = authenticate_admin(token)
         if not auth["status"]:
             return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
         update_state_delivery_fees()
+
         if state not in nigerian_states:
                 return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
-        try: 
-            
-            state_fee = StateDeliveryFee.objects.get(state__iexact=state)
-            if state_fee:
+        
+        
+        try:   
+            state_fee = StateDeliveryFee.objects.create(
+                    state=state,
+                    city=city,
+                    fee=fee,
+                )
+            return UpdateStateDeliveryCharge(status=True,message="successfully created!", delivery_charge=state_fee)
+        
+        except Exception as e:
+            return UpdateStateDeliveryCharge(status=False,message=e) 
+        
+class UpdateStateDeliveryCharge(graphene.Mutation):
+    delivery_charge = graphene.Field(StateDeliveryType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+        state = graphene.String()
+        city = graphene.String()
+        fee = graphene.Float()
+
+    @staticmethod
+    def mutate(self, info, token,id, state=None, fee=None, city=None):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
+        update_state_delivery_fees()
+        if state:
+            if state not in nigerian_states:
+                    return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
+        try:   
+            state_fee = StateDeliveryFee.objects.get(id=id)
+            if fee:
                 state_fee.fee = fee
-                state_fee.save()
-                return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
-            else:
+
+            if state:
                 state_fee.state = state
-                state_fee.fee = fee
-                state_fee.save()
-                return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
+
+            if city:
+                state_fee.city = city
+
+            state_fee.save()
+            return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
+        
         except Exception as e:
             return UpdateStateDeliveryCharge(status=False,message=e) 
         

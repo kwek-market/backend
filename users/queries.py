@@ -316,7 +316,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     )
     get_delivery_fee_for_a_state = graphene.Field(
         StateDeliveryType,
-        state=graphene.String(required=True)
+        state=graphene.String(required=True),
+        city=graphene.String()
+    )
+
+    get_delivery_fee_by_id = graphene.Field(
+        StateDeliveryType,
+        id=graphene.String(required=True)
     )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
@@ -328,12 +334,21 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return User.objects.get(id=id)
     def resolve_get_state_delivery_fee(root, info):
         return StateDeliveryFee.objects.all()
-    def resolve_get_delivery_fee_for_a_state(root, info, state):  
-       try:
-        state_delivery_fee = StateDeliveryFee.objects.get(state__iexact=state)
-        return state_delivery_fee
-       except Exception as e:
-           raise GraphQLError(e)
+    
+    def resolve_get_delivery_fee_by_id(root, info,id):
+        try:
+            state_delivery_fee = StateDeliveryFee.objects.get(id=id)
+            return state_delivery_fee
+        except Exception as e:
+            raise GraphQLError(e)
+        
+    def resolve_get_delivery_fee_for_a_state(root, info, state, city=""):  
+        try:
+            state_delivery_fee = get_delivery_fee(state, city)
+            return state_delivery_fee
+        except Exception as e:
+            raise GraphQLError(e)
+       
     def resolve_get_product_charge(root, info):
         charge = ProductCharge.objects.all()
         if charge.exists():

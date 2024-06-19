@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from bill.models import Order
+from bill.object_types import GetSellerOrdersType
 from .models import *
 from users.model_object_type import UserType
 
@@ -108,17 +109,6 @@ class WishlistType(DjangoObjectType):
 class WishlistItemType(DjangoObjectType):
     class Meta:
         model = WishListItem
-class OrderType(DjangoObjectType):
-    class Meta:
-        model=Order
-        fields = "__all__"
-
-class OrderPaginatedType(graphene.ObjectType):
-    page = graphene.Int()
-    pages = graphene.Int()
-    has_next = graphene.Boolean()
-    has_prev = graphene.Boolean()
-    objects = graphene.List(OrderType)
 
 class SalesType(DjangoObjectType):
     class Meta:
@@ -145,14 +135,6 @@ class FlashSalesPaginatedType(graphene.ObjectType):
     has_prev = graphene.Boolean()
     objects = graphene.List(FlashSalesType)
 
-class GetSellerOrdersType(graphene.ObjectType):
-    order = graphene.Field(OrderType)
-    created = graphene.String()
-    customer = graphene.Field(UserType)
-    total = graphene.Int()
-    profit = graphene.Int()
-    paid = graphene.Boolean()
-    status = graphene.String()
 
 class GetSellerOrdersPaginatedType(graphene.ObjectType):
     page = graphene.Int()

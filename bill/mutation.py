@@ -16,6 +16,7 @@ from market.models import (
     ProductOption,
     ProductPromotion,
     Sales,
+    get_delivery_fee,
 )
 import uuid
 
@@ -399,13 +400,14 @@ class PlaceOrder(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
-        delivery_fee= graphene.Float(required=True)
         cart_id = graphene.String(required=True)
         payment_method = graphene.String(required=True)
         delivery_method = graphene.String(required=True)
         address_id = graphene.String(required=True)
         payment_ref = graphene.String()
         coupon_ids = graphene.List(graphene.String)
+        state = graphene.String(required=True)
+        city = graphene.String()
 
     @staticmethod
     def mutate(
@@ -415,8 +417,9 @@ class PlaceOrder(graphene.Mutation):
         cart_id,
         payment_method,
         delivery_method,
-        delivery_fee,
         address_id,
+        state,
+        city="",
         coupon_ids=None,
         payment_ref=None,
     ):
@@ -436,6 +439,8 @@ class PlaceOrder(graphene.Mutation):
                 shipping_address = Billing.objects.get(id=address_id)
             elif delivery_method == "pickup":
                 shipping_address = Pickup.objects.get(id=address_id)
+
+            delivery_fee = get_delivery_fee(state.lower(), city.lower())
             if user:
                 if cart:
                     if user == cart_owner:
@@ -481,6 +486,7 @@ class PlaceOrder(graphene.Mutation):
                                             payment_method=payment_method,
                                             delivery_method=delivery_method,
                                             coupon=coupon_ids,
+                                            delivery_fee=delivery_fee,
                                         )
                                     else:
                                         return PlaceOrder(
@@ -492,7 +498,7 @@ class PlaceOrder(graphene.Mutation):
                                     user=user,
                                     payment_method=payment_method,
                                     delivery_method=delivery_method,
-                                    delivery_fee=delivery_fee
+                                    delivery_fee=delivery_fee,
                             
                                 )
 

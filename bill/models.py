@@ -180,10 +180,6 @@ class Order(models.Model):
             for id in self.coupon:
                 coupon_item = Coupon.objects.get(id=id)
                 total_coupon_price += int(coupon_item.value)
-        self.order_price_total = (self.order_price - total_coupon_price) + self.delivery_fee
-        if self.order_price_total < 0:
-
-            self.order_price_total = 0
 
         while not self.order_id:
             order_id = f"KWEK-{secrets.token_urlsafe(8)}"
@@ -199,6 +195,31 @@ class Order(models.Model):
                 cart_items = CartItem.objects.filter(cart__user=self.user, ordered=False)
                 self.cart_items.set(cart_items)
                 cart_items.update(ordered=True, cart=None, order=self)
+
+        order_price = 0
+        if self.cart_items.exists():
+            for cart_item in self.cart_items:
+                order_price += (cart_item.quantity * cart_item.price)
+        
+        self.order_price = order_price
+
+        if total_coupon_price > 0:
+            order_price = order_price - total_coupon_price
+
+        if self.delivery_fee > 0:
+             order_price += self.delivery_fee
+
+        self.order_price_total = order_price
+
+        super().save(*args, **kwargs)
+        
+
+        
+
+        
+                
+
+
 
     
     def __str__(self) -> str:
