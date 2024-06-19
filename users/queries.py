@@ -203,6 +203,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         RatingPaginatedType, review_id=graphene.String(required=True)
     )
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
+    seller = graphene.Field(SellerProfileType, shop_url=graphene.String(required=True))
     subcategories = graphene.List(CategoryType)
     subcribers = DjangoListField(NewsletterType)
     user_data = graphene.Field(UserType, token=graphene.String())
@@ -410,6 +411,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
+
+    def resolve_seller(root, info, shop_url):
+        try:
+            seller = SellerProfile.objects.get(shop_url=shop_url)
+            return seller
+        except Exception as e:
+            raise GraphQLError("seller's shop not found")
 
 
     def resolve_subcategories(root, info):
