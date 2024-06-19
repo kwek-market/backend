@@ -49,7 +49,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         PickupType, address_id=graphene.String(required=True)
     )
     billing_addresses = DjangoListField(BillingType)
-    categories = graphene.List(CategoryType, search=graphene.String())
+    categories = graphene.List(CategoryType, search=graphene.String(), visibility=graphene.String())
     get_user_by_id = graphene.Field(UserType, id=graphene.String(required=True), token=graphene.String(required=True))
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
@@ -368,12 +368,18 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 billing_addresses.append(address)
         return billing_addresses
 
-    def resolve_categories(root, info, search=None):
+    def resolve_categories(root, info, search=None, visibility=None):
         Category.objects.filter(visibility=Category.Visibility.SCHEDULED , publish_date__lte=datetime.now().date()).update(visibility=Category.Visibility.PUBLISHED)
+        query = Q()
+
         if search:
-            name = Category.objects.filter(name__icontains=search)
-            return name
-       
+            query = query & Q(name__icontains=search)
+
+        if visibility:
+            query = query & Q(visibility=visibility)
+
+        if search or visibility:
+            return Category.objects.filter(query)
         return Category.objects.filter(parent=None)
 
     def resolve_category(root, info, id):

@@ -198,13 +198,15 @@ class Order(models.Model):
 
         order_price = 0
         if self.cart_items.exists():
-            for cart_item in self.cart_items:
+            for cart_item in self.cart_items.all():
                 order_price += (cart_item.quantity * cart_item.price)
         
         self.order_price = order_price
 
         if total_coupon_price > 0:
             order_price = order_price - total_coupon_price
+            if order_price < 0:
+                order_price = 0
 
         if self.delivery_fee > 0:
              order_price += self.delivery_fee
