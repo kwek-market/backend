@@ -818,22 +818,23 @@ class StoreUpdate(graphene.Mutation):
     message = graphene.String()
     class Arguments:
         token = graphene.String(required=True)
-        store_banner = graphene.String(required=True)
-        store_description = graphene.String(required=True)
+        store_banner = graphene.String()
+        store_description = graphene.String()
         shop_url = graphene.String()
 
     @staticmethod
-    def mutate(self, info, token, store_banner, store_description, shop_url=None):
+    def mutate(self, info, token, store_banner=None, store_description=None, shop_url=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             return StoreUpdate(status=auth["status"],message=auth["message"])
         c_user = auth["user"]
         try:
             seller = SellerProfile.objects.get(user=c_user.id)
-            seller.store_banner_url, seller.store_description = (
-                store_banner,
-                store_description,
-            )
+            if store_banner:
+                seller.store_banner_url = store_banner
+
+            if store_description:
+                seller.store_description = store_description
 
             if shop_url:
                 if SellerProfile.objects.filter(shop_url=shop_url).exists():
