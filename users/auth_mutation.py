@@ -820,9 +820,10 @@ class StoreUpdate(graphene.Mutation):
         token = graphene.String(required=True)
         store_banner = graphene.String(required=True)
         store_description = graphene.String(required=True)
+        shop_url = graphene.String()
 
     @staticmethod
-    def mutate(self, info, token, store_banner, store_description):
+    def mutate(self, info, token, store_banner, store_description, shop_url=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             return StoreUpdate(status=auth["status"],message=auth["message"])
@@ -833,6 +834,13 @@ class StoreUpdate(graphene.Mutation):
                 store_banner,
                 store_description,
             )
+
+            if shop_url:
+                if SellerProfile.objects.filter(shop_url=shop_url).exists():
+                    if SellerProfile.objects.get(shop_url=shop_url).user.id != c_user.id:
+                        return StoreUpdate(status=False, message="Shop url already taken")
+                    
+                seller.shop_url = shop_url
             seller.save()
             if Notification.objects.filter(user=c_user).exists():
                 notification = Notification.objects.get(
