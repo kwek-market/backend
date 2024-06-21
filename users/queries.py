@@ -333,8 +333,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         return User.objects.get(id=id)
+    
     def resolve_get_state_delivery_fee(root, info):
-        return StateDeliveryFee.objects.all()
+        state_fees = StateDeliveryFee.objects.all()
+        if len(state_fees) < 1:
+            update_state_delivery_fees()
+            state_fees = StateDeliveryFee.objects.all()
+        return state_fees
     
     def resolve_get_delivery_fee_by_id(root, info,id):
         try:
