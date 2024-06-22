@@ -174,6 +174,7 @@ class Order(models.Model):
     delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
 
     def save(self, *args, **kwargs):
+        print("saving order", self.id)
         total_coupon_price = 0
 
         if self.coupon:
@@ -196,34 +197,28 @@ class Order(models.Model):
                 self.cart_items.set(cart_items)
                 cart_items.update(ordered=True, cart=None, order=self)
 
-        order_price = 0
-        if self.cart_items.exists():
-            for cart_item in self.cart_items.all():
-                order_price += (cart_item.quantity * cart_item.price)
-        
-        self.order_price = order_price
+            
 
-        if total_coupon_price > 0:
-            order_price = order_price - total_coupon_price
-            if order_price < 0:
-                order_price = 0
+            order_price = 0
+            if self.cart_items.exists():
+                for cart_item in self.cart_items.all():
+                    order_price += (cart_item.quantity * cart_item.price)
+            
+            first_order_price = order_price
 
-        if self.delivery_fee > 0:
-             order_price += self.delivery_fee
+            if total_coupon_price > 0:
+                order_price = order_price - total_coupon_price
+                if order_price < 0:
+                    order_price = 0
 
-        self.order_price_total = order_price
+            if self.delivery_fee > 0:
+                order_price += self.delivery_fee
 
-        super().save(*args, **kwargs)
-        
+            order_price_total = order_price
 
-        
+            Order.objects.filter(id=self.id).update(order_price=first_order_price,order_price_total=order_price_total)
+            # super().save(*args, **kwargs) // apparently you cannot call this twice, it will be like calling create multiple times
 
-        
-                
-
-
-
-    
     def __str__(self) -> str:
         return self.order_id
     
