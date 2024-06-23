@@ -129,10 +129,11 @@ def send_password_reset_email(email):
         print(e)
         return {"status": False, "message": e}
     
-def send_coupon_code(to: List[str], code:str):
+def send_coupon_code(to: List[str], code:str, discount:str):
     template_name = 'users/coupon.html'
     context = {
     'code': code,
+    "discount": discount,
     'facebook': settings.FACEBOOK_URL,
     'instagram': settings.INSTAGRAM_URL,
     'twitter': settings.TWITTER_URL

@@ -5,6 +5,7 @@ from django.contrib.postgres.fields import ArrayField
 from bill.models import Order
 from users.models import ExtendUser as User
 import uuid
+from django.utils import timezone
 
 # Create your models here.
 
@@ -20,8 +21,12 @@ class Category(models.Model):
     visibility = models.CharField(max_length=255, choices=Visibility.choices, default=Visibility.PUBLISHED)
     publish_date = models.DateField(null=True, blank=True)
     parent = models.ForeignKey("self", blank=True, null=True, related_name="child", on_delete=models.CASCADE)
+
     class Meta:
         verbose_name_plural = "categories"
+        indexes = [
+            models.Index(fields=['visibility'], name='visibility_idx'),
+        ]
         
 
     def __str__(self):
@@ -210,6 +215,7 @@ class StateDeliveryFee(models.Model):
     state = models.CharField(max_length=255, blank=False)
     city = models.CharField(max_length=255, blank=True)
     fee = models.FloatField(default=0.00)
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         indexes = [

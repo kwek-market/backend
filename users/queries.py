@@ -335,10 +335,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return User.objects.get(id=id)
     
     def resolve_get_state_delivery_fee(root, info):
-        state_fees = StateDeliveryFee.objects.all()
+        state_fees = StateDeliveryFee.objects.all().order_by("-created_at")
         if len(state_fees) < 1:
             update_state_delivery_fees()
-            state_fees = StateDeliveryFee.objects.all()
+            state_fees = StateDeliveryFee.objects.all().order_by("-created_at")
         return state_fees
     
     def resolve_get_delivery_fee_by_id(root, info,id):
@@ -385,7 +385,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             query = query & Q(visibility=visibility)
 
         if search or visibility:
-            return Category.objects.filter(query)
+            return Category.objects.filter(query, parent=None)
         return Category.objects.filter(parent=None)
 
     def resolve_category(root, info, id):
@@ -492,7 +492,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             if SellerProfile.objects.filter(user=user).exists():
-                prods = Product.objects.filter(user=user).order_by("?")
+                prods = Product.objects.filter(user=user).order_by("-date_created")
                 search_filter, keyword_filter = Q(), Q()
                 price_filter, sizes_filter, this_month_filter = Q(), Q(), Q()
                 search_status, price_status, sizes_status = False, False, False
@@ -549,7 +549,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     elif sort_by in ["sales", "-sales"]:
                         sort_key = "{}_count".format(sort_by)
                         prods = prods.annotate(sales_count=Count("sales")).order_by(
-                            sort_key
+                            sort_key, "-date_created"
                         )
                     elif sort_by in ["price", "-price"]:
                         v1, v2 = "{}_average".format(
@@ -565,7 +565,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                 / Count("options__discounted_price"),
                                 output_field=FloatField(),
                             ),
-                        ).order_by(v1, v2)
+                        ).order_by(v1, v2, "-date_created")
                     elif sort_by in ["rating", "-rating"]:
                         sort_key = "rate" if sort_by == "rating" else "-rate"
                         if rating:
@@ -576,7 +576,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                         / Count("product_rating__rating")
                                     )
                                     .filter(rate__lte=rating)
-                                    .order_by(sort_key)
+                                    .order_by(sort_key, "-date_created")
                                 )
                             else:
                                 prods = (
@@ -585,7 +585,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                         / Count("product_rating__rating")
                                     )
                                     .filter(rate__gte=abs(rating))
-                                    .order_by(sort_key)
+                                    .order_by(sort_key, "-date_created")
                                 )
                     else:
                         prods = prods
@@ -610,6 +610,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         review = Rating.objects.get(id=review_id)
 
     def resolve_reviews(root, info, page, page_size, product_id=None, sort_by=None):
+        reviews = []
         if product_id:
             reviews = Rating.objects.filter(product=Product.objects.get(id=product_id))
         else:
@@ -666,7 +667,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            promoted_products = Product.objects.filter(user=user, promoted=True)
+            promoted_products = Product.objects.filter(user=user, promoted=True).order_by("-date_created")
             return promoted_products
         else:
             raise GraphQLError("Not a seller")
@@ -997,7 +998,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 date_created__year=datetime.now().year
             )
         charge = SellerProfile.objects.get(user=user).kwek_charges
-        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user)
+        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user).order_by("-date_created")
 
         orders_values = orders.values(
             "order_id",
@@ -1346,7 +1347,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     |Q(product_title__icontains=search)
                 )
             if search_status:
-                promoted_products = promoted_products.filter(search_filter)
+                promoted_products = promoted_products.filter(search_filter).order_by("-date_created")
             return get_paginator(promoted_products,page_size,page, ProductPaginatedType)
         
     def resolve_get_wallet_transactions(root, info, token, page=1, page_size=50, search=None, sort_by=None):

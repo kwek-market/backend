@@ -153,6 +153,9 @@ class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     progress = models.CharField(max_length=30, default="Order Placed")
     order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="progress")
+
+    def __str__(self) -> str:
+        return self.order.order_id
     
 
 class Order(models.Model):

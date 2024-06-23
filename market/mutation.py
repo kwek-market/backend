@@ -306,9 +306,18 @@ class ProductClick(graphene.Mutation):
             if product.promoted:
                 promos = ProductPromotion.objects.filter(product=product, active=True)
                 # ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
+                print(promos)
                 for pr in promos:
                     c_clicks, active = pr.link_clicks +1, True
-                    c_balance = pr.balance - settings.PROMOTION_CLICK_CHARGE if not pr.is_admin else pr.balance
+                    c_balance = pr.balance
+
+                    if pr.balance > 0:
+                        c_balance = c_balance - settings.PROMOTION_CLICK_CHARGE
+                    elif pr.is_admin:
+                        c_balance = pr.balance
+                    else:
+                        c_balance = c_balance - settings.PROMOTION_CLICK_CHARGE
+
                     if c_balance <= 0 and not pr.is_admin:
                         c_balance, active = 0, False
                     pr.link_clicks, pr.balance, pr.active =c_clicks, c_balance, active

@@ -835,13 +835,13 @@ class CreateCoupon(graphene.Mutation):
                 )
 
                 emails = ExtendUser.get_emails_by_ids(user_list)
-                send_coupon_code(emails, coupon.code)
+                send_coupon_code(emails, coupon.code, str(coupon.value))
             elif user_list and (not code):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, user_list=user_list
                 )
                 emails = ExtendUser.get_emails_by_ids(user_list)
-                send_coupon_code(emails, coupon.code)
+                send_coupon_code(emails, coupon.code,str(coupon.value))
             elif code and (not user_list):
                 coupon = Coupon.objects.create(
                     value=value, valid_until=valid_until_date, code=code
