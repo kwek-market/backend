@@ -684,7 +684,7 @@ class UpdateDeliverystatus(graphene.Mutation):
                         progress="Order Delivered"
                     )
                     Order.objects.filter(id=order_id).update(closed=True, paid=True)
-                    for item_id in order.cart_items:
+                    for item_id in order.cart_items.all():
                         item = CartItem.objects.get(id=item_id)
                         seller = item.product.user
                         if SellerCustomer.objects.filter(seller=seller).exists():
@@ -738,62 +738,58 @@ class CancelOrder(graphene.Mutation):
         if Order.objects.filter(id=order_id).exists():
             try:
                 order = Order.objects.get(id=order_id)
-                if order.payment_method == "pay on delivery":
-                    Order.objects.filter(id=order_id).update(closed=True)
-                    OrderProgress.objects.filter(order=order).update(
-                        progress="Order cancelled"
-                    )
-                    if Notification.objects.filter(user=order.user).exists():
-                        notification = Notification.objects.get(user=order.user)
+                Order.objects.filter(id=order_id).update(closed=True)
+                OrderProgress.objects.filter(order=order).update(
+                    progress="Order cancelled"
+                )
+                if Notification.objects.filter(user=order.user).exists():
+                    notification = Notification.objects.get(user=order.user)
+                else:
+                    notification = Notification.objects.create(user=order.user)
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Your order has been cancelled successfully",
+                    subject="Cancel order",
+                )
+                notification_info = {
+                    "notification": str(notification_message.notification.id),
+                    "message": notification_message.message,
+                    "subject": notification_message.subject,
+                }
+                push_to_client(order.user.id, notification_info)
+                email_send = SendEmailNotification(order.user.email)
+                email_send.send_only_one_paragraph(
+                    notification_message.subject, notification_message.message
+                )
+                for seller_item in order.cart_items.all():
+                    # seller_item = CartItem.objects.get(id=item)
+                    cart_item_seller = seller_item.product.user
+                    if Notification.objects.filter(user=cart_item_seller).exists():
+                        notification = Notification.objects.get(
+                            user=cart_item_seller
+                        )
                     else:
-                        notification = Notification.objects.create(user=order.user)
+                        notification = Notification.objects.create(
+                            user=cart_item_seller
+                        )
                     notification_message = Message.objects.create(
                         notification=notification,
-                        message=f"Your order has been cancelled successfully",
-                        subject="Cancel order",
+                        message=f"Order no. #{order.order_id} has been cancelled",
+                        subject="Order Cancelled",
                     )
+                    # print(notification_message.message)
                     notification_info = {
                         "notification": str(notification_message.notification.id),
                         "message": notification_message.message,
                         "subject": notification_message.subject,
                     }
-                    push_to_client(order.user.id, notification_info)
-                    email_send = SendEmailNotification(order.user.email)
+                    push_to_client(cart_item_seller.id, notification_info)
+                    email_send = SendEmailNotification(cart_item_seller.email)
                     email_send.send_only_one_paragraph(
                         notification_message.subject, notification_message.message
                     )
-                    for seller_item in order.cart_items.all():
-                        # seller_item = CartItem.objects.get(id=item)
-                        cart_item_seller = seller_item.product.user
-                        if Notification.objects.filter(user=cart_item_seller).exists():
-                            notification = Notification.objects.get(
-                                user=cart_item_seller
-                            )
-                        else:
-                            notification = Notification.objects.create(
-                                user=cart_item_seller
-                            )
-                        notification_message = Message.objects.create(
-                            notification=notification,
-                            message=f"Order no. #{order.order_id} has been cancelled",
-                            subject="Order Cancelled",
-                        )
-                        # print(notification_message.message)
-                        notification_info = {
-                            "notification": str(notification_message.notification.id),
-                            "message": notification_message.message,
-                            "subject": notification_message.subject,
-                        }
-                        push_to_client(cart_item_seller.id, notification_info)
-                        email_send = SendEmailNotification(cart_item_seller.email)
-                        email_send.send_only_one_paragraph(
-                            notification_message.subject, notification_message.message
-                        )
-                    return CancelOrder(status=True, message="Order cancelled")
-                else:
-                    return CancelOrder(
-                        status=False, message="You cannot cancel this order"
-                    )
+                return CancelOrder(status=True, message="Order cancelled")
+
             except Exception as e:
                 return CancelOrder(status=False, message=e)
         else:
