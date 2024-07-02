@@ -441,182 +441,163 @@ class PlaceOrder(graphene.Mutation):
                 shipping_address = Pickup.objects.get(id=address_id)
 
             delivery_fee = get_delivery_fee(state.lower(), city.lower())
-            if user:
-                if cart:
-                    if user == cart_owner:
-                        try:
-                            if (
-                                payment_method != "pay on delivery"
-                                and payment_ref is not None
-                            ):
-                                if Payment.objects.filter(ref=payment_ref).exists:
-                                    payment = Payment.objects.get(ref=payment_ref)
-                                    if payment.verified:
-                                        if payment.used:
-                                            return PlaceOrder(
-                                                status=False,
-                                                message="Payment reference already used",
-                                            )
-                                    else:
-                                        return PlaceOrder(
-                                            status=False,
-                                            message="Payment has not been verified",
-                                        )
-                                else:
-                                    return PlaceOrder(
-                                        status=False,
-                                        message="Invalid payment reference",
-                                    )
-                            elif (
-                                payment_method != "pay on delivery"
-                                and payment_ref is None
-                            ):
-                                return PlaceOrder(
-                                    status=False,
-                                    message="Payment reference not provided",
-                                )
-                            if coupon_ids:
-                                for id in coupon_ids:
-                                    coupon = Coupon.objects.get(id=id)
-                                    if CouponUser.objects.get(
-                                        coupon=coupon, user=user
-                                    ).exists():
-                                        order = Order.objects.create(
-                                            user=user,
-                                            payment_method=payment_method,
-                                            delivery_method=delivery_method,
-                                            coupon=coupon_ids,
-                                            delivery_fee=delivery_fee,
-                                        )
-                                    else:
-                                        return PlaceOrder(
-                                            status=False,
-                                            message="Coupon has not been applied",
-                                        )
-                            else:
-                                order = Order.objects.create(
-                                    user=user,
-                                    payment_method=payment_method,
-                                    delivery_method=delivery_method,
-                                    delivery_fee=delivery_fee,
-                            
-                                )
 
-                            if delivery_method == "door step":
-                                Order.objects.filter(id=order.id).update(
-                                    door_step=shipping_address
-                                )
-                            elif delivery_method == "pickup":
-                                Order.objects.filter(id=order.id).update(
-                                    pickup=shipping_address
-                                )
-                            OrderProgress.objects.create(order=order)
-                            for cart_item in cart_items:
-                                cart_item_quantity = cart_item.quantity
-                                product = ProductOption.objects.get(id=cart_item.product_option_id)
-                                product_quantity = product.quantity
-                                for i in range(int(product_quantity)):
-                                    Sales.objects.create(
-                                        product=product.product,
-                                        amount=cart_item.price,
-                                    )
+            if not user: return PlaceOrder(status=False, message="User does not exist")
 
-                                new_quantity = int(product_quantity) - int(
-                                    cart_item_quantity
-                                )
-                                ProductOption.objects.filter(id=id).update(
-                                    quantity=new_quantity
-                                )
-                                if ProductPromotion.objects.filter(
-                                    product=product.product, active=True
-                                ).exists():
-                                    reach = (
-                                        ProductPromotion.objects.get(
-                                            product=product.product
-                                        ).reach
-                                        + 1
-                                    )
-                                    ProductPromotion.objects.filter(
-                                        product=cart_item.product
-                                    ).update(reach=reach)
-                            if payment_ref:
-                                Payment.objects.filter(ref=payment_ref).update(
-                                    used=True
-                                )
-                                Order.objects.filter(id=order.id).update(paid=True)
-                            if Notification.objects.filter(user=user).exists():
-                                notification = Notification.objects.get(user=user)
-                            else:
-                                notification = Notification.objects.create(user=user)
-                            notification_message = Message.objects.create(
-                                notification=notification,
-                                message=f"Your order has been placed successfully",
-                                subject="Order placed",
-                            )
-                            # print(notification_message.message)
-                            notification_info = {
-                                "notification": str(
-                                    notification_message.notification.id
-                                ),
-                                "message": notification_message.message,
-                                "subject": notification_message.subject,
-                            }
-                            push_to_client(user.id, notification_info)
-                            email_send = SendEmailNotification(user.email)
-                            email_send.send_only_one_paragraph(
-                                notification_message.subject,
-                                notification_message.message,
-                            )
-                            for seller_item in cart_items:
-                                cart_item_seller = seller_item.product.user
-                                if Notification.objects.filter(
-                                    user=cart_item_seller
-                                ).exists():
-                                    notification = Notification.objects.get(
-                                        user=cart_item_seller
-                                    )
-                                else:
-                                    notification = Notification.objects.create(
-                                        user=cart_item_seller
-                                    )
-                                notification_message = Message.objects.create(
-                                    notification=notification,
-                                    message=f"You've got a new order - Order no. #{order.order_id}",
-                                    subject="New Order",
-                                )
-                                # print(notification_message.message)
-                                notification_info = {
-                                    "notification": str(
-                                        notification_message.notification.id
-                                    ),
-                                    "message": notification_message.message,
-                                    "subject": notification_message.subject,
-                                }
-                                push_to_client(cart_item_seller.id, notification_info)
-                                email_send = SendEmailNotification(
-                                    cart_item_seller.email
-                                )
-                                email_send.send_only_one_paragraph(
-                                    notification_message.subject,
-                                    notification_message.message,
-                                )
-                            return PlaceOrder(
-                                status=True,
-                                message="Order placed successfully",
-                                order_id=order.order_id,
-                            )
-                        except Exception as e:
-                            return PlaceOrder(status=False, message=e)
+            if not cart: return PlaceOrder(status=False, message="Cart does not exist")
 
-                    else:
-                        return PlaceOrder(
-                            status=False, message="User is not the owner of the cart"
+            if user != cart_owner: return PlaceOrder(status=False, message="User is not the owner of the cart")
+
+
+            try:
+
+                if (payment_method != "pay on delivery"and payment_ref is None):
+                    return PlaceOrder(
+                        status=False,
+                        message="Payment reference not provided",
+                    )
+            
+                if (payment_method != "pay on delivery" and payment_ref is not None):
+                    if not Payment.objects.filter(ref=payment_ref).exists: return PlaceOrder(
+                            status=False,
+                            message="Invalid payment reference",
+                        )
+                    
+                    payment = Payment.objects.get(ref=payment_ref)
+                    if payment.verified and payment.used: return PlaceOrder(
+                                status=False,
+                                message="Payment reference already used",)
+                    
+                    if not payment.verified :return PlaceOrder(
+                            status=False,
+                            message="Payment has not been verified",
+                        )
+                    
+                coupons = []
+                if coupon_ids:
+                    for id in coupon_ids:
+                        coupon = Coupon.objects.get(id=id)
+                        if CouponUser.objects.get(coupon=coupon, user=user).exists(): coupons.append(id)              
+
+                if coupon_ids and len(coupons) == 0: return PlaceOrder(status=False,message="No coupon applied",)
+
+                order = Order.objects.create(
+                            user=user,
+                            payment_method=payment_method,
+                            delivery_method=delivery_method,
+                            coupon=coupons,
+                            delivery_fee=delivery_fee,
                         )
 
+                if delivery_method == "door step":
+                    Order.objects.filter(id=order.id).update(
+                        door_step=shipping_address
+                    )
+                elif delivery_method == "pickup":
+                    Order.objects.filter(id=order.id).update(
+                        pickup=shipping_address
+                    )
+                OrderProgress.objects.create(order=order)
+                for cart_item in cart_items:
+                    cart_item_quantity = cart_item.quantity
+                    product = ProductOption.objects.get(id=cart_item.product_option_id)
+                    product_quantity = product.quantity
+                    for i in range(int(product_quantity)):
+                        Sales.objects.create(
+                            product=product.product,
+                            amount=cart_item.price,
+                        )
+
+                    new_quantity = int(product_quantity) - int(
+                        cart_item_quantity
+                    )
+                    ProductOption.objects.filter(id=id).update(
+                        quantity=new_quantity
+                    )
+                    if ProductPromotion.objects.filter(
+                        product=product.product, active=True
+                    ).exists():
+                        reach = (
+                            ProductPromotion.objects.get(
+                                product=product.product
+                            ).reach
+                            + 1
+                        )
+                        ProductPromotion.objects.filter(
+                            product=cart_item.product
+                        ).update(reach=reach)
+                if payment_ref:
+                    Payment.objects.filter(ref=payment_ref).update(
+                        used=True
+                    )
+                    Order.objects.filter(id=order.id).update(paid=True)
+                if Notification.objects.filter(user=user).exists():
+                    notification = Notification.objects.get(user=user)
                 else:
-                    return PlaceOrder(status=False, message="Cart does not exist")
-            else:
-                return PlaceOrder(status=False, message="User does not exist")
+                    notification = Notification.objects.create(user=user)
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"Your order has been placed successfully",
+                    subject="Order placed",
+                )
+                # print(notification_message.message)
+                notification_info = {
+                    "notification": str(
+                        notification_message.notification.id
+                    ),
+                    "message": notification_message.message,
+                    "subject": notification_message.subject,
+                }
+                push_to_client(user.id, notification_info)
+                email_send = SendEmailNotification(user.email)
+                email_send.send_only_one_paragraph(
+                    notification_message.subject,
+                    notification_message.message,
+                )
+                for seller_item in cart_items:
+                    cart_item_seller = seller_item.product.user
+                    if Notification.objects.filter(
+                        user=cart_item_seller
+                    ).exists():
+                        notification = Notification.objects.get(
+                            user=cart_item_seller
+                        )
+                    else:
+                        notification = Notification.objects.create(
+                            user=cart_item_seller
+                        )
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"You've got a new order - Order no. #{order.order_id}",
+                        subject="New Order",
+                    )
+                    # print(notification_message.message)
+                    notification_info = {
+                        "notification": str(
+                            notification_message.notification.id
+                        ),
+                        "message": notification_message.message,
+                        "subject": notification_message.subject,
+                    }
+                    push_to_client(cart_item_seller.id, notification_info)
+                    email_send = SendEmailNotification(
+                        cart_item_seller.email
+                    )
+                    email_send.send_only_one_paragraph(
+                        notification_message.subject,
+                        notification_message.message,
+                    )
+                return PlaceOrder(
+                    status=True,
+                    message="Order placed successfully",
+                    order_id=order.order_id,
+                )
+            except Exception as e:
+                return PlaceOrder(status=False, message=e)
+
+
+
+
 
 
 class TrackOrder(graphene.Mutation):
