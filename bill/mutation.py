@@ -485,7 +485,7 @@ class PlaceOrder(graphene.Mutation):
                             user=user,
                             payment_method=payment_method,
                             delivery_method=delivery_method,
-                            coupon=coupons,
+                            coupon= coupons if len(coupons)> 0 else None,
                             delivery_fee=delivery_fee,
                         )
 
