@@ -50,6 +50,7 @@ class Payment(models.Model):
     amount = models.FloatField(default=0)
     ref = models.CharField(max_length=200)
     user_id = models.CharField(max_length=225, default=None)
+    gateway = models.CharField(max_length=225, default="flutterwave")
     email = models.EmailField(blank=False)
     name = models.CharField(max_length=225, default="admin")
     phone = models.CharField(max_length=15, default="+1809384583")

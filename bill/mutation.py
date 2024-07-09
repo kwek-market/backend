@@ -6,9 +6,10 @@ from users.validate import authenticate_user, authenticate_admin
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
 from users.models import ExtendUser, SellerCustomer
+from wallet.models import Wallet
 from .models import Billing, Coupon, CouponUser, Payment, Pickup, Order, OrderProgress
 from .object_types import BillingType, CouponType, PaymentType, PickupType
-from .flutterwave import get_payment_url, verify_transaction
+from .payment import get_payment_url, verify_transaction
 from market.models import (
     Cart,
     CartItem,
@@ -303,9 +304,10 @@ class PaymentInitiate(graphene.Mutation):
         description = graphene.String(required=True)
         currency = graphene.String()
         redirect_url = graphene.String(required=True)
+        gateway = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, amount, token, description, redirect_url, currency="NGN"):
+    def mutate(self, info, amount, token, description, redirect_url, currency="NGN", gateway="gateway"):
         auth = authenticate_user(token)
         if not auth["status"]:
             return PaymentInitiate(status=auth["status"], message=auth["message"])
@@ -325,6 +327,7 @@ class PaymentInitiate(graphene.Mutation):
                             name=user.full_name,
                             phone=user.phone_number,
                             description=description,
+                            gateway=gateway,
                         )
                         if currency:
                             payment.currency = currency
@@ -340,6 +343,7 @@ class PaymentInitiate(graphene.Mutation):
                             payment.currency,
                             redirect_url,
                             payment.description,
+                            gateway
                         )
                         if link["status"] == True:
                             return PaymentInitiate(
@@ -375,7 +379,19 @@ class PaymentVerification(graphene.Mutation):
     @staticmethod
     def mutate(self, info, transaction_id, payment_ref):
         try:
-            verify = verify_transaction(transaction_id)
+            if not Payment.objects.filter(ref=payment_ref).exists():
+                return PaymentVerification(
+                    status=False,
+                    message="payment not found",
+                    transaction_info={},
+                )
+            
+            payment = Payment.objects.get(ref=payment_ref)
+            trans_ref = payment_ref
+            if payment.gateway == "flutterwave":
+                trans_ref= transaction_id
+
+            verify = verify_transaction(trans_ref)
             if verify["status"] == True:
                 Payment.objects.filter(ref=payment_ref).update(verified=True)
                 return PaymentVerification(
@@ -668,6 +684,15 @@ class UpdateDeliverystatus(graphene.Mutation):
                     for item_id in order.cart_items.all():
                         item = CartItem.objects.get(id=item_id)
                         seller = item.product.user
+
+                        #brute force solution
+                        # TODO: update this logic
+                        seller_wallet = Wallet.objects.get(owner=seller)
+                        price = (item.quantity * item.price)
+                        balance = seller_wallet.balance + price
+                        seller_wallet.balance = balance
+                        seller_wallet.save()
+
                         if SellerCustomer.objects.filter(seller=seller).exists():
                             customers_id = SellerCustomer.objects.get(
                                 seller=seller
