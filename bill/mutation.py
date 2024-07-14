@@ -373,7 +373,7 @@ class PaymentVerification(graphene.Mutation):
     transaction_info = graphene.String()
 
     class Arguments:
-        transaction_id = graphene.Int(required=True)
+        transaction_id = graphene.String(required=True)
         payment_ref = graphene.String(required=True)
 
     @staticmethod
