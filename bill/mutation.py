@@ -410,7 +410,7 @@ class PaymentVerification(graphene.Mutation):
                     transaction_info=verify["transaction_info"],
                 )
         except Exception as e:
-            return PaymentVerification(status=verify["status"], message=e)
+            return PaymentVerification(status=False, message=e)
 
 
 class PlaceOrder(graphene.Mutation):
