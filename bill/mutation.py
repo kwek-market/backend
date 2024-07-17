@@ -377,27 +377,27 @@ class PaymentVerification(graphene.Mutation):
     transaction_info = graphene.String()
 
     class Arguments:
+        transaction_ref = graphene.String(required=True)
         transaction_id = graphene.String(required=True)
-        payment_ref = graphene.String(required=True)
 
     @staticmethod
-    def mutate(self, info, transaction_id, payment_ref):
+    def mutate(self, info, transaction_ref, transaction_id):
         try:
-            if not Payment.objects.filter(ref=payment_ref).exists():
+            if not Payment.objects.filter(ref=transaction_ref).exists():
                 return PaymentVerification(
                     status=False,
                     message="payment not found",
                     transaction_info={},
                 )
             
-            payment = Payment.objects.get(ref=payment_ref)
-            trans_ref = payment_ref
+            payment = Payment.objects.get(ref=transaction_ref)
+            trans_ref = transaction_ref
             if payment.gateway == "flutterwave":
-                trans_ref= transaction_id
+                trans_ref = transaction_id
 
             verify = verify_transaction(trans_ref)
             if verify["status"] == True:
-                Payment.objects.filter(ref=payment_ref).update(verified=True)
+                Payment.objects.filter(ref=transaction_ref).update(verified=True)
                 return PaymentVerification(
                     status=verify["status"],
                     message=verify["message"],
