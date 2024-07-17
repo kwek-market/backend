@@ -395,7 +395,7 @@ class PaymentVerification(graphene.Mutation):
             if payment.gateway == "flutterwave":
                 trans_ref = transaction_id
 
-            verify = verify_transaction(trans_ref)
+            verify = verify_transaction(trans_ref, payment.gateway)
             if verify["status"] == True:
                 Payment.objects.filter(ref=transaction_ref).update(verified=True)
                 return PaymentVerification(
