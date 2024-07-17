@@ -346,6 +346,10 @@ class PaymentInitiate(graphene.Mutation):
                             gateway
                         )
                         if link["status"] == True:
+                            # solving edge case for paystack by replacing payment.ref
+                            ref = link["reference"] 
+                            payment.ref = ref
+                            payment.save()
                             return PaymentInitiate(
                                 payment=payment,
                                 status=True,

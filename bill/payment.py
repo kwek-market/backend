@@ -57,6 +57,7 @@ def get_payment_url(
 # print("paystack", data)
 
 
+
 def verify_transaction(transaction_id:str, gateway:str):
     if gateway.lower() == "flutterwave":
         flutterwave = Flutterwave()
@@ -66,6 +67,8 @@ def verify_transaction(transaction_id:str, gateway:str):
         return paystack.verify(transaction_id)
     else :
         return {"status":False,"message":"gateway not implemented", "transaction_info":""}
+
+# print("verify",verify_transaction("g6kyn3fe97", "paystack"))
 
 
 

@@ -47,7 +47,7 @@ class Flutterwave():
         try:
             response = requests.request("POST", Url, headers=headers, data=payload)
             if response.json()["status"] == "success":
-                return {"status":True,"message":response.json()['message'], "payment_link":response.json()['data']['link'], "gateway":"flutterwave"}
+                return {"status":True,"message":response.json()['message'], "payment_link":response.json()['data']['link'],"reference":transaction_reference, "gateway":"flutterwave"}
             else:
                 return {"status":False,"message":response.json()['message'], "payment_link":"", "gateway":"flutterwave"}
         except Exception as e:
@@ -109,7 +109,8 @@ class Paystack():
         try:
             response = requests.request("POST", url, headers=headers, data=payload)
             if response.json()["status"] == True:
-                return {"status":True,"message":response.json()['message'], "payment_link":response.json()['data']['authorization_url'], "gateway":"paystack"}
+                print("paystack response", response.json())
+                return {"status":True,"message":response.json()['message'], "payment_link":response.json()['data']['authorization_url'],"reference":response.json()['data']["reference"], "gateway":"paystack"}
             else:
                 return {"status":False,"message":response.json()['message'], "payment_link":"", "gateway":"paystack"}
         except Exception as e:
