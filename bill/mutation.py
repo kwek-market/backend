@@ -470,7 +470,7 @@ class PlaceOrder(graphene.Mutation):
 
         try:
 
-            if (payment_method != "pay on delivery"and payment_ref is None):
+            if (payment_method != "pay on delivery" and payment_ref is None):
                 return PlaceOrder(
                     status=False,
                     message="Payment reference not provided",
@@ -530,7 +530,7 @@ class PlaceOrder(graphene.Mutation):
                 new_quantity = int(product_quantity) - int(
                     cart_item_quantity
                 )
-                ProductOption.objects.filter(id=id).update(
+                ProductOption.objects.filter(id=cart_item.product_option_id).update(
                     quantity=new_quantity
                 )
                 if ProductPromotion.objects.filter(
