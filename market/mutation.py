@@ -643,10 +643,8 @@ class CreateCartItem(graphene.Mutation):
 
                 if has_product:
                     cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option, ordered=False)
-                    initial_price = cart_item.price/cart_item.quantity
                     quantity = int(cart_item.quantity) + quantity
-                    price = int(cart_item.price) + initial_price
-                    cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
+                    cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
@@ -676,10 +674,8 @@ class CreateCartItem(graphene.Mutation):
 
             if has_product:
                 cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
-                initial_price = cart_item.price/cart_item.quantity
                 quantity = int(cart_item.quantity) + quantity
-                price = int(cart_item.price) + initial_price
-                cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
+                cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                 return CreateCartItem(
                     cart_item=cart_item,
                     status = True,
