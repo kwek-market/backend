@@ -175,6 +175,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         token=graphene.String(required=True),
         id=graphene.String(required=True),
     )
+    order_by_order_id = graphene.Field(
+        OrderType,
+        token=graphene.String(required=True),
+        order_id=graphene.String(required=True),
+    )
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(
         PickupType, location_id=graphene.String(required=True)
@@ -350,7 +355,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         
     def resolve_get_delivery_fee_for_a_state(root, info, state, city=""):  
         try:
-            state_delivery_fee = get_delivery_fee(state, city)
+            state_delivery_fee = get_delivery_fee_obj(state, city)
             return state_delivery_fee
         except Exception as e:
             raise GraphQLError(e)
@@ -445,10 +450,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 cart = Cart.objects.get(user=user)
                 try:
                     if cart:
-                        cart_items = CartItem.objects.filter(cart=cart, ordered=False)
+                        cart_items = CartItem.objects.filter(cart=cart, ordered=False).check_and_update_items()
                     else:
                         cart_items = []
                 except Exception as e:
+                    print("error", e)
                     cart_items = []
 
                 return cart_items
@@ -709,6 +715,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         user_order = Order.objects.get( id=id)
+        return user_order
+
+    def resolve_order_by_order_id(root, info, token, order_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        user_order = Order.objects.get( order_id=order_id)
         return user_order
 
     def resolve_user_notifications(root, info, token):

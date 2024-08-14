@@ -417,6 +417,7 @@ class PlaceOrder(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
     order_id = graphene.String()
+    id = graphene.String()
 
     class Arguments:
         token = graphene.String(required=True)
@@ -452,22 +453,29 @@ class PlaceOrder(graphene.Mutation):
         if not user: return PlaceOrder(status=False, message="User does not exist")
 
         cart = Cart.objects.get(id=cart_id)
+        print("Cart", cart)
         if not cart: return PlaceOrder(status=False, message="Cart does not exist")
 
         cart_owner = cart.user
         if user != cart_owner: return PlaceOrder(status=False, message="User is not the owner of the cart")
 
-        cart_items = CartItem.objects.filter(cart=cart, ordered=False)
+        cart_items = CartItem.objects.filter(cart=cart, ordered=False).check_and_update_items()
+        if len(cart_items) < 1:  return PlaceOrder(status=False, message="cannot checkout empty cart")
+        
+        print("Cart items", cart_items)
+        cart_items_amount = 0
         for cart_item in cart_items:
-            cart_item.check_and_update_quantity()
+            print("Cart item price", cart_item.price * cart_item.quantity)
+            cart_items_amount +=(cart_item.price * cart_item.quantity)
         cart_items = CartItem.objects.filter(cart=cart, ordered=False)
+        print("Cart items", cart_items)
         if delivery_method == "door step":
             shipping_address = Billing.objects.get(id=address_id)
         elif delivery_method == "pickup":
             shipping_address = Pickup.objects.get(id=address_id)
 
         delivery_fee = get_delivery_fee(state.lower(), city.lower())
-
+        print("delivery_fee", delivery_fee)
         try:
 
             if (payment_method != "pay on delivery" and payment_ref is None):
@@ -492,6 +500,12 @@ class PlaceOrder(graphene.Mutation):
                         message="Payment has not been verified",
                     )
                 
+                if payment.amount < cart_items_amount:return PlaceOrder(
+                        status=False,
+                        message="incomplete payment",
+                    )
+
+                
             coupons = []
             if coupon_ids:
                 for id in coupon_ids:
@@ -499,7 +513,7 @@ class PlaceOrder(graphene.Mutation):
                     if CouponUser.objects.get(coupon=coupon, user=user).exists(): coupons.append(id)              
 
             if coupon_ids and len(coupons) == 0: return PlaceOrder(status=False,message="No coupon applied",)
-
+            print("delivery_fee", delivery_fee)
             order = Order.objects.create(
                         user=user,
                         payment_method=payment_method,
@@ -507,6 +521,7 @@ class PlaceOrder(graphene.Mutation):
                         coupon= coupons if len(coupons)> 0 else None,
                         delivery_fee=delivery_fee,
                     )
+            print("order", order.order_price, order.order_price_total)
 
             if delivery_method == "door step":
                 Order.objects.filter(id=order.id).update(
@@ -610,6 +625,7 @@ class PlaceOrder(graphene.Mutation):
                 status=True,
                 message="Order placed successfully",
                 order_id=order.order_id,
+                id=order.id,
             )
         except Exception as e:
             return PlaceOrder(status=False, message=e)

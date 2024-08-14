@@ -161,4 +161,4 @@ def build_products_query(
                         .order_by(sort_key)
                     )
 
-    return prods
+    return prods.available()

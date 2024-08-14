@@ -7,6 +7,8 @@ from users.models import ExtendUser as User
 import uuid
 from django.utils import timezone
 
+from django.db.models import Count, Q
+
 # Create your models here.
 
 
@@ -44,7 +46,23 @@ class Sales(models.Model):
     product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="sales")
     amount = models.FloatField()
     date = models.DateTimeField(auto_now_add=True)
+
+
+class ProductQuerySet(models.QuerySet):
+    def with_available_options(self):
+        return self.annotate(
+            available_options=Count('options', filter=Q(options__quantity__gt=0))
+        ).filter(available_options__gt=0)
     
+    def available(self):
+        return self.with_available_options()
+
+class ProductManager(models.Manager):
+    def get_queryset(self):
+        return ProductQuerySet(self.model, using=self._db)
+
+    def available(self):
+        return self.get_queryset().with_available_options() 
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -65,6 +83,7 @@ class Product(models.Model):
     promoted = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
 
+    objects = ProductManager()
 
     def __str__(self):
         return self.product_title
@@ -161,6 +180,31 @@ class Cart(models.Model):
     ip = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class CartItemQuerySet(models.QuerySet):
+    def check_and_update(self):
+        # Collect IDs of items to be deleted
+        ids_to_delete = []
+
+        # Iterate over the queryset
+        for item in self:
+            if not item.check_and_update_quantity(force_save=False):
+                ids_to_delete.append(item.id)
+
+        # Remove deleted items from the queryset
+        if ids_to_delete:
+            self = self.exclude(id__in=ids_to_delete)
+        
+        return self
+    
+    def check_and_update_items(self):
+        return self.check_and_update()
+
+class CartItemManager(models.Manager):
+    def get_queryset(self):
+        return CartItemQuerySet(self.model, using=self._db)
+
+    def check_and_update_items(self):
+        return self.get_queryset().check_and_update()
 class CartItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
@@ -171,21 +215,27 @@ class CartItem(models.Model):
     order = models.ForeignKey(Order, related_name="order_items", on_delete=models.CASCADE, null=True)
     ordered = models.BooleanField(default=False)
 
+    objects = CartItemManager()
+
     def __str__(self):
         return f"{self.product.product_title} - {self.product.user}"
     
-    def check_and_update_quantity(self):
+    def check_and_update_quantity(self, force_save=True):
         try:
             product_option = ProductOption.objects.get(id=self.product_option_id)
         except ProductOption.DoesNotExist:
             self.delete()
-            return
+            return False
 
-        if product_option.quantity == 0:
+        print("product_option.quantity", product_option.quantity, self.quantity)
+        if int(product_option.quantity) < 1:
             self.delete()
+            return False
         elif self.quantity > int(product_option.quantity):
             self.quantity = int(product_option.quantity)
-            self.save()
+            if force_save: self.save()
+
+        return True
 
 
 class Wishlist(models.Model):
@@ -246,6 +296,17 @@ def get_delivery_fee(state:str,city:str)->float:
             return state_fee[0].fee
         else:
             return 0
+
+def get_delivery_fee_obj(state:str,city:str):
+    city_fee = StateDeliveryFee.objects.filter(state=state, city=city)
+    if city_fee.exists():
+        return city_fee[0]
+    else:
+        state_fee = StateDeliveryFee.objects.filter(state=state)
+        if state_fee.exists():
+            return state_fee[0]
+        else:
+            return None
 
 
 def update_state_delivery_fees():
