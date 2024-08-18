@@ -225,68 +225,6 @@ class Order(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
 
-    # def save(self, *args, **kwargs):
-    #     print("saving order", self.id)
-    #     print("delivery fee", self.delivery_fee)
-    #     total_coupon_price = 0
-
-    #     if self.coupon:
-    #         for id in self.coupon:
-    #             coupon_item = Coupon.objects.get(id=id)
-    #             total_coupon_price += int(coupon_item.value)
-    #     print("total_coupon_price", total_coupon_price)
-    #     print("pk", self.pk)
-
-    #     with transaction.atomic():
-    #         if not self.pk:  # Only if it's a new order
-    #             print("no self .pk")
-    #             while not self.order_id:
-    #                 order_id = f"KWEK-{secrets.token_urlsafe(8)}"
-    #                 if not Order.objects.filter(order_id=order_id).exists():
-    #                     self.order_id = order_id
-
-    #             super().save(*args, **kwargs)
-
-    #             # Transfer CartItems from Cart to Order
-    #             if not self.cart_items.exists():
-    #                 CartItem = apps.get_model('market', 'CartItem')
-    #                 cart_items = CartItem.objects.filter(cart__user=self.user, ordered=False)
-    #                 self.cart_items.set(cart_items)
-    #                 cart_items.update(ordered=True, cart=None, order=self)
-
-    #             print("order cart items", self.cart_items.all())
-
-    #             order_price = 0
-    #             if self.cart_items.exists():
-    #                 for cart_item in self.cart_items.all():
-    #                     order_price += (cart_item.quantity * cart_item.price)
-                
-    #             first_order_price = order_price
-    #             print("first_order_price", first_order_price)
-
-    #             if total_coupon_price > 0:
-    #                 order_price = order_price - total_coupon_price
-    #                 if order_price < 0:
-    #                     order_price = 0
-
-    #             if self.delivery_fee > 0:
-    #                 order_price += self.delivery_fee
-
-    #             order_price_total = order_price
-    #             print("order_price_total", order_price_total)
-
-    #             Order.objects.filter(id=self.id).update(order_price=first_order_price,order_price_total=order_price_total)
-    #             print("self first_order_price", self.order_price)
-    #             print("self order_price_total", self.order_price_total)
-    #             # super().save(*args, **kwargs) // apparently you cannot call this twice, it will be like calling create multiple times
-    #     if self.pk:
-    #         print("has self .pk")
-    #         super().save(*args, **kwargs)
-
-    #     print("end delivery fee", self.delivery_fee)
-    #     print("end order cart items", self.cart_items.all())
-    #     print("end self first_order_price", self.order_price)
-    #     print("end self order_price_total", self.order_price_total)
 
     objects = OrderManager()
     def __str__(self) -> str:

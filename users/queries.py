@@ -41,6 +41,7 @@ from django.db.models import Q
 from bill.object_types import *
 from operator import attrgetter
 from .queries_build import build_products_query, build_users_query, get_price_range
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 
 
@@ -1020,45 +1021,113 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_orders(
-        root, info, token, page=1, page_size=50, this_month=False
-    ):
+    # def resolve_get_seller_orders(
+    #     root, info, token, page=1, page_size=50, this_month=False
+    # ):
+    #     auth = authenticate_user(token)
+    #     if not auth["status"]:
+    #         raise GraphQLError(auth["message"])
+    #     user, seller_orders, this_month_filter = auth["user"], [], Q()
+    #     if this_month:
+    #         this_month_filter = Q(date_created__month=datetime.now().month) & Q(
+    #             date_created__year=datetime.now().year
+    #         )
+    #     charge = SellerProfile.objects.get(user=user).kwek_charges
+    #     orders = Order.objects.filter(this_month_filter, cart_items__product__user=user).order_by("-date_created")
+
+    #     orders_values = orders.values(
+    #         "order_id",
+    #         "date_created",
+    #         "user__id",
+    #         "paid",
+    #         "cart_items__price",
+    #         "progress__progress",
+    #     )
+    #     print(orders_values)
+    #     for i in orders_values:
+    #         seller_orders.append(
+    #             GetSellerOrdersType(
+    #                 order=Order.objects.get(order_id=i["order_id"]),
+    #                 created=str(i["date_created"]),
+    #                 customer=ExtendUser.objects.get(id=i["user__id"]),
+    #                 total=int(i["cart_items__price"]),
+    #                 profit=int(i["cart_items__price"])
+    #                 - (int(i["cart_items__price"]) * charge),
+    #                 paid=i["paid"],
+    #                 status=i["cart_items__price"],
+    #             )
+    #         )
+    #     return get_paginator(
+    #         seller_orders, page_size, page, GetSellerOrdersPaginatedType
+    #     )
+
+    def resolve_get_seller_orders(root, info, token, page=1, page_size=50, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
-        user, seller_orders, this_month_filter = auth["user"], [], Q()
-        if this_month:
-            this_month_filter = Q(date_created__month=datetime.now().month) & Q(
-                date_created__year=datetime.now().year
-            )
-        charge = SellerProfile.objects.get(user=user).kwek_charges
-        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user).order_by("-date_created")
 
-        orders_values = orders.values(
-            "order_id",
-            "date_created",
-            "user__id",
-            "paid",
-            "cart_items__price",
-            "progress__progress",
+        user = auth["user"]
+        this_month_filter = Q()
+        if this_month:
+            now = datetime.now()
+            this_month_filter = Q(date_created__month=now.month, date_created__year=now.year)
+        
+        # Calculate the profit using annotations
+        charge = SellerProfile.objects.get(user=user).kwek_charges
+        profit_expression = ExpressionWrapper(
+            F('cart_items__price') - (F('cart_items__price') * charge),
+            output_field=FloatField()
         )
-        print(orders_values)
-        for i in orders_values:
-            seller_orders.append(
-                GetSellerOrdersType(
-                    order=Order.objects.get(order_id=i["order_id"]),
-                    created=str(i["date_created"]),
-                    customer=ExtendUser.objects.get(id=i["user__id"]),
-                    total=int(i["cart_items__price"]),
-                    profit=int(i["cart_items__price"])
-                    - (int(i["cart_items__price"]) * charge),
-                    paid=i["paid"],
-                    status=i["cart_items__price"],
-                )
-            )
-        return get_paginator(
-            seller_orders, page_size, page, GetSellerOrdersPaginatedType
+
+         # Prefetch only the relevant CartItems
+        cart_items_prefetch = Prefetch(
+            'cart_items',
+            queryset=CartItem.objects.filter(product__user=user)
         )
+
+        # Apply filtering, annotation, and ordering before pagination
+        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user) \
+            .annotate(
+                total_price=Sum('cart_items__price'),
+                profit=profit_expression,
+                customer_id=F('user__id'),
+                status=F('progress__progress')
+            ) \
+            .prefetch_related(cart_items_prefetch) \
+            .order_by('-date_created')
+        
+        # Apply pagination at the query level
+        paginator = Paginator(orders, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        
+        seller_orders = [
+        GetSellerOrdersType(
+            order=order,  # Directly use the order object
+            created=str(order.date_created),
+            customer=ExtendUser.objects.get(id=order.customer_id),
+            total=order.total_price,
+            profit=order.profit,
+            paid=order.paid,
+            status=order.status,
+        )
+        for order in page_obj.object_list
+        ]
+
+    #     (
+    #     page=page_obj.number,
+    #     pages=p.num_pages,
+    #     has_next=page_obj.has_next(),
+    #     has_prev=page_obj.has_previous(),
+    #     objects=page_obj.object_list,
+    #     **kwargs
+    # )
+
+        return get_paginator(seller_orders, page_size, page, GetSellerOrdersPaginatedType)
 
     def resolve_get_seller_revenue_chart_data(root, info, token):
         auth = authenticate_user(token)
