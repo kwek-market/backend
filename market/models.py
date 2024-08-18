@@ -273,6 +273,9 @@ class StateDeliveryFee(models.Model):
             models.Index(fields=['city'], name='city_idx'),
         ]
 
+    def __str__(self):
+        return f"{self.state} - {self.city}"
+
 class ProductCharge(models.Model):
      id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
      has_fixed_amount= models.BooleanField(default=False)

@@ -320,6 +320,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     get_state_delivery_fee = graphene.List(
         StateDeliveryType, 
     )
+    state_delivery_fees = graphene.List(StateDeliveryFeeType)
     get_delivery_fee_for_a_state = graphene.Field(
         StateDeliveryType,
         state=graphene.String(required=True),
@@ -345,6 +346,25 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             update_state_delivery_fees()
             state_fees = StateDeliveryFee.objects.all().order_by("-created_at")
         return state_fees
+    
+    def resolve_state_delivery_fees(self, info):
+        # Get all state delivery fees from the database
+        state_fees = StateDeliveryFee.objects.all()
+
+        # Create a dictionary to group fees by state
+        state_dict = {}
+        for fee in state_fees:
+            if fee.state not in state_dict:
+                state_dict[fee.state] = []
+            state_dict[fee.state].append({"city": fee.city, "fee": fee.fee})
+
+        # Convert the dictionary to a list of StateDeliveryFeeType objects
+        return [
+            StateDeliveryFeeType(state=state, delivery_fees=[
+                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"])
+                for city_fee in city_fees
+            ]) for state, city_fees in state_dict.items()
+        ]
     
     def resolve_get_delivery_fee_by_id(root, info,id):
         try:
