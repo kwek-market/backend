@@ -1117,6 +1117,8 @@ class CreateStateDeliveryCharge(graphene.Mutation):
         if state not in nigerian_states:
                 return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
         
+        if StateDeliveryFee.objects.filter(state__iexact=state, city__iexact=city).exists():
+            return UpdateStateDeliveryCharge(status=False,message="city already exists for state")
         
         try:   
             state_fee = StateDeliveryFee.objects.create(
