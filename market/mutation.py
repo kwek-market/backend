@@ -1169,6 +1169,32 @@ class UpdateStateDeliveryCharge(graphene.Mutation):
         except Exception as e:
             return UpdateStateDeliveryCharge(status=False,message=e) 
         
+class DeleteDeliveryCharge(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, token,id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return DeleteDeliveryCharge(status=auth["status"],message=auth["message"])
+        try:   
+            state_fee = StateDeliveryFee.objects.get(id=id)
+            if not state_fee:
+                return DeleteDeliveryCharge(status=False,message="state delivery doesn't exist")
+
+            
+
+            state_fee.delete()
+            return DeleteDeliveryCharge(status=True,message="successfully deleted!")
+        
+        except Exception as e:
+            return DeleteDeliveryCharge(status=False,message=e) 
+        
 
 
 

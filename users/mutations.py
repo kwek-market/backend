@@ -120,4 +120,5 @@ class Mutation(AuthMutation, graphene.ObjectType):
     update_charge = UpdateProductCharges.Field()
     create_state_delivery_fee = CreateStateDeliveryCharge.Field()
     update_state_delivery_fee = UpdateStateDeliveryCharge.Field()
+    delete_state_delivery_fee = DeleteDeliveryCharge.Field()
     
