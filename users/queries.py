@@ -357,12 +357,12 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         for fee in state_fees:
             if fee.state not in state_dict:
                 state_dict[fee.state] = []
-            state_dict[fee.state].append({"city": fee.city, "fee": fee.fee})
+            state_dict[fee.state].append({"city": fee.city, "fee": fee.fee, "id": fee.id})
 
         # Convert the dictionary to a list of StateDeliveryFeeType objects
         return [
             StateDeliveryFeeType(state=state, delivery_fees=[
-                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"])
+                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"], id=city_fees["id"])
                 for city_fee in city_fees
             ]) for state, city_fees in state_dict.items()
         ]

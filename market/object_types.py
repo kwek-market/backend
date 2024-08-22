@@ -145,7 +145,8 @@ class GetSellerOrdersPaginatedType(graphene.ObjectType):
 
 
 class DeliveryFeeType(graphene.ObjectType):
-    city = graphene.String()
+    id = graphene.String()
+    city = graphene.String() 
     fee = graphene.Float()
 
 class StateDeliveryFeeType(graphene.ObjectType):
