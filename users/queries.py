@@ -362,7 +362,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         # Convert the dictionary to a list of StateDeliveryFeeType objects
         return [
             StateDeliveryFeeType(state=state, delivery_fees=[
-                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"], id=city_fees["id"])
+                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"], id=city_fee["id"])
                 for city_fee in city_fees
             ]) for state, city_fees in state_dict.items()
         ]
