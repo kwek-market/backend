@@ -316,7 +316,10 @@ def update_state_delivery_fees():
     default_fee = 0.00
 
     for state in nigerian_states:
-        created = StateDeliveryFee.objects.get_or_create(state=state, defaults={'fee': default_fee})
+        if StateDeliveryFee.objects.filter(state__iexact=state).exists():
+            print(f'Delivery fee for {state} already exists')
+
+        created = StateDeliveryFee.objects.create(state=state,fee=default_fee)
         if created:
             print(f'Created delivery fee for {state}')
         else:
