@@ -3,6 +3,7 @@ import jwt
 from django.utils import timezone
 from users.validate import authenticate_user, authenticate_admin
 from django.conf import settings
+from django.db import transaction
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -230,7 +231,21 @@ class CreateProduct(graphene.Mutation):
         if not auth["status"]:
             return CreateProduct(status=auth["status"],message=auth["message"])
         user = auth["user"]
+
+        if not Category.objects.filter(id=category).exists:
+            return CreateProduct(
+            status=False,
+            message="category not found"
+            )
+
         p_cat = Category.objects.get(id=category)
+
+        if not Category.objects.filter(id=subcategory).exists:
+            return CreateProduct(
+            status=False,
+            message="sub category not found"
+            )
+        
         sub_cat = Category.objects.get(id=subcategory)
         
 
@@ -334,19 +349,194 @@ class ProductClick(graphene.Mutation):
             )
         else:
             return ProductClick(status=False,message="Invalid Product")
-class UpdateProductMutation(graphene.Mutation):
+
+class UpdateProduct(graphene.Mutation):
     product = graphene.Field(ProductType)
+    status = graphene.Boolean()
+    message = graphene.String()
 
     class Arguments:
-        id = graphene.Int(required=True)
-        product_data = ProductInput(required=True)
-        
+        token = graphene.String(required=True)
+        product_id = graphene.String(required=True)
+        charge_five_percent_vat = graphene.Boolean() 
+        product_title = graphene.String()
+        category = graphene.String()
+        subcategory = graphene.String() 
+        product_image_url = graphene.List(graphene.String)  
+        product_options = graphene.List(graphene.String)
+        keyword = graphene.List(graphene.String)
+        brand = graphene.String()
+        product_weight = graphene.String()
+        short_description = graphene.String()
+        return_policy = graphene.String()
+        warranty = graphene.String()
+        color = graphene.String()
+        gender = graphene.String()
 
     @staticmethod
-    def mutate(root, info, id=None, product_data=None):
-        product = Product.objects.filter(id=id)
-        product.update(**product_data)
-        return CreateProduct(product=product.first())
+    def mutate(
+        self,
+        info,
+        token, 
+        product_id, 
+        charge_five_percent_vat=None,
+        product_title=None,
+        category=None,
+        subcategory=None,
+        product_image_url=None,
+        product_options=None,
+        keyword=None,
+        brand=None,
+        product_weight=None,
+        short_description=None,
+        return_policy=None,
+        warranty=None,
+        color=None,
+        gender=None
+    ):
+        try:
+            with transaction.atomic():
+                auth = authenticate_user(token)
+                if not auth["status"]:
+                    return UpdateProduct(status=auth["status"],message=auth["message"])
+                user = auth["user"]
+
+                if not Product.objects.filter(id=product_id).exists():
+                    return UpdateProduct(status=False,message="product not found")
+                
+                product = Product.objects.get(id=product_id)
+
+                if not user.is_admin and product.user.id != user.id:
+                    return UpdateProduct(status=False,message="you are not allowed to update this product")
+                
+                if category:
+                    if not Category.objects.filter(id=category).exists:
+                        return UpdateProduct(
+                        status=False,
+                        message="category not found"
+                        )
+                    cate = Category.objects.get(id=category)
+                    product.category = cate
+                    
+                
+                if subcategory:
+                    if not Category.objects.filter(id=subcategory).exists:
+                        return UpdateProduct(
+                                status=False,
+                            message="sub category not found"
+                            )
+                    product.subcategory = sub_cat
+                    sub_cat = Category.objects.get(id=subcategory)
+
+                if keyword:
+                    for word in keyword:
+                        if not Keyword.objects.filter(keyword=word).exists():
+                            Keyword.objects.create(keyword=word)
+                    product.keyword = keyword
+
+
+                if product_image_url:
+                    ProductImage.objects.filter(product=product).delete()
+                    for url in product_image_url:
+                        ProductImage.objects.create(product=product, image_url=url)
+                
+                if product_options:
+                    ProductOption.objects.filter(product=product).delete()
+                    for item in product_options:
+                        option = eval(item)
+                        keys = option.keys()
+
+                        size = "" if "size" not in keys else option["size"]
+                        quantity = "" if "quantity" not in keys else option["quantity"]
+                        price = "" if "price" not in keys else option["price"]
+                        discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
+                        option_total_price = 0.0
+                        ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+
+                if product_title:
+                    product.product_title=product_title
+
+                if brand:
+                    product.brand=brand
+
+                if product_weight:
+                    product.product_weight=product_weight
+
+                if short_description:
+                    product.short_description=short_description
+
+                if charge_five_percent_vat:
+                    product.charge_five_percent_vat=charge_five_percent_vat
+
+                if return_policy:
+                    product.return_policy=return_policy
+
+                if warranty:
+                    product.warranty=warranty
+
+                if color:
+                    product.color=color
+
+                if gender:
+                    product.gender=gender
+
+                product.save()
+            return UpdateProduct(status=True,message="update successful", product=product)
+        except Exception as e:
+            return UpdateProduct(status=False,message=e)
+        
+class DeleteProduct(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        token, 
+        id,
+    ):
+        try:
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return DeleteProduct(status=auth["status"],message=auth["message"])
+            user = auth["user"]
+
+            if not Product.objects.filter(id=id).exists():
+                return DeleteProduct(status=False,message="product not found")
+            
+            product = Product.objects.get(id=id)
+
+            if not user.is_admin and product.user.id != user.id:
+                return DeleteProduct(status=False,message="you are not allowed to delete this product")
+            
+            product.delete()
+            return DeleteProduct(status=True,message="delete successful")
+        except Exception as e:
+            return DeleteProduct(status=False,message=e)
+        
+        
+        
+
+
+
+# class UpdateProductMutation(graphene.Mutation):
+#     product = graphene.Field(ProductType)
+
+#     class Arguments:
+#         id = graphene.Int(required=True)
+#         product_data = ProductInput(required=True)
+        
+
+#     @staticmethod
+#     def mutate(root, info, id=None, product_data=None):
+#         product = Product.objects.filter(id=id)
+#         product.update(**product_data)
+#         return CreateProduct(product=product.first())
 # =====================================================================================================================
 
 # product rating
