@@ -117,6 +117,14 @@ class ProductOption(models.Model):
         charge_amount = charge.charge if charge.has_fixed_amount else self.price * (charge.charge/100)  
         return self.price + charge_amount
     
+    def get_product_discounted_price(self):
+        if self.discounted_price <= 0: return self.discounted_price
+        charge =  ProductCharge.objects.first()
+        if not charge:
+            charge = ProductCharge.objects.create(has_fixed_amount=True, charge=0.00)
+        charge_amount = charge.charge if charge.has_fixed_amount else self.discounted_price * (charge.charge/100)  
+        return self.discounted_price + charge_amount
+    
 
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)

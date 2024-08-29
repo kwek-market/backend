@@ -19,7 +19,11 @@ from django.apps import apps
 
 admin.site.register(Product)
 admin.site.register(ProductImage)
-admin.site.register(ProductOption)
+
+class ProductOptionAdmin(admin.ModelAdmin):
+    # list_filter = ('id',)
+    search_fields = ("id",'product__product_title')
+admin.site.register(ProductOption, ProductOptionAdmin)
 admin.site.register(Keyword)
 admin.site.register(ProductPromotion)
 admin.site.register(Rating)

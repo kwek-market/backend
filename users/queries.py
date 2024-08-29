@@ -186,6 +186,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         PickupType, location_id=graphene.String(required=True)
     )
     product = graphene.Field(ProductType, id=graphene.String(required=True))
+    product_option = graphene.Field(ProductOptionType, id=graphene.String(required=True))
     products = graphene.Field(
         ProductPaginatedType,
         page=graphene.Int(),
@@ -498,6 +499,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_product(root, info, id):
         return Product.objects.get(id=id)
+    
+    def resolve_product_option(root, info, id):
+        return ProductOption.objects.get(id=id)
 
     def resolve_get_seller_products(
         root,

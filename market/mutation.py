@@ -425,8 +425,8 @@ class UpdateProduct(graphene.Mutation):
                                 status=False,
                             message="sub category not found"
                             )
-                    product.subcategory = sub_cat
                     sub_cat = Category.objects.get(id=subcategory)
+                    product.subcategory = sub_cat
 
                 if keyword:
                     for word in keyword:
@@ -817,8 +817,11 @@ class CreateCartItem(graphene.Mutation):
     @staticmethod
     def mutate(self, info, product_option_id, token=None, ip_address=None, quantity=1):
         option = ProductOption.objects.get(id=product_option_id)
+        discounted_price = option.get_product_discounted_price()
+        price = option.get_product_price()
         product = Product.objects.get(options__id=product_option_id)
         if token:
+            print("using token")
             auth = authenticate_user(token)
             if not auth["status"]:
                 return CreateCartItem(status=auth["status"],message=auth["message"])
@@ -842,10 +845,10 @@ class CreateCartItem(graphene.Mutation):
                     )
                 else:
                     try:
-                        if option.discounted_price:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                        if discounted_price > 0:
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price, cart=user_cart, product_option_id=product_option_id)
                         else:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart, product_option_id=product_option_id)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -874,10 +877,10 @@ class CreateCartItem(graphene.Mutation):
                 )
             else:
                 try:
-                    if option.discounted_price:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                    if discounted_price > 0:
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price, cart=user_cart, product_option_id=product_option_id)
                     else:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart, product_option_id=product_option_id)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,

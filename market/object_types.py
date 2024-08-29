@@ -46,6 +46,7 @@ class ProductImageType(DjangoObjectType):
 
 class ProductOptionType(DjangoObjectType):
     price = graphene.Float()
+    discounted_price = graphene.Float()
     class Meta:
         model = ProductOption
         fields = (
@@ -56,9 +57,12 @@ class ProductOptionType(DjangoObjectType):
             "price",
             "discounted_price",
             "option_total_price",
+            "quantity"
         )
     def resolve_price(self, info):
         return self.get_product_price()
+    def resolve_discounted_price(self, info):
+        return self.get_product_discounted_price()
 
 
 class ProductPromotionType(DjangoObjectType):
