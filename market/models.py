@@ -110,19 +110,21 @@ class ProductOption(models.Model):
     def __str__(self):
         return f"{self.id}"
     
-    def get_product_price(self):
+    def get_product_charge(self)->float:
         charge =  ProductCharge.objects.first()
         if not charge:
             charge = ProductCharge.objects.create(has_fixed_amount=True, charge=0.00)
-        charge_amount = charge.charge if charge.has_fixed_amount else self.price * (charge.charge/100)  
+
+        charge_amount = charge.charge if charge.has_fixed_amount else self.price * (charge.charge/100)
+        return charge_amount
+        
+    def get_product_price(self):
+        charge_amount = self.get_product_charge() 
         return self.price + charge_amount
     
     def get_product_discounted_price(self):
         if self.discounted_price <= 0: return self.discounted_price
-        charge =  ProductCharge.objects.first()
-        if not charge:
-            charge = ProductCharge.objects.create(has_fixed_amount=True, charge=0.00)
-        charge_amount = charge.charge if charge.has_fixed_amount else self.discounted_price * (charge.charge/100)  
+        charge_amount = self.get_product_charge() 
         return self.discounted_price + charge_amount
     
 
