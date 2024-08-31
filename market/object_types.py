@@ -58,6 +58,7 @@ class ProductOptionType(DjangoObjectType):
             "price",
             "discounted_price",
             "option_total_price",
+            "product_charge",
             "quantity"
         )
     def resolve_product_charge(self, info):
