@@ -217,7 +217,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
     user_cart = graphene.List(
         CartItemType, token=graphene.String(), ip=graphene.String()
     )
-    user_billing_addresses = graphene.Field(
+    user_billing_addresses = graphene.List(
         BillingType, token=graphene.String(required=True)
     )
     user_notifications = graphene.List(
@@ -394,11 +394,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
+        
         user = auth["user"]
-        billing_addresses = []
-        for address in Billing.objects.all():
-            if address.user == user:
-                billing_addresses.append(address)
+        billing_addresses = Billing.objects.filter(user=user)
+        
         return billing_addresses
 
     def resolve_categories(root, info, search=None, visibility=None):
