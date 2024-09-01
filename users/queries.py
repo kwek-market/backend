@@ -343,10 +343,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         return User.objects.get(id=id)
     
     def resolve_get_state_delivery_fee(root, info):
-        state_fees = StateDeliveryFee.objects.all().order_by("-created_at")
+        state_fees = StateDeliveryFee.objects.order_by("-created_at")
         if len(state_fees) < 1:
             update_state_delivery_fees()
-            state_fees = StateDeliveryFee.objects.all().order_by("-created_at")
+            state_fees = StateDeliveryFee.objects.order_by("-created_at")
         return state_fees
     
     def resolve_state_delivery_fees(self, info):
