@@ -300,26 +300,30 @@ nigerian_states = [
     ]
 
 def get_delivery_fee(state:str,city:str)->float:
-    city_fee = StateDeliveryFee.objects.filter(state=state, city=city)
-    if city_fee.exists():
-        return city_fee[0].fee
-    else:
-        state_fee = StateDeliveryFee.objects.filter(state=state)
-        if state_fee.exists():
-            return state_fee[0].fee
-        else:
-            return 0
+    fee = get_delivery_fee_obj(state,city)
+    if fee: return fee.fee
+    return 0
 
-def get_delivery_fee_obj(state:str,city:str):
-    city_fee = StateDeliveryFee.objects.filter(state=state, city=city)
+def get_delivery_fee_obj(state:str,city:str)->StateDeliveryFee: 
+    city_fee = None
+    if not city or city=="":
+        city_fee = StateDeliveryFee.objects.filter(state__iexact=state).exclude(city__isnull=True).exclude(city__exact='')
+    else:
+        city_fee = StateDeliveryFee.objects.filter(state__iexact=state, city__iexact=city)
+    
     if city_fee.exists():
         return city_fee[0]
     else:
-        state_fee = StateDeliveryFee.objects.filter(state=state)
+        state_fee = StateDeliveryFee.objects.filter(state__iexact=state).exclude(city__isnull=True).exclude(city__exact='')
+        print("STATE", state_fee)
         if state_fee.exists():
             return state_fee[0]
         else:
-            return None
+            state_fee = StateDeliveryFee.objects.filter(state__iexact=state)
+            if state_fee.exists():
+                return state_fee[0]
+            else:
+                return None
 
 
 def update_state_delivery_fees():
