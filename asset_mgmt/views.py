@@ -210,6 +210,7 @@ class PopulateProduct(View):
                     ProductOption.objects.create(
                         product=created_product,
                         size=option["size"],
+                        color="" if "color" not in option else option["color"],
                         quantity=option["quantity"],
                         price=option["price"],
                         discounted_price=option["discountedPrice"],

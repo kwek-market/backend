@@ -102,6 +102,7 @@ class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="options", on_delete=models.CASCADE, null=True)
     size = models.CharField(max_length=255, blank=False, null=True)
+    color = models.CharField(max_length=255, blank=False, null=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
     discounted_price = models.FloatField(blank=False, null=True)

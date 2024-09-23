@@ -78,11 +78,13 @@ def build_products_query(
         keyword=None,
         price_range=None,
         rating=None,
-        sizes=None):
+        sizes=None,
+        colors=None
+        ):
     prods = Product.objects.all().order_by("?")
     search_filter, keyword_filter = Q(), Q()
-    price_filter, sizes_filter = Q(), Q()
-    search_status, price_status, sizes_status = False, False, False
+    price_filter, sizes_filter, colors_filter = Q(), Q(), Q()
+    search_status, price_status, sizes_status, colors_status = False, False, False, False
     if search:
         search_status = True
         search_filter = (
@@ -111,9 +113,12 @@ def build_products_query(
     if sizes:
         sizes_filter, sizes_status = Q(options__size__in=sizes), True
 
-    if search_status or price_status or sizes_status:
+    if colors:
+        colors_filter, colors_status = Q(options__color__in=colors), True
+
+    if search_status or price_status or sizes_status or colors_status:
         prods = prods.filter(
-            search_filter, keyword_filter, price_filter, sizes_filter
+            search_filter, keyword_filter, price_filter, sizes_filter, colors_filter
         ).distinct()
     else:
         prods = prods.filter(keyword_filter)

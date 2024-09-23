@@ -276,11 +276,12 @@ class CreateProduct(graphene.Mutation):
             keys = option.keys()
 
             size = "" if "size" not in keys else option["size"]
+            color = "" if "color" not in keys else option["color"]
             quantity = "" if "quantity" not in keys else option["quantity"]
             price = "" if "price" not in keys else option["price"]
             discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
             option_total_price = 0.0
-            ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+            ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
         
         if Notification.objects.filter(user=product.user).exists():
             notification = Notification.objects.get(user=product.user)
@@ -447,11 +448,12 @@ class UpdateProduct(graphene.Mutation):
                         keys = option.keys()
 
                         size = "" if "size" not in keys else option["size"]
+                        color = "" if "color" not in keys else option["color"]
                         quantity = "" if "quantity" not in keys else option["quantity"]
                         price = "" if "price" not in keys else option["price"]
                         discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
                         option_total_price = 0.0
-                        ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+                        ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
 
                 if product_title:
                     product.product_title=product_title

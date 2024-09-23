@@ -54,6 +54,7 @@ class ProductOptionType(DjangoObjectType):
             "id",
             "product",
             "size",
+            "color",
             "quantity",
             "price",
             "discounted_price",

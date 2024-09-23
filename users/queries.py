@@ -84,6 +84,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=graphene.List(graphene.Float),
         rating=graphene.Int(),
         sizes=graphene.List(graphene.String),
+        colors=graphene.List(graphene.String),
         this_month=graphene.Boolean(),
     )
     get_seller_review = graphene.Field(
@@ -197,6 +198,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=graphene.List(graphene.Float),
         rating=graphene.Int(),
         sizes=graphene.List(graphene.String),
+        colors=graphene.List(graphene.String),
     )
     rating_sort = graphene.Field(ProductType)
     reviews = graphene.Field(
@@ -514,6 +516,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=None,
         rating=None,
         sizes=None,
+        colors=None,
         this_month=False,
     ):
         auth = authenticate_user(token)
@@ -524,8 +527,8 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             if SellerProfile.objects.filter(user=user).exists():
                 prods = Product.objects.filter(user=user).order_by("-date_created")
                 search_filter, keyword_filter = Q(), Q()
-                price_filter, sizes_filter, this_month_filter = Q(), Q(), Q()
-                search_status, price_status, sizes_status = False, False, False
+                price_filter, sizes_filter, colors_filter, this_month_filter = Q(),Q(), Q(), Q()
+                search_status, price_status, sizes_status, colors_status = False, False, False, False
                 if this_month:
                     this_month_filter = Q(date_created__month=datetime.now().month) & Q(
                         date_created__year=datetime.now().year
@@ -558,12 +561,16 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 if sizes:
                     sizes_filter, sizes_status = Q(options__size__in=sizes), True
 
-                if search_status or price_status or sizes_status:
+                if colors:
+                    colors_filter, colors_status = Q(options__color__in=colors), True
+
+                if search_status or price_status or sizes_status or colors_status:
                     prods = prods.filter(
                         search_filter,
                         keyword_filter,
                         price_filter,
                         sizes_filter,
+                        colors_filter,
                         this_month_filter,
                     ).distinct()
                 else:
@@ -632,8 +639,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=None,
         rating=None,
         sizes=None,
+        colors=None,
     ):
-        prods = build_products_query(search, sort_by, keyword, price_range, rating, sizes)
+        prods = build_products_query(search, sort_by, keyword, price_range, rating, sizes, colors)
         return get_paginator(prods, page_size, page, ProductPaginatedType)
 
     def resolve_review(root, info, review_id):
