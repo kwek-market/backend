@@ -5,7 +5,7 @@ from users.validate import authenticate_user, authenticate_admin
 
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
-from users.models import ExtendUser, SellerCustomer
+from users.models import ExtendUser, SellerCustomer, SellerProfile
 from wallet.models import Wallet
 from .models import Billing, Coupon, CouponUser, Payment, Pickup, Order, OrderProgress
 from .object_types import BillingType, CouponType, PaymentType, PickupType
@@ -701,8 +701,9 @@ class UpdateDeliverystatus(graphene.Mutation):
                     )
                     Order.objects.filter(id=order_id).update(closed=True, paid=True)
                     for item_id in order.cart_items.all():
-                        item = CartItem.objects.get(id=item_id)
+                        item = CartItem.objects.get(id=item_id.id)
                         seller = item.product.user
+                        seller_profile = SellerProfile.objects.get(user=seller)
 
                         #brute force solution
                         # TODO: update this logic
@@ -712,15 +713,15 @@ class UpdateDeliverystatus(graphene.Mutation):
                         seller_wallet.balance = balance
                         seller_wallet.save()
 
-                        if SellerCustomer.objects.filter(seller=seller).exists():
+                        if SellerCustomer.objects.filter(seller=seller_profile).exists():
                             customers_id = SellerCustomer.objects.get(
-                                seller=seller
+                                seller=seller_profile
                             ).customer_id
                             if order.user.id in customers_id:
                                 pass
                             else:
                                 customers_id.append(order.user.id)
-                                SellerCustomer.objects.filter(seller=seller).update(
+                                SellerCustomer.objects.filter(seller=seller_profile).update(
                                     customer_id=customers_id
                                 )
                     if Notification.objects.filter(user=order.user).exists():
