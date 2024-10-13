@@ -83,6 +83,7 @@ class Mutation(AuthMutation, graphene.ObjectType):
     delete_cart = DeleteCart.Field()
     delete_cart_item = DeleteCartItem.Field()
     decrease_cart_item_quantity = DecreaseCartItemQuantity.Field()
+    remove_item_from_cart_with_option_id = RemoveItemFromCartWithOptionId.Field()
     fund_wallet = FundWallet.Field()
     login_user = LoginUser.Field()
     payment_link = PaymentInitiate.Field()

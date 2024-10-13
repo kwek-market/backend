@@ -11,15 +11,15 @@ from market.models import CartItem
 class StoreDetail(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField(ExtendUser, on_delete=models.CASCADE)
-    store_name = models.CharField(max_length=225, unique=True, error_messages={"unique":"Store with name already exists"})
-    email = models.EmailField(unique=True, error_messages={"unique":"Store with email already exists"})
+    store_name = models.CharField(max_length=225, unique=True, error_messages={"unique":"Store with name already exists"}, db_index=True)
+    email = models.EmailField(unique=True, error_messages={"unique":"Store with email already exists"}, db_index=True)
     address = models.CharField(max_length=225)
 
 
 class PurchasedItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     invoice = models.ForeignKey("Invoice", on_delete=models.CASCADE, related_name="purchased_item")
-    item = models.CharField(max_length=225)
+    item = models.CharField(max_length=225, db_index=True)
     description = models.TextField(default="")
     quantity = models.PositiveBigIntegerField(default=1)
     unit_cost = models.PositiveBigIntegerField(blank=False)
@@ -29,8 +29,8 @@ class PurchasedItem(models.Model):
 class Invoice(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     store = models.ForeignKey(StoreDetail, on_delete=models.CASCADE)
-    customer_name = models.CharField(max_length=225)
-    customer_email = models.EmailField(default="")
+    customer_name = models.CharField(max_length=225, db_index=True)
+    customer_email = models.EmailField(default="", db_index=True)
     customer_address = models.CharField(max_length=225)
     delivery_fee = models.PositiveBigIntegerField()
     subtotal = models.PositiveBigIntegerField()
@@ -61,7 +61,7 @@ class WalletTransaction(models.Model):
     remark = models.CharField(max_length=225)
     amount = models.PositiveBigIntegerField()
     date = models.DateTimeField(auto_now_add=True)
-    transaction_type = models.CharField(max_length=10)
+    transaction_type = models.CharField(max_length=10, db_index=True)
     status = models.BooleanField(default=False)
     class Meta:
         indexes = [

@@ -18,7 +18,7 @@ class Category(models.Model):
         SCHEDULED = "scheduled", "Scheduled"
         HIDDEN = 'hidden', "Hidden"
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=255, blank=False, null=True, unique=True)
+    name = models.CharField(max_length=255, blank=False, null=True, unique=True, db_index=True)
     icon = models.URLField(blank=True, null=True)
     visibility = models.CharField(max_length=255, choices=Visibility.choices, default=Visibility.PUBLISHED)
     publish_date = models.DateField(null=True, blank=True)
@@ -36,7 +36,7 @@ class Category(models.Model):
 
 class Keyword(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    keyword = models.CharField(max_length=255, blank=False, null=True, unique=True)
+    keyword = models.CharField(max_length=255, blank=False, null=True, unique=True, db_index=True)
 
     def __str__(self):
         return self.keyword
@@ -66,11 +66,11 @@ class ProductManager(models.Manager):
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    product_title = models.CharField(max_length=255, blank=False, null=True)
+    product_title = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     category = models.ForeignKey(Category, related_name="category", on_delete=models.CASCADE, null=True)
     subcategory = models.ForeignKey(Category, related_name="subcategory", on_delete=models.CASCADE, null=True, default=None)
-    brand = models.CharField(max_length=255, blank=False, null=True)
+    brand = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     product_weight = models.CharField(max_length=255, blank=True, null=True)
     short_description = models.TextField(blank=True, null=True)
     charge_five_percent_vat = models.BooleanField(blank=False)
@@ -78,9 +78,9 @@ class Product(models.Model):
     warranty = models.CharField(max_length=255, blank=True, null=True)
     color = models.CharField(max_length=255, blank=True, null=True)
     gender = models.CharField(max_length=255, blank=True, null=True)
-    keyword = ArrayField(models.CharField(max_length=250))
+    keyword = ArrayField(models.CharField(max_length=250), db_index=True)
     clicks = models.IntegerField(default=0)
-    promoted = models.BooleanField(default=False)
+    promoted = models.BooleanField(default=False, db_index=True)
     date_created = models.DateTimeField(auto_now_add=True)
 
     objects = ProductManager()
@@ -101,8 +101,8 @@ class ProductImage(models.Model):
 class ProductOption(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="options", on_delete=models.CASCADE, null=True)
-    size = models.CharField(max_length=255, blank=False, null=True)
-    color = models.CharField(max_length=255, blank=False, null=True)
+    size = models.CharField(max_length=255, blank=False, null=True, db_index=True)
+    color = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     quantity = models.CharField(max_length=255, blank=False, null=True)
     price = models.FloatField(blank=False, null=True)
     discounted_price = models.FloatField(blank=False, null=True)
@@ -132,10 +132,10 @@ class ProductOption(models.Model):
 class ProductPromotion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="promo", on_delete=models.CASCADE)
-    start_date = models.DateTimeField(default=django.utils.timezone.now)
-    end_date = models.DateTimeField(default=django.utils.timezone.now)
+    start_date = models.DateTimeField(default=django.utils.timezone.now, db_index=True)
+    end_date = models.DateTimeField(default=django.utils.timezone.now, db_index=True)
     days = models.IntegerField(default=1)
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True, db_index=True)
     is_admin = models.BooleanField(default=False)
     amount = models.FloatField(default=0)
     balance = models.FloatField(default=0)
@@ -156,7 +156,7 @@ class ProductPromotion(models.Model):
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_rating", on_delete=models.CASCADE, null=True)
-    rating = models.IntegerField(blank=False, null=True)
+    rating = models.IntegerField(blank=False, null=True, db_index=True)
     review = models.TextField(null=True)
     parent = models.ForeignKey("self", related_name="comment", on_delete=models.CASCADE, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
@@ -172,13 +172,13 @@ class Rating(models.Model):
 
 class Newsletter(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    email = models.EmailField(max_length=255, unique=True)
+    email = models.EmailField(max_length=255, unique=True, db_index=True)
 
     def __str__(self):
         return str(self.email)
 class ContactMessage(models.Model):
-    email = models.EmailField(max_length=255)
-    name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255, db_index=True)
+    name = models.CharField(max_length=255, db_index=True)
     message = models.TextField(max_length=255, null=False)
     sent_at = models.DateTimeField(default=django.utils.timezone.now)
 
@@ -188,7 +188,7 @@ class ContactMessage(models.Model):
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField(User, related_name="user_carts", on_delete=models.CASCADE, null=True)
-    ip = models.CharField(max_length=255, blank=True, null=True)
+    ip = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class CartItemQuerySet(models.QuerySet):
@@ -219,9 +219,10 @@ class CartItemManager(models.Manager):
 class CartItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     product = models.ForeignKey(Product, related_name="product_carts", on_delete=models.CASCADE)
-    product_option_id = models.CharField(max_length=225, default="lucky_cart")
+    product_option_id = models.CharField(max_length=225, default="lucky_cart", db_index=True)
     quantity = models.PositiveBigIntegerField(default=1)
     price = models.FloatField(blank=False)
+    charge = models.FloatField(blank=False, default=0.00)
     cart = models.ForeignKey(Cart, related_name="cart_item", on_delete=models.CASCADE, null=True)
     order = models.ForeignKey(Order, related_name="order_items", on_delete=models.CASCADE, null=True)
     ordered = models.BooleanField(default=False)
@@ -265,7 +266,7 @@ class FlashSales(models.Model):
     start_date = models.DateTimeField(auto_now_add=True)
     number_of_days = models.IntegerField(default=1)
     discount_percent = models.FloatField(default=1)
-    status = models.BooleanField(default=False)
+    status = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
         return f"{self.id} - {self.number_of_days}"

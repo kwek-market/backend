@@ -12,11 +12,11 @@ from django.db.models import Sum, F, FloatField, Q
 class ExtendUser(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(
-        blank=False, max_length=255, verbose_name="email", unique=True
+        blank=False, max_length=255, verbose_name="email", unique=True, db_index=True
     )
     full_name = models.CharField(blank=False, max_length=255, verbose_name="full_name")
     phone_number = models.CharField(
-        blank=True, max_length=255, verbose_name="full_name"
+        blank=True, max_length=255, verbose_name="full_name", db_index=True
     )
     is_verified = models.BooleanField(default=False, verbose_name="is_verified")
     is_seller = models.BooleanField(default=False, verbose_name="is_seller")
@@ -71,14 +71,14 @@ class ExtendUser(AbstractUser):
 class SellerProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, related_name="seller_profile", on_delete=models.CASCADE, null=True)
-    firstname = models.CharField(max_length=255, blank=False, null=True)
-    lastname = models.CharField(max_length=255, blank=False, null=True)
+    firstname = models.CharField(max_length=255, blank=False, null=True, db_index=True)
+    lastname = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     phone_number = models.CharField(max_length=255, blank=False, null=True)
-    shop_name = models.CharField(max_length=255, blank=False, null=True)
-    shop_url = models.CharField(max_length=255, blank=False, null=True)
+    shop_name = models.CharField(max_length=255, blank=False, null=True, db_index=True)
+    shop_url = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     shop_address = models.CharField(max_length=255, blank=False, null=True)
-    state = models.CharField(max_length=255, blank=False, null=True)
-    city = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=False, null=True, db_index=True)
+    city = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     lga = models.CharField(max_length=255, blank=False, null=True)
     landmark = models.CharField(max_length=255, blank=False, null=True)
     how_you_heard_about_us = models.CharField(max_length=255, blank=False, null=True)

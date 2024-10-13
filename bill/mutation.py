@@ -20,6 +20,7 @@ from market.models import (
     get_delivery_fee,
 )
 import uuid
+from django.utils import timezone
 
 
 class BillingAddress(graphene.Mutation):
@@ -691,6 +692,11 @@ class UpdateDeliverystatus(graphene.Mutation):
     def mutate(self, info, order_id, delivery_status):
         if Order.objects.filter(id=order_id).exists():
             try:
+                order = Order.objects.get(id=order_id)
+                if delivery_status == "delivered" and order.delivery_status=="delivered":
+                    return UpdateDeliverystatus(
+                    status=True, message="Delivery status updated"
+                )
                 Order.objects.filter(id=order_id).update(
                     delivery_status=delivery_status
                 )
@@ -699,31 +705,31 @@ class UpdateDeliverystatus(graphene.Mutation):
                     OrderProgress.objects.filter(order=order).update(
                         progress="Order Delivered"
                     )
-                    Order.objects.filter(id=order_id).update(closed=True, paid=True)
-                    for item_id in order.cart_items.all():
-                        item = CartItem.objects.get(id=item_id.id)
-                        seller = item.product.user
-                        seller_profile = SellerProfile.objects.get(user=seller)
+                    Order.objects.filter(id=order_id).update(closed=True, paid=True, delivered_at=timezone.now())
+                    # for item_id in order.cart_items.all():
+                    #     item = CartItem.objects.get(id=item_id.id)
+                    #     seller = item.product.user
+                    #     seller_profile = SellerProfile.objects.get(user=seller)
 
-                        #brute force solution
-                        # TODO: update this logic
-                        seller_wallet = Wallet.objects.get(owner=seller)
-                        price = (item.quantity * item.price)
-                        balance = seller_wallet.balance + price
-                        seller_wallet.balance = balance
-                        seller_wallet.save()
+                    #     #brute force solution
+                    #     # TODO: update this logic
+                    #     seller_wallet = Wallet.objects.get(owner=seller)
+                    #     price = (item.quantity * item.price)
+                    #     balance = seller_wallet.balance + price
+                    #     seller_wallet.balance = balance
+                    #     seller_wallet.save()
 
-                        if SellerCustomer.objects.filter(seller=seller_profile).exists():
-                            customers_id = SellerCustomer.objects.get(
-                                seller=seller_profile
-                            ).customer_id
-                            if order.user.id in customers_id:
-                                pass
-                            else:
-                                customers_id.append(order.user.id)
-                                SellerCustomer.objects.filter(seller=seller_profile).update(
-                                    customer_id=customers_id
-                                )
+                    #     if SellerCustomer.objects.filter(seller=seller_profile).exists():
+                    #         customers_id = SellerCustomer.objects.get(
+                    #             seller=seller_profile
+                    #         ).customer_id
+                    #         if order.user.id in customers_id:
+                    #             pass
+                    #         else:
+                    #             customers_id.append(order.user.id)
+                    #             SellerCustomer.objects.filter(seller=seller_profile).update(
+                    #                 customer_id=customers_id
+                    #             )
                     if Notification.objects.filter(user=order.user).exists():
                         notification = Notification.objects.get(user=order.user)
                     else:

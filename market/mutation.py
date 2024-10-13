@@ -1,6 +1,5 @@
 import graphene
 import jwt
-from django.utils import timezone
 from users.validate import authenticate_user, authenticate_admin
 from django.conf import settings
 from django.db import transaction
@@ -13,7 +12,6 @@ from .models import *
 from .object_types import *
 from .pusher import *
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
 from wallet.models import Wallet
 from django.db.models import (
@@ -281,7 +279,8 @@ class CreateProduct(graphene.Mutation):
             price = "" if "price" not in keys else option["price"]
             discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
             option_total_price = 0.0
-            ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+            newoption = ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+
         
         if Notification.objects.filter(user=product.user).exists():
             notification = Notification.objects.get(user=product.user)
@@ -821,6 +820,7 @@ class CreateCartItem(graphene.Mutation):
         option = ProductOption.objects.get(id=product_option_id)
         discounted_price = option.get_product_discounted_price()
         price = option.get_product_price()
+        charge = option.get_product_charge()
         product = Product.objects.get(options__id=product_option_id)
         if token:
             print("using token")
@@ -834,10 +834,10 @@ class CreateCartItem(graphene.Mutation):
                 except Exception:
                     user_cart = Cart.objects.create(user=user)
                 
-                has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
+                has_product = Cart.objects.filter(user=user, cart_item__product_option_id=product_option_id, cart_item__ordered=False)
 
                 if has_product:
-                    cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option, ordered=False)
+                    cart_item = CartItem.objects.get(cart__user=user, product_option_id=product_option_id, ordered=False)
                     quantity = int(cart_item.quantity) + quantity
                     cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                     return CreateCartItem(
@@ -848,9 +848,10 @@ class CreateCartItem(graphene.Mutation):
                 else:
                     try:
                         if discounted_price > 0:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price, cart=user_cart, product_option_id=product_option_id)
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                         else:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart, product_option_id=product_option_id)
+                            if price <=0: charge = 0
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -865,10 +866,10 @@ class CreateCartItem(graphene.Mutation):
             except Exception:
                 user_cart = Cart.objects.create(ip=ip_address)
 
-            has_product = Cart.objects.filter(ip=ip_address, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
+            has_product = Cart.objects.filter(ip=ip_address, cart_item__product_option_id=product_option_id, cart_item__ordered=False)
 
             if has_product:
-                cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
+                cart_item = CartItem.objects.get(cart__ip=ip_address, product_option_id=product_option_id)
                 quantity = int(cart_item.quantity) + quantity
                 cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                 return CreateCartItem(
@@ -880,9 +881,10 @@ class CreateCartItem(graphene.Mutation):
             else:
                 try:
                     if discounted_price > 0:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price, cart=user_cart, product_option_id=product_option_id)
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                     else:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price, cart=user_cart, product_option_id=product_option_id)
+                        if price <=0: charge = 0
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
@@ -986,6 +988,58 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                 return DecreaseCartItemQuantity(status=False,message=e)
         else:
             return DecreaseCartItemQuantity(status=False,message="Invalid user")
+        
+
+class RemoveItemFromCartWithOptionId(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String()
+        ip = graphene.String()
+        product_option_id = graphene.String(required=True)
+        quantity = graphene.Int()
+
+    def mutate(self, info, quantity, product_option_id,token=None, ip=None):
+        cart: Cart
+        cart_item: CartItem
+        if token:
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return RemoveItemFromCartWithOptionId(status=auth["status"],message=auth["message"])
+            user = auth["user"]
+            try:
+                cart = Cart.objects.get(user=user)
+                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
+            except Exception as e:
+                return RemoveItemFromCartWithOptionId(status=False,message=e)
+        elif ip:
+            try:
+                cart = Cart.objects.get(ip=ip)
+                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
+            except Exception as e:
+                return RemoveItemFromCartWithOptionId(status=False,message=e)
+        elif not ip and not token:
+            return RemoveItemFromCartWithOptionId(status=False,message="provide ip or token")
+        
+        if not cart or not cart_item:
+            return RemoveItemFromCartWithOptionId(status=False,message="cart item not found")
+        
+        try:
+            quantity = cart_item.quantity-1
+            if quantity < 1:
+                CartItem.objects.filter(id=cart_item.id).delete()
+            else:
+                CartItem.objects.filter(id=cart_item.id).update(quantity=quantity)
+
+            return DeleteCart(
+                    status = True,
+                    message = "successful"
+                )
+        except Exception as e:
+            return RemoveItemFromCartWithOptionId(status=False,message=e)
+        
+
 # =====================================================================================================================
 class DeleteCartItem(graphene.Mutation):
     status = graphene.Boolean()
@@ -1026,6 +1080,7 @@ class DeleteCartItem(graphene.Mutation):
                 return DeleteCartItem(status=False,message=e)
         else:
             return DeleteCartItem(status=False,message="Invalid user")
+
 # =====================================================================================================================
 
 # Cart Migrate Function
@@ -1203,28 +1258,7 @@ class FlashSalesMutation(graphene.Mutation):
         except Exception as e:
             return FlashSalesMutation(status=False,message=e) 
 
-def unpromote():
-    from datetime import datetime
-    now = timezone.now() # now = datetime.now()
-    filter = (Q(promo__end_date__lte = now)
-            | Q(promo__balance__lte=1))
-    all_products = Product.objects.filter(filter, promoted=True)
-    print("expired promotions", all_products)
-    for product in all_products:
-        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
-        Product.objects.filter(id=product.id).update(promoted=False)
-        active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
-        for pr in active_promos:
-            if not pr.is_admin:
-                sb = seller_wallet.balance
-                seller_wallet.balance = sb + pr.balance
-                seller_wallet.save()
-            pr.balance = 0
-            pr.save()
-        ProductPromotion.objects.filter(product=product).update(active=False)
-  
-sched.add_job(unpromote, 'interval', minutes=10)
-sched.start()
+
 
 class CreateProductCharges(graphene.Mutation):
     product_charge = graphene.Field(ProductChargeType)

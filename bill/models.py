@@ -12,7 +12,7 @@ from django.db import transaction
 
 class Billing(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    full_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255, db_index=True)
     contact = models.CharField(max_length=15)
     address = models.CharField(max_length=355)
     state = models.CharField(max_length=255)
@@ -31,11 +31,11 @@ class Billing(models.Model):
 
 class Pickup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
     contact = models.CharField(max_length=13)
     address = models.CharField(max_length=355)
-    state = models.CharField(max_length=255)
-    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255, db_index=True)
+    city = models.CharField(max_length=255, db_index=True)
 
     def __str__(self) -> str:
         return self.name
@@ -48,7 +48,7 @@ class Pickup(models.Model):
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     amount = models.FloatField(default=0)
-    ref = models.CharField(max_length=200)
+    ref = models.CharField(max_length=200, db_index=True)
     user_id = models.CharField(max_length=225, default=None)
     gateway = models.CharField(max_length=225, default="flutterwave")
     email = models.EmailField(blank=False)
@@ -80,7 +80,7 @@ class Payment(models.Model):
 
 class Coupon(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    code = models.CharField(max_length=10, help_text="If left blank, it will be created automatically", unique=True)
+    code = models.CharField(max_length=10, help_text="If left blank, it will be created automatically", unique=True, db_index=True)
     value = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     valid_until = models.DateTimeField()
@@ -189,7 +189,9 @@ class OrderManager(models.Manager):
 
 
             order_price = 0
+            products_charge_total = 0
             for cart_item in order.cart_items.all():
+                products_charge_total += (cart_item.quantity * cart_item.charge)
                 order_price += (cart_item.quantity * cart_item.price)
 
             first_order_price = order_price
@@ -204,26 +206,29 @@ class OrderManager(models.Manager):
 
             order_price_total = order_price
 
-            Order.objects.filter(id=order.id).update(order_price=first_order_price, order_price_total=order_price_total)
+            Order.objects.filter(id=order.id).update(order_price=first_order_price, order_price_total=order_price_total, products_charge_total=products_charge_total)
 
         return order
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, related_name="order", on_delete=models.CASCADE)
-    order_id = models.CharField(max_length=30)
+    order_id = models.CharField(max_length=30, db_index=True)
     cart_items = models.ManyToManyField('market.CartItem',related_name='order_cart_items')
     payment_method = models.CharField(max_length=30)
     delivery_method = models.CharField(max_length=30)
-    delivery_status = models.CharField(max_length=30, default="Order in progress")
+    delivery_status = models.CharField(max_length=30, default="Order in progress", db_index=True)
     closed = models.BooleanField(default=False)
     coupon = ArrayField(models.CharField(max_length=225), blank=True, null=True)
     paid = models.BooleanField(default=False)
     door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
     pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
+    disbursed_to_wallet = models.BooleanField(null=False, default=False)
     order_price = models.PositiveBigIntegerField(default=0)
     order_price_total = models.PositiveBigIntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True)
     delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
+    products_charge_total = models.FloatField(blank=False, null=False, default=0.00)
 
 
     objects = OrderManager()
@@ -232,5 +237,8 @@ class Order(models.Model):
     
     class Meta:
         indexes = [
-            models.Index(fields=["-date_created"])
+            models.Index(fields=["-date_created"]),
+            # models.Index(fields=['delivered_at'], name='delivered_at_idx'),
+            models.Index(fields=['closed', 'delivery_status', 'paid', 'delivered_at']),
         ]
+
