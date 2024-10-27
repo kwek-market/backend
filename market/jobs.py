@@ -8,7 +8,7 @@ from django.db.models import (
 )
 from users.models import ExtendUser,SellerProfile, SellerCustomer
 from .models import *
-from wallet.models import Wallet
+from wallet.models import Wallet, WalletTransaction
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import timedelta
 from django.utils import timezone
@@ -41,10 +41,11 @@ def unpromote():
 def completeDelivery():
 
     random_password = uuid.uuid4().hex  # This will generate a random string
+    admin_email = 'kwekadmin@admin.com'
 
     # Get or create the admin user
     admin_user, created = ExtendUser.objects.get_or_create(
-        email='kwekadmin@admin.com',
+        email=admin_email,
         defaults={
             'username': 'kwekadmin',  # Or any other default username you want to set
             'full_name': 'Kwek Admin',  # Adjust as needed
@@ -55,9 +56,12 @@ def completeDelivery():
         }
     )
 
+    admin_wallet, _ = Wallet.objects.get_or_create(owner=admin_user)
+
 
     # Get the date 7 days ago
-    seven_days_ago = timezone.now() - timedelta(days=1)
+    # seven_days_ago = timezone.now() - timedelta(days=1)
+    seven_days_ago = timezone.now() - timedelta(minutes=30)
     # TODO: put back to 7days
 
     # Use select_related to reduce the number of queries on related objects
@@ -66,11 +70,11 @@ def completeDelivery():
         delivery_status="delivered",
         paid=True,
         delivered_at__lt=seven_days_ago,  # more than 7 days ago
-        delivered_at__isnull=False
     ).prefetch_related('cart_items__product__user')  # Prefetch the product and related user
 
     # Create a dictionary to store total price for each seller to update the wallet balance in bulk
     seller_wallet_updates = {}
+    w_transactions = []
     total_charges = 0
 
     # Iterate over the closed orders
@@ -82,6 +86,7 @@ def completeDelivery():
         for item in cart_items:
             seller = item.product.user
             seller_profile = SellerProfile.objects.get(user=seller)
+            wallet = Wallet.objects.get(owner=seller)
 
             # Calculate the price for the cart item
             charge = item.quantity * item.charge
@@ -95,8 +100,25 @@ def completeDelivery():
 
             total_charges+=charge
 
+            
+            w_transactions.append({
+            "wallet":wallet,
+            "amount":price,
+            "remark":f"Purchase of {item.product.product_title} with id {item.product.id}",
+            "status":True,
+            "transaction_type":"Product Purchase"
+            })
+
+            w_transactions.append({
+            "wallet":admin_wallet,
+            "amount":charge,
+            "remark":f"Purchase of {item.product.product_title} with id {item.product.id}",
+            "status":True,
+            "transaction_type":"Product Purchase"
+            })
+
             # Update seller's customer list using get_or_create for efficiency
-            seller_customer, created = SellerCustomer.objects.get_or_create(seller=seller_profile)
+            seller_customer, _ = SellerCustomer.objects.get_or_create(seller=seller_profile)
             
             # Check if the buyer (order.user) is already in the customers_id list
             if order.user.id not in seller_customer.customer_id:
@@ -107,10 +129,11 @@ def completeDelivery():
     for seller, total_price in seller_wallet_updates.items():
         Wallet.objects.filter(owner=seller).update(balance=F('balance') + total_price)
 
-    Wallet.objects.filter(owner=admin_user).update(balance=F('balance') + total_charges)
+    admin_wallet.balance += total_charges
+    admin_wallet.save()
 
-    for order in closed_orders:
-        Order.objects.filter(id=order.id).update(disbursed_to_wallet=True)
+    closed_orders.update(disbursed_to_wallet=True)
+    WalletTransaction.objects.bulk_create(w_transactions)
 
     
 sched.add_job(unpromote, 'interval', minutes=60)
