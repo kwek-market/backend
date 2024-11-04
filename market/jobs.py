@@ -10,7 +10,7 @@ from users.models import ExtendUser,SellerProfile, SellerCustomer
 from .models import *
 from wallet.models import Wallet, WalletTransaction
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import timedelta
+from datetime import time, timedelta
 from django.utils import timezone
 from market.models import CartItem
 import uuid
@@ -150,6 +150,7 @@ def completeDelivery():
 
 
 def start_market_jobs_scheduler():
+    time.sleep(60)
     print("starting jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     sched = BackgroundScheduler()
     sched.add_job(unpromote, 'interval', minutes=60)
