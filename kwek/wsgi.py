@@ -17,5 +17,5 @@ application = get_wsgi_application()
 app = application
 
 
-from market.jobs import start_market_jobs_scheduler
-start_market_jobs_scheduler()
+# from market.jobs import start_market_jobs_scheduler
+# start_market_jobs_scheduler()
