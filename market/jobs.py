@@ -39,6 +39,7 @@ def unpromote():
 
 
 def completeDelivery():
+    print("started completeDelivery")
 
     random_password = uuid.uuid4().hex  # This will generate a random string
     admin_email = 'kwekadmin@admin.com'
@@ -61,7 +62,7 @@ def completeDelivery():
 
     # Get the date 7 days ago
     # seven_days_ago = timezone.now() - timedelta(days=1)
-    seven_days_ago = timezone.now() - timedelta(minutes=30)
+    seven_days_ago = timezone.now() - timedelta(minutes=1)
     # TODO: put back to 7days
 
     # Use select_related to reduce the number of queries on related objects
@@ -71,6 +72,8 @@ def completeDelivery():
         paid=True,
         delivered_at__lt=seven_days_ago,  # more than 7 days ago
     ).prefetch_related('cart_items__product__user')  # Prefetch the product and related user
+
+    # print(closed_orders)
 
     # Create a dictionary to store total price for each seller to update the wallet balance in bulk
     seller_wallet_updates = {}
@@ -85,6 +88,9 @@ def completeDelivery():
         # Process each cart item
         for item in cart_items:
             seller = item.product.user
+
+            if not SellerProfile.objects.filter(user=seller).exists():
+                continue
             seller_profile = SellerProfile.objects.get(user=seller)
             wallet = Wallet.objects.get(owner=seller)
 
@@ -100,22 +106,26 @@ def completeDelivery():
 
             total_charges+=charge
 
-            
-            w_transactions.append({
-            "wallet":wallet,
-            "amount":price,
-            "remark":f"Purchase of {item.product.product_title} with id {item.product.id}",
-            "status":True,
-            "transaction_type":"Product Purchase"
-            })
 
-            w_transactions.append({
-            "wallet":admin_wallet,
-            "amount":charge,
-            "remark":f"Purchase of {item.product.product_title} with id {item.product.id}",
-            "status":True,
-            "transaction_type":"Product Purchase"
-            })
+            w_transactions.append(
+                WalletTransaction(
+                    wallet=wallet,
+                    amount=price,
+                    remark=f"Purchase of {item.product.product_title} with id {item.product.id}",
+                    status=True,
+                    transaction_type="Product Purchase"
+                )
+            )
+
+            w_transactions.append(
+                WalletTransaction(
+                    wallet=admin_wallet,
+                    amount=charge,
+                    remark=f"Purchase of {item.product.product_title} with id {item.product.id}",
+                    status=True,
+                    transaction_type="Product Purchase"
+                )
+            )
 
             # Update seller's customer list using get_or_create for efficiency
             seller_customer, _ = SellerCustomer.objects.get_or_create(seller=seller_profile)
@@ -134,8 +144,15 @@ def completeDelivery():
 
     closed_orders.update(disbursed_to_wallet=True)
     WalletTransaction.objects.bulk_create(w_transactions)
+    print("finished completeDelivery")
 
     
-sched.add_job(unpromote, 'interval', minutes=60)
-sched.add_job(completeDelivery, 'interval', minutes=720)
-sched.start()
+
+
+def start_market_jobs_scheduler():
+    print("starting jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    sched = BackgroundScheduler()
+    sched.add_job(unpromote, 'interval', minutes=60)
+    sched.add_job(completeDelivery, 'interval', minutes=1)
+    sched.start()
+    print("started jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

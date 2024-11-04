@@ -119,5 +119,5 @@ class SellerProfile(models.Model):
 class SellerCustomer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     seller = models.OneToOneField(SellerProfile, on_delete=models.CASCADE, related_name="customers")
-    customer_id = ArrayField(models.CharField(max_length=225))
+    customer_id = ArrayField(models.CharField(max_length=225), blank=True, default=list)
     date_created = models.DateTimeField(auto_now_add=True)

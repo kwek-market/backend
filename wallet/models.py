@@ -61,7 +61,7 @@ class WalletTransaction(models.Model):
     remark = models.CharField(max_length=225)
     amount = models.PositiveBigIntegerField()
     date = models.DateTimeField(auto_now_add=True)
-    transaction_type = models.CharField(max_length=10, db_index=True)
+    transaction_type = models.CharField(max_length=100, db_index=True)
     status = models.BooleanField(default=False)
     class Meta:
         indexes = [

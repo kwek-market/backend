@@ -125,6 +125,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         token=graphene.String(required=True),
         page=graphene.Int(),
         page_size=graphene.Int(),
+        order_by=graphene.String(),
     )
     get_wallet_transactions = graphene.Field(
         WalletTransactionPaginatedType,
@@ -824,15 +825,20 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_wallet_transactions(root, info, token, page=1, page_size=50):
+    def resolve_get_seller_wallet_transactions(root, info, token, page=1, page_size=50, order_by=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            transactions = WalletTransaction.objects.filter(
-                wallet=Wallet.objects.get(owner=user)
-            )
+            if order_by:
+                transactions = WalletTransaction.objects.filter(
+                    wallet=Wallet.objects.get(owner=user)
+                ).order_by(order_by)
+            else:
+                transactions = WalletTransaction.objects.filter(
+                    wallet=Wallet.objects.get(owner=user)
+                )
             return get_paginator(
                 transactions, page_size, page, WalletTransactionPaginatedType
             )

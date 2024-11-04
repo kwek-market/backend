@@ -817,7 +817,10 @@ class CreateCartItem(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, product_option_id, token=None, ip_address=None, quantity=1):
-        option = ProductOption.objects.get(id=product_option_id)
+        try:
+            option = ProductOption.objects.get(id=product_option_id)
+        except Exception:
+            return CreateCartItem(status=False,message="product option not found")
         discounted_price = option.get_product_discounted_price()
         price = option.get_product_price()
         charge = option.get_product_charge()

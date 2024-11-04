@@ -227,6 +227,7 @@ class Order(models.Model):
     order_price_total = models.PositiveBigIntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
     delivered_at = models.DateTimeField(null=True)
+    wallet_transaction_handled = models.BooleanField(null=False, default=False)
     delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
     products_charge_total = models.FloatField(blank=False, null=False, default=0.00)
 
@@ -238,6 +239,7 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["-date_created"]),
+            models.Index(fields=["wallet_transaction_handled"]),
             # models.Index(fields=['delivered_at'], name='delivered_at_idx'),
             models.Index(fields=['closed', 'delivery_status', 'paid', 'delivered_at']),
         ]
