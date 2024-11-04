@@ -19,4 +19,4 @@ application = get_wsgi_application()
 app = application
 
 
-start_market_jobs_scheduler()
+# start_market_jobs_scheduler()
