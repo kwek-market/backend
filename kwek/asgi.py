@@ -13,9 +13,10 @@ from django.core.asgi import get_asgi_application
 
 
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mirror_project.settings')
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mirror_project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kwek.settings')
 
 
 
-application = get_asgi_application(),
+application = get_asgi_application()
   
