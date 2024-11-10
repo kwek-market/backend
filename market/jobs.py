@@ -11,6 +11,7 @@ from .models import *
 from wallet.models import Wallet, WalletTransaction
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import time, timedelta
+import time as timex
 from django.utils import timezone
 from market.models import CartItem
 import uuid
@@ -150,7 +151,7 @@ def completeDelivery():
 
 
 def start_market_jobs_scheduler():
-    time.sleep(60)
+    timex.sleep(60)
     print("starting jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     sched = BackgroundScheduler()
     sched.add_job(unpromote, 'interval', minutes=60)
