@@ -111,7 +111,7 @@ DATABASES = {
         "USER": config("USER_NAME"),
         "PASSWORD": config("PASSWORD"),
         "HOST": config("HOST"),
-        "PORT": config("PORT"),
+        "PORT": config("DB_PORT"),
     }
 }
 
@@ -178,6 +178,7 @@ REGISTER_MUTATION_FIELDS = {
 # EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
 EMAIL_BACKEND_DOMAIN = os.getenv("EMAIL_BACKEND_DOMAIN")
 APP_DOMAIN = os.getenv("APP_DOMAIN")
+PORT = os.getenv("PORT", "8000")
 DOMAIN = "www.kwekmarket.com"
 KWEK_EMAIL = "support@kwekapi.com"
 PHPWEB = "kwekmailapiphpmailsystem"
