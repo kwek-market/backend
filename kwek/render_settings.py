@@ -7,6 +7,7 @@ from .general_settings import *
 # Here, they well be accessible at your-domain.onrender.com/static/... or yourcustomdomain.com/static/...
 # STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # STATIC_URL = '/static/'
+RUNJOBS=True
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'

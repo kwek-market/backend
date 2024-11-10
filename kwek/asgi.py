@@ -19,4 +19,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kwek.settings')
 
 
 application = get_asgi_application()
+
+
+from django.conf import settings
+if settings.RUNJOBS:
+    from market.jobs import start_market_jobs_scheduler
+    start_market_jobs_scheduler()
   
