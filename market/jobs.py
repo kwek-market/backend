@@ -148,13 +148,18 @@ def completeDelivery():
     print("finished completeDelivery")
 
     
+def keepAlive():
+    print("keeping alive")
+    timex.sleep(30)
+    print("done keeping alive")
 
 
 def start_market_jobs_scheduler():
     timex.sleep(60)
     print("starting jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     sched = BackgroundScheduler()
-    sched.add_job(unpromote, 'interval', minutes=5)
-    sched.add_job(completeDelivery, 'interval', seconds=30)
+    sched.add_job(unpromote, 'interval', minutes=10)
+    sched.add_job(completeDelivery, 'interval', minutes=10)
+    sched.add_job(keepAlive, 'interval', seconds=30)
     sched.start()
     print("started jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
