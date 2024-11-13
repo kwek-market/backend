@@ -71,6 +71,7 @@ def completeDelivery():
         closed=True,
         delivery_status="delivered",
         paid=True,
+        disbursed_to_wallet=False,
         delivered_at__lt=seven_days_ago,  # more than 7 days ago
     ).prefetch_related('cart_items__product__user')  # Prefetch the product and related user
 
