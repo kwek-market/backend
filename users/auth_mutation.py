@@ -903,7 +903,7 @@ class StoreBanner(graphene.Mutation):
     class Arguments:
         token = graphene.String(required=True)
         image_url = graphene.String(required=True)
-        store_description = graphene.String()
+        store_description = graphene.String()   
 
     @staticmethod
     def mutate(self, info, token, image_url, store_description=None):
