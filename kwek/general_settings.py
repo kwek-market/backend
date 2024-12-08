@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
+    'debug_toolbar',
     
 ]
 
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = "kwek.urls"
@@ -114,6 +116,9 @@ DATABASES = {
         "PORT": config("PORT"),
     }
 }
+
+
+    DATABASES["default"] = DATABASES["test"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -201,7 +206,7 @@ CORS_ORIGIN_WHITELIST = (
     "https://localhost:3000",
     "https://kwek.vercel.app",
     "http://kwek.vercel.app",
-    "http://kwekapi.com",
+    "http://kwekapi.com",   
     "https://kwekapi.com",
 )
 

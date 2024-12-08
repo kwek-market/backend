@@ -16,7 +16,7 @@ constantly==15.1.0
 cryptography==40.0.2
 daphne==3.0.2
 dj-database-url==0.5.0
-Django==3.1.7
+Django==3.2.21
 django-cors-headers==3.11.0
 django-filter==21.1
 django-graphql-auth==0.3.16
