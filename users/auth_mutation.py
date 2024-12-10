@@ -7,6 +7,7 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password
+from django.shortcuts import get_object_or_404
 from django.template import Context, Template
 from graphql_jwt.shortcuts import create_refresh_token
 
@@ -67,6 +68,7 @@ class CreateUser(graphene.Mutation):
             )
         else:
             sen_m = send_confirmation_email(email, full_name)
+            print(sen_m, "Talk about sending mails")
             if sen_m["status"] == True:
                 user.set_password(password1)
                 user.save()
@@ -95,7 +97,14 @@ class ResendVerification(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, email):
-        f_user = ExtendUser.objects.get(email=email)
+        try:
+            f_user = ExtendUser.objects.get(email=email)
+        except ExtendUser.DoesNotExist:
+            return ResendVerification(
+                status=False,
+                message="No user with this email found. Please check the email address and try again.",
+            )
+
         sen_m = send_confirmation_email(email, f_user.full_name)
         if sen_m["status"] == True:
             return ResendVerification(
@@ -103,7 +112,7 @@ class ResendVerification(graphene.Mutation):
                 message="Successfully sent email to {}".format(email),
             )
         else:
-            # raise GraphQLError("Email Verification not sent")
+            # raise Error("Email Verification not sent")
             return ResendVerification(status=False, message=sen_m["message"])
 
 

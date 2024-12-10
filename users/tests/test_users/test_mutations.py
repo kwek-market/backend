@@ -32,6 +32,96 @@ class UserManagementTests(GraphQLTestCase):
             {"user": self.user.email}, settings.SECRET_KEY, algorithm="HS256"
         )
 
+    def test_create_user_invalid_email(self):
+        response = self.query(
+            """
+            mutation {
+                createUser(
+                    password1: "Password123!",
+                    password2: "Password123!",
+                    fullName: "Invalid Email User",
+                    email: "invalidemail.com"
+                ) {
+                    status
+                    message
+                }
+            }
+            """
+        )
+        content = response.json()
+        self.assertFalse(content["data"]["createUser"]["status"])
+        self.assertIn("Enter Valid E-mail", content["data"]["createUser"]["message"])
+
+    def test_create_user_duplicate_email(self):
+        # Create a user first
+        self.User.objects.create_user(
+            username="duplicateuser",
+            email="duplicate@example.com",
+            password="Password123!",
+            full_name="Duplicate User",
+        )
+
+        # Try to create another user with the same email
+        response = self.query(
+            """
+            mutation {
+                createUser(
+                    password1: "Password123!",
+                    password2: "Password123!",
+                    fullName: "New User",
+                    email: "duplicate@example.com"
+                ) {
+                    status
+                    message
+                }
+            }
+            """
+        )
+        content = response.json()
+        self.assertFalse(content["data"]["createUser"]["status"])
+        self.assertIn(
+            "E-mail Already in use", content["data"]["createUser"]["message"]
+        )
+
+    @patch("users.auth_mutation.send_confirmation_email")
+    def test_resend_verification_email_success(self, mock_send_email):
+        mock_send_email.return_value = {"status": True}
+        response = self.query(
+            """
+            mutation {
+                resendVerification(email: "testuser@example.com") {
+                    status
+                    message
+                }
+            }
+            """
+        )
+        content = response.json()
+        self.assertTrue(content["data"]["resendVerification"]["status"])
+        self.assertIn(
+            "Successfully sent email to testuser@example.com",
+            content["data"]["resendVerification"]["message"],
+        )
+
+    def test_resend_verification_email_invalid(self):
+        response = self.query(
+            """
+            mutation {
+                resendVerification(email: "nonexistent@example.com") {
+                    status
+                    message
+                }
+            }
+            """
+        )
+        content = response.json()
+        print(content)
+        self.assertFalse(content["data"]["resendVerification"]["status"])
+        self.assertIn(
+            "No user with this email found",
+            content["data"]["resendVerification"]["message"],
+        )
+
     def test_create_user_success(self):
         response = self.query(
             """
@@ -153,8 +243,6 @@ class UserManagementTests(GraphQLTestCase):
         self.assertEqual(
             content["data"]["loginUser"]["user"]["email"], "testuser@example.com"
         )
-
-    
 
     def test_login_user_unverified(self):
         response = self.query(
