@@ -1,11 +1,10 @@
 from django.apps import AppConfig
-from .jobs import start_scheduler
 
 
 class MarketConfig(AppConfig):
-    name = 'market'
-        
+    name = "market"
 
+    def ready(self):
+        from .jobs import start_market_jobs_scheduler
 
-
-    
+        start_market_jobs_scheduler()

@@ -1,34 +1,37 @@
-
-from django.utils import timezone
-from apscheduler.triggers.cron import CronTrigger
-from django.db.models import (
-    Q,
-    F, 
-    Sum
-)
-from users.models import ExtendUser,SellerProfile, SellerCustomer
-from .models import *
-from wallet.models import Wallet, WalletTransaction
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import time, timedelta
 import time as timex
-from django.utils import timezone
-from market.models import CartItem
 import uuid
+from datetime import time, timedelta
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from django.contrib.auth.hashers import make_password
+from django.db.models import F, Q, Sum
+from django.utils import timezone
+
+from market.models import CartItem
+from users.models import ExtendUser, SellerCustomer, SellerProfile
+from wallet.models import Wallet, WalletTransaction
+
+from .models import *
 
 sched = BackgroundScheduler(daemon=True)
+
+
 def unpromote():
     from datetime import datetime
-    now = timezone.now() # now = datetime.now()
-    filter = (Q(promo__end_date__lte = now)
-            | Q(promo__balance__lte=1))
+
+    now = timezone.now()  # now = datetime.now()
+    filter = Q(promo__end_date__lte=now) | Q(promo__balance__lte=1)
     all_products = Product.objects.filter(filter, promoted=True)
     print("expired promotions", all_products)
     for product in all_products:
-        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
+        seller_wallet = Wallet.objects.get(
+            owner=ExtendUser.objects.get(id=product.user.id)
+        )
         Product.objects.filter(id=product.id).update(promoted=False)
-        active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
+        active_promos = ProductPromotion.objects.filter(
+            product=product, active=True, balance__gte=1
+        )
         for pr in active_promos:
             if not pr.is_admin:
                 sb = seller_wallet.balance
@@ -43,23 +46,22 @@ def completeDelivery():
     print("started completeDelivery")
 
     random_password = uuid.uuid4().hex  # This will generate a random string
-    admin_email = 'kwekadmin@admin.com'
+    admin_email = "kwekadmin@admin.com"
 
     # Get or create the admin user
     admin_user, created = ExtendUser.objects.get_or_create(
         email=admin_email,
         defaults={
-            'username': 'kwekadmin',  # Or any other default username you want to set
-            'full_name': 'Kwek Admin',  # Adjust as needed
-            'password': make_password(random_password),  # Set hashed password
-            'is_admin': True,
-            'is_staff': True,
-            'is_verified': True
-        }
+            "username": "kwekadmin",  # Or any other default username you want to set
+            "full_name": "Kwek Admin",  # Adjust as needed
+            "password": make_password(random_password),  # Set hashed password
+            "is_admin": True,
+            "is_staff": True,
+            "is_verified": True,
+        },
     )
 
     admin_wallet, _ = Wallet.objects.get_or_create(owner=admin_user)
-
 
     # Get the date 7 days ago
     # seven_days_ago = timezone.now() - timedelta(days=1)
@@ -73,7 +75,9 @@ def completeDelivery():
         paid=True,
         disbursed_to_wallet=False,
         delivered_at__lt=seven_days_ago,  # more than 7 days ago
-    ).prefetch_related('cart_items__product__user')  # Prefetch the product and related user
+    ).prefetch_related(
+        "cart_items__product__user"
+    )  # Prefetch the product and related user
 
     # print(closed_orders)
 
@@ -86,7 +90,7 @@ def completeDelivery():
     for order in closed_orders:
         # Prefetch all the cart items for the order in one go
         cart_items = order.cart_items.all()
-        
+
         # Process each cart item
         for item in cart_items:
             seller = item.product.user
@@ -106,8 +110,7 @@ def completeDelivery():
             else:
                 seller_wallet_updates[seller] = price
 
-            total_charges+=charge
-
+            total_charges += charge
 
             w_transactions.append(
                 WalletTransaction(
@@ -115,7 +118,7 @@ def completeDelivery():
                     amount=price,
                     remark=f"Purchase of {item.product.product_title} with id {item.product.id}",
                     status=True,
-                    transaction_type="Product Purchase"
+                    transaction_type="Product Purchase",
                 )
             )
 
@@ -125,13 +128,15 @@ def completeDelivery():
                     amount=charge,
                     remark=f"Purchase of {item.product.product_title} with id {item.product.id}",
                     status=True,
-                    transaction_type="Product Purchase"
+                    transaction_type="Product Purchase",
                 )
             )
 
             # Update seller's customer list using get_or_create for efficiency
-            seller_customer, _ = SellerCustomer.objects.get_or_create(seller=seller_profile)
-            
+            seller_customer, _ = SellerCustomer.objects.get_or_create(
+                seller=seller_profile
+            )
+
             # Check if the buyer (order.user) is already in the customers_id list
             if order.user.id not in seller_customer.customer_id:
                 seller_customer.customer_id.append(order.user.id)
@@ -139,7 +144,7 @@ def completeDelivery():
 
     # Perform bulk wallet updates in one go
     for seller, total_price in seller_wallet_updates.items():
-        Wallet.objects.filter(owner=seller).update(balance=F('balance') + total_price)
+        Wallet.objects.filter(owner=seller).update(balance=F("balance") + total_price)
 
     admin_wallet.balance += total_charges
     admin_wallet.save()
@@ -148,7 +153,7 @@ def completeDelivery():
     WalletTransaction.objects.bulk_create(w_transactions)
     print("finished completeDelivery")
 
-    
+
 def keepAlive():
     print("keeping alive")
     timex.sleep(30)
@@ -156,11 +161,11 @@ def keepAlive():
 
 
 def start_market_jobs_scheduler():
-    timex.sleep(60)
+    #timex.sleep(60)
     print("starting jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     sched = BackgroundScheduler()
-    sched.add_job(unpromote, 'interval', minutes=10)
-    sched.add_job(completeDelivery, 'interval', minutes=10)
-    sched.add_job(keepAlive, 'interval', seconds=30)
+    sched.add_job(unpromote, "interval", minutes=10)
+    sched.add_job(completeDelivery, "interval", minutes=10)
+    sched.add_job(keepAlive, "interval", seconds=30)
     sched.start()
     print("started jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

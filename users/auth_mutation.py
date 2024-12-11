@@ -21,18 +21,12 @@ from .model_object_type import SellerProfileType, UserType
 from .models import ExtendUser, SellerProfile
 from .send_post import send_post_request
 from .sendmail import (
-    send_verification_email,
-    send_generic_email_through_PHP,
-    send_welcome_email,
-    user_loggedIN,
-    expire_token,
-          
     expire_token,
     refresh_user_token,
-    send_confirmation_email,
     send_generic_email_through_PHP,
-
     send_password_reset_email,
+    send_verification_email,
+    send_welcome_email,
     user_loggedIN,
 )
 from .validate import (
@@ -77,7 +71,7 @@ class CreateUser(graphene.Mutation):
 
             send_welcome_email(email, full_name)
             sen_m = send_confirmation_email(email, full_name)
-            
+
             if sen_m["status"] == True:
                 user.set_password(password1)
                 user.save()
@@ -105,14 +99,14 @@ class ResendVerification(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, email):
-         try:
+        try:
             f_user = ExtendUser.objects.get(email=email)
         except ExtendUser.DoesNotExist:
             return ResendVerification(
                 status=False,
                 message="No user with this email found. Please check the email address and try again.",
             )
-    
+
         sen_m = send_verification_email(email, f_user.full_name)
         if sen_m["status"] == True:
             return ResendVerification(
@@ -122,7 +116,6 @@ class ResendVerification(graphene.Mutation):
         else:
             # raise Error("Email Verification not sent")
             return ResendVerification(status=False, message=sen_m["message"])
-
 
 
 class VerifyUser(graphene.Mutation):
@@ -522,27 +515,31 @@ class SellerVerification(graphene.Mutation):
             return SellerVerification(status=False, message="you are not yet a seller")
 
         if not seller.seller_is_verified:
-                if not accepted_vendor_policy:
-                    return SellerVerification(status=False, message="vendor policy must be accepted")
-                try:
-                    seller.accepted_vendor_policy = accepted_vendor_policy
-                    seller.prefered_id= prefered_id
-                    seller.prefered_id_url= prefered_id_url
+            if not accepted_vendor_policy:
+                return SellerVerification(
+                    status=False, message="vendor policy must be accepted"
+                )
+            try:
+                seller.accepted_vendor_policy = accepted_vendor_policy
+                seller.prefered_id = prefered_id
+                seller.prefered_id_url = prefered_id_url
 
-                    seller.bvn = bvn
-                    seller.bank_name = bank_name
-                    seller.bank_sort_code = bank_sort_code
-                    seller.bank_account_number = account_number
-                    seller.bank_account_name = account_name
-                    seller.save()
-                    return SellerVerification(
-                        status=True,
-                        message="Verification in progress, this might take a few hours",
-                    )
-                except Exception as e:
-                    return SellerVerification(status=True, message=e)
+                seller.bvn = bvn
+                seller.bank_name = bank_name
+                seller.bank_sort_code = bank_sort_code
+                seller.bank_account_number = account_number
+                seller.bank_account_name = account_name
+                seller.save()
+                return SellerVerification(
+                    status=True,
+                    message="Verification in progress, this might take a few hours",
+                )
+            except Exception as e:
+                return SellerVerification(status=True, message=e)
         else:
-            return SellerVerification(status=False, message="Seller is already Verified")
+            return SellerVerification(
+                status=False, message="Seller is already Verified"
+            )
 
 
 class CompleteSellerVerification(graphene.Mutation):
@@ -846,7 +843,9 @@ class StoreUpdate(graphene.Mutation):
         shop_url = graphene.String()
 
     @staticmethod
-    def mutate(self, info, token, store_banner=None, store_description=None, shop_url=None):
+    def mutate(
+        self, info, token, store_banner=None, store_description=None, shop_url=None
+    ):
         auth = authenticate_user(token)
         if not auth["status"]:
             return StoreUpdate(status=auth["status"], message=auth["message"])
@@ -861,9 +860,14 @@ class StoreUpdate(graphene.Mutation):
 
             if shop_url:
                 if SellerProfile.objects.filter(shop_url=shop_url).exists():
-                    if SellerProfile.objects.get(shop_url=shop_url).user.id != c_user.id:
-                        return StoreUpdate(status=False, message="Shop url already taken")
-                    
+                    if (
+                        SellerProfile.objects.get(shop_url=shop_url).user.id
+                        != c_user.id
+                    ):
+                        return StoreUpdate(
+                            status=False, message="Shop url already taken"
+                        )
+
                 seller.shop_url = shop_url
             seller.save()
             if Notification.objects.filter(user=c_user).exists():
