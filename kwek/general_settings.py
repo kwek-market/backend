@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
+    'debug_toolbar',
     
 ]
 
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = "kwek.urls"
@@ -115,6 +117,7 @@ DATABASES = {
     }
 }
 
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -157,6 +160,7 @@ AUTHENTICATION_BACKENDS = [
     # 'graphql_jwt.backends.JSONWebTokenBackend',
     "graphql_auth.backends.GraphQLAuthBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "users.auth_backends.EmailOrUsernameAuthBackend",
 ]
 
 GRAPHQL_JWT = {
@@ -202,7 +206,7 @@ CORS_ORIGIN_WHITELIST = (
     "https://localhost:3000",
     "https://kwek.vercel.app",
     "http://kwek.vercel.app",
-    "http://kwekapi.com",
+    "http://kwekapi.com",   
     "https://kwekapi.com",
 )
 
@@ -232,3 +236,6 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
+
+"""This ensures all auto-created primary keys use BigAutoField."""
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

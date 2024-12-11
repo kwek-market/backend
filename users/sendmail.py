@@ -173,13 +173,11 @@ def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
          }), {'Content-Type': 'application/json'}
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
-        print(response.json())
         if response.json()["status"]:
             return True,response.json()['message']
         else:
             return False, "error occured"
     except Exception as e:
-        print(e)
         return False,e 
     
 
