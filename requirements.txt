@@ -6,10 +6,9 @@ async-timeout==4.0.2
 attrs==23.1.0
 autobahn==23.1.2
 Automat==22.10.0
-backports.zoneinfo==0.2.1
 certifi==2023.5.7
 cffi==1.15.1
-channels==3.0.5
+channels==4.0.0
 channels-redis==4.1.0
 chardet==5.1.0
 charset-normalizer==3.1.0
@@ -17,9 +16,9 @@ constantly==15.1.0
 cryptography==40.0.2
 daphne==3.0.2
 dj-database-url==0.5.0
-Django==3.2.21
-django-cors-headers==3.11.0
-django-debug-toolbar==4.4.6
+Django==3.2.4
+django-cors-headers==4.5.0
+django-debug-toolbar==4.3
 django-filter==21.1
 django-graphql-auth==0.3.16
 django-graphql-jwt==0.3.0
