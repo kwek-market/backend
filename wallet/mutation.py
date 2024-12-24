@@ -134,6 +134,7 @@ class FundWallet(graphene.Mutation):
         if not auth["status"]:
             return FundWallet(status=auth["status"],message=auth["message"])
         user = auth["user"]
+        amount = 0
         p_status = False
         if Wallet.objects.filter(owner=user).exists():
             if Payment.objects.filter(ref=payment_ref).exists():
@@ -152,6 +153,7 @@ class FundWallet(graphene.Mutation):
                         status = False,
                         message = "Payment has not been verified"
                     )
+                
                 try:
                     seller_wallet = Wallet.objects.get(owner=user)
                     wallet = WalletTransaction.objects.create(
@@ -164,6 +166,9 @@ class FundWallet(graphene.Mutation):
                     balance = seller_wallet.balance
                     new_balance = balance + amount
                     Wallet.objects.filter(owner=user).update(balance=new_balance)
+
+                    payment.used = True
+                    payment.save()
                     if Notification.objects.filter(user=user).exists():
                         notification = Notification.objects.get(
                             user=user

@@ -42,7 +42,15 @@ from users.models import ExtendUser, SellerCustomer, SellerProfile
 from users.validate import authenticate_admin, authenticate_user
 from wallet.models import Invoice, StoreDetail, Wallet, WalletTransaction
 from wallet.object_types import *
-
+from .model_object_type import UserType, SellerProfileType
+from market.object_types import *
+from users.models import SellerCustomer, ExtendUser, SellerProfile
+from users.validate import authenticate_user, authenticate_admin
+from django.db.models import Q
+from bill.object_types import *
+from operator import attrgetter
+from .queries_build import build_products_query, build_users_query, get_price_range
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from .model_object_type import SellerProfileType, UserType
 from .queries_build import build_products_query, build_users_query, get_price_range
 
@@ -53,12 +61,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         PickupType, address_id=graphene.String(required=True)
     )
     billing_addresses = DjangoListField(BillingType)
-    categories = graphene.List(CategoryType, search=graphene.String())
-    get_user_by_id = graphene.Field(
-        UserType,
-        id=graphene.String(required=True),
-        token=graphene.String(required=True),
-    )
+
+    categories = graphene.List(CategoryType, search=graphene.String(), visibility=graphene.String())
+    get_user_by_id = graphene.Field(UserType, id=graphene.String(required=True), token=graphene.String(required=True))
+
     category = graphene.Field(CategoryType, id=graphene.String(required=True))
     contact_us = DjangoListField(ContactMessageType)
     coupons = graphene.Field(
@@ -96,6 +102,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=graphene.List(graphene.Float),
         rating=graphene.Int(),
         sizes=graphene.List(graphene.String),
+        colors=graphene.List(graphene.String),
         this_month=graphene.Boolean(),
     )
     get_seller_review = graphene.Field(
@@ -136,6 +143,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         token=graphene.String(required=True),
         page=graphene.Int(),
         page_size=graphene.Int(),
+        order_by=graphene.String(),
     )
     get_wallet_transactions = graphene.Field(
         WalletTransactionPaginatedType,
@@ -188,11 +196,17 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         token=graphene.String(required=True),
         id=graphene.String(required=True),
     )
+    order_by_order_id = graphene.Field(
+        OrderType,
+        token=graphene.String(required=True),
+        order_id=graphene.String(required=True),
+    )
     pickup_locations = DjangoListField(PickupType)
     pickup_location = graphene.Field(
         PickupType, location_id=graphene.String(required=True)
     )
     product = graphene.Field(ProductType, id=graphene.String(required=True))
+    product_option = graphene.Field(ProductOptionType, id=graphene.String(required=True))
     products = graphene.Field(
         ProductPaginatedType,
         page=graphene.Int(),
@@ -203,6 +217,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=graphene.List(graphene.Float),
         rating=graphene.Int(),
         sizes=graphene.List(graphene.String),
+        colors=graphene.List(graphene.String),
     )
     rating_sort = graphene.Field(ProductType)
     reviews = graphene.Field(
@@ -216,13 +231,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         RatingPaginatedType, review_id=graphene.String(required=True)
     )
     seller_data = graphene.Field(SellerProfileType, token=graphene.String())
+    seller = graphene.Field(SellerProfileType, shop_url=graphene.String(required=True))
     subcategories = graphene.List(CategoryType)
     subcribers = DjangoListField(NewsletterType)
     user_data = graphene.Field(UserType, token=graphene.String())
     user_cart = graphene.List(
         CartItemType, token=graphene.String(), ip=graphene.String()
     )
-    user_billing_addresses = graphene.Field(
+    user_billing_addresses = graphene.List(
         BillingType, token=graphene.String(required=True)
     )
     user_notifications = graphene.List(
@@ -320,6 +336,23 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         page=graphene.Int(),
         page_size=graphene.Int(),
     )
+    get_product_charge = graphene.List(
+        ProductChargeType, 
+    )
+    get_state_delivery_fee = graphene.List(
+        StateDeliveryType, 
+    )
+    state_delivery_fees = graphene.List(StateDeliveryFeeType)
+    get_delivery_fee_for_a_state = graphene.Field(
+        StateDeliveryType,
+        state=graphene.String(required=True),
+        city=graphene.String()
+    )
+
+    get_delivery_fee_by_id = graphene.Field(
+        StateDeliveryType,
+        id=graphene.String(required=True)
+    )
 
     wishlists = graphene.List(WishlistItemType, token=graphene.String(required=True))
 
@@ -329,6 +362,52 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return User.objects.get(id=id)
 
+    def resolve_get_state_delivery_fee(root, info):
+        state_fees = StateDeliveryFee.objects.order_by("-created_at")
+        if len(state_fees) < 1:
+            update_state_delivery_fees()
+            state_fees = StateDeliveryFee.objects.order_by("-created_at")
+        return state_fees
+    
+    def resolve_state_delivery_fees(self, info):
+        # Get all state delivery fees from the database
+        state_fees = StateDeliveryFee.objects.all()
+
+        # Create a dictionary to group fees by state
+        state_dict = {}
+        for fee in state_fees:
+            if fee.state not in state_dict:
+                state_dict[fee.state] = []
+            state_dict[fee.state].append({"city": fee.city, "fee": fee.fee, "id": fee.id})
+
+        # Convert the dictionary to a list of StateDeliveryFeeType objects
+        return [
+            StateDeliveryFeeType(state=state, delivery_fees=[
+                DeliveryFeeType(city=city_fee["city"], fee=city_fee["fee"], id=city_fee["id"])
+                for city_fee in city_fees
+            ]) for state, city_fees in state_dict.items()
+        ]
+    
+    def resolve_get_delivery_fee_by_id(root, info,id):
+        try:
+            state_delivery_fee = StateDeliveryFee.objects.get(id=id)
+            return state_delivery_fee
+        except Exception as e:
+            raise GraphQLError(e)
+        
+    def resolve_get_delivery_fee_for_a_state(root, info, state, city=""):  
+        try:
+            state_delivery_fee = get_delivery_fee_obj(state, city)
+            return state_delivery_fee
+        except Exception as e:
+            raise GraphQLError(e)
+       
+    def resolve_get_product_charge(root, info):
+        charge = ProductCharge.objects.all()
+        if charge.exists():
+            return charge
+        raise GraphQLError("No product charge has been set!!")
+
     def resolve_billing_address(root, info, address_id):
         return Billing.objects.get(id=address_id)
 
@@ -336,21 +415,25 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
+        
         user = auth["user"]
-        billing_addresses = []
-        for address in Billing.objects.all():
-            if address.user == user:
-                billing_addresses.append(address)
+        billing_addresses = Billing.objects.filter(user=user)
+        
         return billing_addresses
 
-    def resolve_categories(root, info, search=None):
-        Category.objects.filter(
-            visibility=Category.Visibility.SCHEDULED,
-            publish_date__lte=datetime.now().date(),
-        ).update(visibility=Category.Visibility.PUBLISHED)
+
+    def resolve_categories(root, info, search=None, visibility=None):
+        Category.objects.filter(visibility=Category.Visibility.SCHEDULED , publish_date__lte=datetime.now().date()).update(visibility=Category.Visibility.PUBLISHED)
+        query = Q()
+
         if search:
-            name = Category.objects.filter(name__icontains=search)
-            return name
+            query = query & Q(name__icontains=search)
+
+        if visibility:
+            query = query & Q(visibility=visibility)
+
+        if search or visibility:
+            return Category.objects.filter(query, parent=None)
 
         return Category.objects.filter(parent=None)
 
@@ -386,6 +469,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         return SellerProfile.objects.get(user=auth["user"].id)
 
+    def resolve_seller(root, info, shop_url):
+        try:
+            seller = SellerProfile.objects.get(shop_url=shop_url)
+            return seller
+        except Exception as e:
+            raise GraphQLError("seller's shop not found")
+
+
     def resolve_subcategories(root, info):
         categories, cat_list = Category.objects.all(), []
         for category in categories:
@@ -406,10 +497,11 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 cart = Cart.objects.get(user=user)
                 try:
                     if cart:
-                        cart_items = CartItem.objects.filter(cart=cart, ordered=False)
+                        cart_items = CartItem.objects.filter(cart=cart, ordered=False).check_and_update_items()
                     else:
                         cart_items = []
                 except Exception as e:
+                    print("error", e)
                     cart_items = []
 
                 return cart_items
@@ -432,6 +524,9 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
 
     def resolve_product(root, info, id):
         return Product.objects.get(id=id)
+    
+    def resolve_product_option(root, info, id):
+        return ProductOption.objects.get(id=id)
 
     def resolve_get_seller_products(
         root,
@@ -445,6 +540,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=None,
         rating=None,
         sizes=None,
+        colors=None,
         this_month=False,
     ):
         auth = authenticate_user(token)
@@ -453,10 +549,10 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         user = auth["user"]
         if user.is_seller:
             if SellerProfile.objects.filter(user=user).exists():
-                prods = Product.objects.filter(user=user).order_by("?")
+                prods = Product.objects.filter(user=user).order_by("-date_created")
                 search_filter, keyword_filter = Q(), Q()
-                price_filter, sizes_filter, this_month_filter = Q(), Q(), Q()
-                search_status, price_status, sizes_status = False, False, False
+                price_filter, sizes_filter, colors_filter, this_month_filter = Q(),Q(), Q(), Q()
+                search_status, price_status, sizes_status, colors_status = False, False, False, False
                 if this_month:
                     this_month_filter = Q(date_created__month=datetime.now().month) & Q(
                         date_created__year=datetime.now().year
@@ -489,12 +585,16 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                 if sizes:
                     sizes_filter, sizes_status = Q(options__size__in=sizes), True
 
-                if search_status or price_status or sizes_status:
+                if colors:
+                    colors_filter, colors_status = Q(options__color__in=colors), True
+
+                if search_status or price_status or sizes_status or colors_status:
                     prods = prods.filter(
                         search_filter,
                         keyword_filter,
                         price_filter,
                         sizes_filter,
+                        colors_filter,
                         this_month_filter,
                     ).distinct()
                 else:
@@ -510,7 +610,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     elif sort_by in ["sales", "-sales"]:
                         sort_key = "{}_count".format(sort_by)
                         prods = prods.annotate(sales_count=Count("sales")).order_by(
-                            sort_key
+                            sort_key, "-date_created"
                         )
                     elif sort_by in ["price", "-price"]:
                         v1, v2 = "{}_average".format(
@@ -526,7 +626,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                 / Count("options__discounted_price"),
                                 output_field=FloatField(),
                             ),
-                        ).order_by(v1, v2)
+                        ).order_by(v1, v2, "-date_created")
                     elif sort_by in ["rating", "-rating"]:
                         sort_key = "rate" if sort_by == "rating" else "-rate"
                         if rating:
@@ -537,7 +637,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                         / Count("product_rating__rating")
                                     )
                                     .filter(rate__lte=rating)
-                                    .order_by(sort_key)
+                                    .order_by(sort_key, "-date_created")
                                 )
                             else:
                                 prods = (
@@ -546,7 +646,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                                         / Count("product_rating__rating")
                                     )
                                     .filter(rate__gte=abs(rating))
-                                    .order_by(sort_key)
+                                    .order_by(sort_key, "-date_created")
                                 )
                     else:
                         prods = prods
@@ -563,16 +663,18 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         price_range=None,
         rating=None,
         sizes=None,
+        colors=None,
     ):
-        prods = build_products_query(
-            search, sort_by, keyword, price_range, rating, sizes
-        )
+
+        prods = build_products_query(search, sort_by, keyword, price_range, rating, sizes, colors)
+
         return get_paginator(prods, page_size, page, ProductPaginatedType)
 
     def resolve_review(root, info, review_id):
         review = Rating.objects.get(id=review_id)
 
     def resolve_reviews(root, info, page, page_size, product_id=None, sort_by=None):
+        reviews = []
         if product_id:
             reviews = Rating.objects.filter(product=Product.objects.get(id=product_id))
         else:
@@ -625,7 +727,7 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            promoted_products = Product.objects.filter(user=user, promoted=True)
+            promoted_products = Product.objects.filter(user=user, promoted=True).order_by("-date_created")
             return promoted_products
         else:
             raise GraphQLError("Not a seller")
@@ -675,6 +777,14 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
             raise GraphQLError(auth["message"])
         user = auth["user"]
         user_order = Order.objects.get(id=id)
+        return user_order
+
+    def resolve_order_by_order_id(root, info, token, order_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            raise GraphQLError(auth["message"])
+        user = auth["user"]
+        user_order = Order.objects.get( order_id=order_id)
         return user_order
 
     def resolve_user_notifications(root, info, token):
@@ -744,15 +854,20 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_wallet_transactions(root, info, token, page=1, page_size=50):
+    def resolve_get_seller_wallet_transactions(root, info, token, page=1, page_size=50, order_by=None):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
         user = auth["user"]
         if user.is_seller:
-            transactions = WalletTransaction.objects.filter(
-                wallet=Wallet.objects.get(owner=user)
-            )
+            if order_by:
+                transactions = WalletTransaction.objects.filter(
+                    wallet=Wallet.objects.get(owner=user)
+                ).order_by(order_by)
+            else:
+                transactions = WalletTransaction.objects.filter(
+                    wallet=Wallet.objects.get(owner=user)
+                )
             return get_paginator(
                 transactions, page_size, page, WalletTransactionPaginatedType
             )
@@ -952,45 +1067,113 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
         else:
             raise GraphQLError("Not a seller")
 
-    def resolve_get_seller_orders(
-        root, info, token, page=1, page_size=50, this_month=False
-    ):
+    # def resolve_get_seller_orders(
+    #     root, info, token, page=1, page_size=50, this_month=False
+    # ):
+    #     auth = authenticate_user(token)
+    #     if not auth["status"]:
+    #         raise GraphQLError(auth["message"])
+    #     user, seller_orders, this_month_filter = auth["user"], [], Q()
+    #     if this_month:
+    #         this_month_filter = Q(date_created__month=datetime.now().month) & Q(
+    #             date_created__year=datetime.now().year
+    #         )
+    #     charge = SellerProfile.objects.get(user=user).kwek_charges
+    #     orders = Order.objects.filter(this_month_filter, cart_items__product__user=user).order_by("-date_created")
+
+    #     orders_values = orders.values(
+    #         "order_id",
+    #         "date_created",
+    #         "user__id",
+    #         "paid",
+    #         "cart_items__price",
+    #         "progress__progress",
+    #     )
+    #     print(orders_values)
+    #     for i in orders_values:
+    #         seller_orders.append(
+    #             GetSellerOrdersType(
+    #                 order=Order.objects.get(order_id=i["order_id"]),
+    #                 created=str(i["date_created"]),
+    #                 customer=ExtendUser.objects.get(id=i["user__id"]),
+    #                 total=int(i["cart_items__price"]),
+    #                 profit=int(i["cart_items__price"])
+    #                 - (int(i["cart_items__price"]) * charge),
+    #                 paid=i["paid"],
+    #                 status=i["cart_items__price"],
+    #             )
+    #         )
+    #     return get_paginator(
+    #         seller_orders, page_size, page, GetSellerOrdersPaginatedType
+    #     )
+
+    def resolve_get_seller_orders(root, info, token, page=1, page_size=50, this_month=False):
         auth = authenticate_user(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])
-        user, seller_orders, this_month_filter = auth["user"], [], Q()
-        if this_month:
-            this_month_filter = Q(date_created__month=datetime.now().month) & Q(
-                date_created__year=datetime.now().year
-            )
-        charge = SellerProfile.objects.get(user=user).kwek_charges
-        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user)
 
-        orders_values = orders.values(
-            "order_id",
-            "date_created",
-            "user__id",
-            "paid",
-            "cart_items__price",
-            "progress__progress",
+        user = auth["user"]
+        this_month_filter = Q()
+        if this_month:
+            now = datetime.now()
+            this_month_filter = Q(date_created__month=now.month, date_created__year=now.year)
+        
+        # Calculate the profit using annotations
+        charge = SellerProfile.objects.get(user=user).kwek_charges
+        profit_expression = ExpressionWrapper(
+            F('cart_items__price') - (F('cart_items__price') * charge),
+            output_field=FloatField()
         )
-        print(orders_values)
-        for i in orders_values:
-            seller_orders.append(
-                GetSellerOrdersType(
-                    order=Order.objects.get(order_id=i["order_id"]),
-                    created=str(i["date_created"]),
-                    customer=ExtendUser.objects.get(id=i["user__id"]),
-                    total=int(i["cart_items__price"]),
-                    profit=int(i["cart_items__price"])
-                    - (int(i["cart_items__price"]) * charge),
-                    paid=i["paid"],
-                    status=i["cart_items__price"],
-                )
-            )
-        return get_paginator(
-            seller_orders, page_size, page, GetSellerOrdersPaginatedType
+
+         # Prefetch only the relevant CartItems
+        cart_items_prefetch = Prefetch(
+            'cart_items',
+            queryset=CartItem.objects.filter(product__user=user)
         )
+
+        # Apply filtering, annotation, and ordering before pagination
+        orders = Order.objects.filter(this_month_filter, cart_items__product__user=user) \
+            .annotate(
+                total_price=Sum('cart_items__price'),
+                profit=profit_expression,
+                customer_id=F('user__id'),
+                status=F('progress__progress')
+            ) \
+            .prefetch_related(cart_items_prefetch) \
+            .order_by('-date_created')
+        
+        # Apply pagination at the query level
+        paginator = Paginator(orders, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        
+        seller_orders = [
+        GetSellerOrdersType(
+            order=order,  # Directly use the order object
+            created=str(order.date_created),
+            customer=ExtendUser.objects.get(id=order.customer_id),
+            total=order.total_price,
+            profit=order.profit,
+            paid=order.paid,
+            status=order.status,
+        )
+        for order in page_obj.object_list
+        ]
+
+    #     (
+    #     page=page_obj.number,
+    #     pages=p.num_pages,
+    #     has_next=page_obj.has_next(),
+    #     has_prev=page_obj.has_previous(),
+    #     objects=page_obj.object_list,
+    #     **kwargs
+    # )
+
+        return get_paginator(seller_orders, page_size, page, GetSellerOrdersPaginatedType)
 
     def resolve_get_seller_revenue_chart_data(root, info, token):
         auth = authenticate_user(token)
@@ -1413,14 +1596,13 @@ class Query(UserQuery, MeQuery, graphene.ObjectType):
                     product_title__icontains=search
                 )
             if search_status:
-                promoted_products = promoted_products.filter(search_filter)
-            return get_paginator(
-                promoted_products, page_size, page, ProductPaginatedType
-            )
-
+                promoted_products = promoted_products.filter(search_filter).order_by("-date_created")
+            return get_paginator(promoted_products,page_size,page, ProductPaginatedType)
+        
     def resolve_get_wallet_transactions(
         root, info, token, page=1, page_size=50, search=None, sort_by=None
     ):
+        
         auth = authenticate_admin(token)
         if not auth["status"]:
             raise GraphQLError(auth["message"])

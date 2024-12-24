@@ -23,9 +23,10 @@ from .send_post import send_post_request
 from .sendmail import (
     expire_token,
     refresh_user_token,
-    send_confirmation_email,
     send_generic_email_through_PHP,
     send_password_reset_email,
+    send_verification_email,
+    send_welcome_email,
     user_loggedIN,
 )
 from .validate import (
@@ -67,8 +68,10 @@ class CreateUser(graphene.Mutation):
                 message=validate_passwords(password1, password2)["message"],
             )
         else:
+
+            send_welcome_email(email, full_name)
             sen_m = send_confirmation_email(email, full_name)
-            print(sen_m, "Talk about sending mails")
+
             if sen_m["status"] == True:
                 user.set_password(password1)
                 user.save()
@@ -84,7 +87,6 @@ class CreateUser(graphene.Mutation):
             else:
                 # raise GraphQLError("Email Verification not sent")
                 return CreateUser(status=False, message=sen_m["message"])
-        # raise Exception('Invalid Link!')
 
 
 class ResendVerification(graphene.Mutation):
@@ -105,7 +107,7 @@ class ResendVerification(graphene.Mutation):
                 message="No user with this email found. Please check the email address and try again.",
             )
 
-        sen_m = send_confirmation_email(email, f_user.full_name)
+        sen_m = send_verification_email(email, f_user.full_name)
         if sen_m["status"] == True:
             return ResendVerification(
                 status=True,
