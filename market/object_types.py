@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from bill.models import Order
+from bill.object_types import GetSellerOrdersType
 from .models import *
 from users.model_object_type import UserType
 
@@ -28,6 +29,14 @@ class FlashSalesType(DjangoObjectType):
     class Meta:
         model = FlashSales
         fields = "__all__"
+class ProductChargeType(DjangoObjectType):
+    class Meta:
+        model = ProductCharge
+        fields = "__all__"
+class StateDeliveryType(DjangoObjectType):
+    class Meta:
+        model = StateDeliveryFee
+        fields = "__all__"
 
 class ProductImageType(DjangoObjectType):
     class Meta:
@@ -36,17 +45,29 @@ class ProductImageType(DjangoObjectType):
 
 
 class ProductOptionType(DjangoObjectType):
+    price = graphene.Float()
+    discounted_price = graphene.Float()
+    product_charge = graphene.Float()
     class Meta:
         model = ProductOption
         fields = (
             "id",
             "product",
             "size",
+            "color",
             "quantity",
             "price",
             "discounted_price",
             "option_total_price",
+            "product_charge",
+            "quantity"
         )
+    def resolve_product_charge(self, info):
+        return self.get_product_charge()
+    def resolve_price(self, info):
+        return self.get_product_price()
+    def resolve_discounted_price(self, info):
+        return self.get_product_discounted_price()
 
 
 class ProductPromotionType(DjangoObjectType):
@@ -97,17 +118,6 @@ class WishlistType(DjangoObjectType):
 class WishlistItemType(DjangoObjectType):
     class Meta:
         model = WishListItem
-class OrderType(DjangoObjectType):
-    class Meta:
-        model=Order
-        fields = "__all__"
-
-class OrderPaginatedType(graphene.ObjectType):
-    page = graphene.Int()
-    pages = graphene.Int()
-    has_next = graphene.Boolean()
-    has_prev = graphene.Boolean()
-    objects = graphene.List(OrderType)
 
 class SalesType(DjangoObjectType):
     class Meta:
@@ -134,14 +144,6 @@ class FlashSalesPaginatedType(graphene.ObjectType):
     has_prev = graphene.Boolean()
     objects = graphene.List(FlashSalesType)
 
-class GetSellerOrdersType(graphene.ObjectType):
-    order = graphene.Field(OrderType)
-    created = graphene.String()
-    customer = graphene.Field(UserType)
-    total = graphene.Int()
-    profit = graphene.Int()
-    paid = graphene.Boolean()
-    status = graphene.String()
 
 class GetSellerOrdersPaginatedType(graphene.ObjectType):
     page = graphene.Int()
@@ -149,3 +151,13 @@ class GetSellerOrdersPaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(GetSellerOrdersType)
+
+
+class DeliveryFeeType(graphene.ObjectType):
+    id = graphene.String()
+    city = graphene.String() 
+    fee = graphene.Float()
+
+class StateDeliveryFeeType(graphene.ObjectType):
+    state = graphene.String()
+    delivery_fees = graphene.List(DeliveryFeeType)

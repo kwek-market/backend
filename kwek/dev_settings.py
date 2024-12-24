@@ -1,5 +1,3 @@
-
-
 import os
 from .general_settings import *
 
@@ -20,6 +18,10 @@ STATIC_URL = '/static/'
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_ROOT  = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-
-
-
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "::1",
+]
+DEBUG_TOOLBAR_PANELS = [
+    "debug_toolbar.panels.sql.SQLPanel",
+]

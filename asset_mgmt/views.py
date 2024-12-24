@@ -20,6 +20,8 @@ from django.views.static import directory_index, was_modified_since
 from django.utils._os import safe_join
 from pathlib import Path
 from kwek.vendor_array import data
+from market.data import STATES
+from market.models import StateDeliveryFee
 from market.models import (
     Category,
     Product,
@@ -116,8 +118,6 @@ def populate_categories():
             count += 1
 
     print("population done")
-
-
 class ImageAssetView(View):
     def post(self, request, *args, **kwargs):
         upload = request.FILES.getlist("upload")
@@ -210,6 +210,7 @@ class PopulateProduct(View):
                     ProductOption.objects.create(
                         product=created_product,
                         size=option["size"],
+                        color="" if "color" not in option else option["color"],
                         quantity=option["quantity"],
                         price=option["price"],
                         discounted_price=option["discountedPrice"],
@@ -295,3 +296,13 @@ class PopulateSellers(View):
 
         return JsonResponse(data="Sellers created successfully",safe=False)
         pass
+class PopulateStates(View):
+    def get(self, request):
+        for i in STATES:
+            state = StateDeliveryFee.objects.filter(state=i)
+            if state:
+                print(f"{i} already exists!")
+                continue
+            else:   
+             StateDeliveryFee.objects.create(state=i)
+        return JsonResponse(data="States created successfully",safe=False)

@@ -149,3 +149,5 @@ user_token.txt
 updates.txt
 .DS_Store
 staticfiles/
+
+_ignore/

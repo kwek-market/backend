@@ -1,8 +1,8 @@
 import graphene
 import jwt
-from django.utils import timezone
 from users.validate import authenticate_user, authenticate_admin
 from django.conf import settings
+from django.db import transaction
 
 from django.conf import settings
 from market.pusher import push_to_client
@@ -12,7 +12,6 @@ from .models import *
 from .object_types import *
 from .pusher import *
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 from django.utils import timezone
 from wallet.models import Wallet
 from django.db.models import (
@@ -230,7 +229,21 @@ class CreateProduct(graphene.Mutation):
         if not auth["status"]:
             return CreateProduct(status=auth["status"],message=auth["message"])
         user = auth["user"]
+
+        if not Category.objects.filter(id=category).exists:
+            return CreateProduct(
+            status=False,
+            message="category not found"
+            )
+
         p_cat = Category.objects.get(id=category)
+
+        if not Category.objects.filter(id=subcategory).exists:
+            return CreateProduct(
+            status=False,
+            message="sub category not found"
+            )
+        
         sub_cat = Category.objects.get(id=subcategory)
         
 
@@ -261,11 +274,13 @@ class CreateProduct(graphene.Mutation):
             keys = option.keys()
 
             size = "" if "size" not in keys else option["size"]
+            color = "" if "color" not in keys else option["color"]
             quantity = "" if "quantity" not in keys else option["quantity"]
             price = "" if "price" not in keys else option["price"]
             discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
             option_total_price = 0.0
-            ProductOption.objects.create(product=product, size=size, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+            newoption = ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+
         
         if Notification.objects.filter(user=product.user).exists():
             notification = Notification.objects.get(user=product.user)
@@ -306,9 +321,18 @@ class ProductClick(graphene.Mutation):
             if product.promoted:
                 promos = ProductPromotion.objects.filter(product=product, active=True)
                 # ProductPromotion.objects.filter(product=product, active=True).update(link_clicks=F('link_clicks')+1)
+                print(promos)
                 for pr in promos:
                     c_clicks, active = pr.link_clicks +1, True
-                    c_balance = pr.balance - settings.PROMOTION_CLICK_CHARGE if not pr.is_admin else pr.balance
+                    c_balance = pr.balance
+
+                    if pr.balance > 0:
+                        c_balance = c_balance - settings.PROMOTION_CLICK_CHARGE
+                    elif pr.is_admin:
+                        c_balance = pr.balance
+                    else:
+                        c_balance = c_balance - settings.PROMOTION_CLICK_CHARGE
+
                     if c_balance <= 0 and not pr.is_admin:
                         c_balance, active = 0, False
                     pr.link_clicks, pr.balance, pr.active =c_clicks, c_balance, active
@@ -325,19 +349,195 @@ class ProductClick(graphene.Mutation):
             )
         else:
             return ProductClick(status=False,message="Invalid Product")
-class UpdateProductMutation(graphene.Mutation):
+
+class UpdateProduct(graphene.Mutation):
     product = graphene.Field(ProductType)
+    status = graphene.Boolean()
+    message = graphene.String()
 
     class Arguments:
-        id = graphene.Int(required=True)
-        product_data = ProductInput(required=True)
-        
+        token = graphene.String(required=True)
+        product_id = graphene.String(required=True)
+        charge_five_percent_vat = graphene.Boolean() 
+        product_title = graphene.String()
+        category = graphene.String()
+        subcategory = graphene.String() 
+        product_image_url = graphene.List(graphene.String)  
+        product_options = graphene.List(graphene.String)
+        keyword = graphene.List(graphene.String)
+        brand = graphene.String()
+        product_weight = graphene.String()
+        short_description = graphene.String()
+        return_policy = graphene.String()
+        warranty = graphene.String()
+        color = graphene.String()
+        gender = graphene.String()
 
     @staticmethod
-    def mutate(root, info, id=None, product_data=None):
-        product = Product.objects.filter(id=id)
-        product.update(**product_data)
-        return CreateProduct(product=product.first())
+    def mutate(
+        self,
+        info,
+        token, 
+        product_id, 
+        charge_five_percent_vat=None,
+        product_title=None,
+        category=None,
+        subcategory=None,
+        product_image_url=None,
+        product_options=None,
+        keyword=None,
+        brand=None,
+        product_weight=None,
+        short_description=None,
+        return_policy=None,
+        warranty=None,
+        color=None,
+        gender=None
+    ):
+        try:
+            with transaction.atomic():
+                auth = authenticate_user(token)
+                if not auth["status"]:
+                    return UpdateProduct(status=auth["status"],message=auth["message"])
+                user = auth["user"]
+
+                if not Product.objects.filter(id=product_id).exists():
+                    return UpdateProduct(status=False,message="product not found")
+                
+                product = Product.objects.get(id=product_id)
+
+                if not user.is_admin and product.user.id != user.id:
+                    return UpdateProduct(status=False,message="you are not allowed to update this product")
+                
+                if category:
+                    if not Category.objects.filter(id=category).exists:
+                        return UpdateProduct(
+                        status=False,
+                        message="category not found"
+                        )
+                    cate = Category.objects.get(id=category)
+                    product.category = cate
+                    
+                
+                if subcategory:
+                    if not Category.objects.filter(id=subcategory).exists:
+                        return UpdateProduct(
+                                status=False,
+                            message="sub category not found"
+                            )
+                    sub_cat = Category.objects.get(id=subcategory)
+                    product.subcategory = sub_cat
+
+                if keyword:
+                    for word in keyword:
+                        if not Keyword.objects.filter(keyword=word).exists():
+                            Keyword.objects.create(keyword=word)
+                    product.keyword = keyword
+
+
+                if product_image_url:
+                    ProductImage.objects.filter(product=product).delete()
+                    for url in product_image_url:
+                        ProductImage.objects.create(product=product, image_url=url)
+                
+                if product_options:
+                    ProductOption.objects.filter(product=product).delete()
+                    for item in product_options:
+                        option = eval(item)
+                        keys = option.keys()
+
+                        size = "" if "size" not in keys else option["size"]
+                        color = "" if "color" not in keys else option["color"]
+                        quantity = "" if "quantity" not in keys else option["quantity"]
+                        price = "" if "price" not in keys else option["price"]
+                        discounted_price = "" if "discounted_price" not in keys else option["discounted_price"]
+                        option_total_price = 0.0
+                        ProductOption.objects.create(product=product, size=size,color=color, quantity=quantity, price=price, discounted_price=discounted_price, option_total_price=option_total_price)
+
+                if product_title:
+                    product.product_title=product_title
+
+                if brand:
+                    product.brand=brand
+
+                if product_weight:
+                    product.product_weight=product_weight
+
+                if short_description:
+                    product.short_description=short_description
+
+                if charge_five_percent_vat:
+                    product.charge_five_percent_vat=charge_five_percent_vat
+
+                if return_policy:
+                    product.return_policy=return_policy
+
+                if warranty:
+                    product.warranty=warranty
+
+                if color:
+                    product.color=color
+
+                if gender:
+                    product.gender=gender
+
+                product.save()
+            return UpdateProduct(status=True,message="update successful", product=product)
+        except Exception as e:
+            return UpdateProduct(status=False,message=e)
+        
+class DeleteProduct(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        token, 
+        id,
+    ):
+        try:
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return DeleteProduct(status=auth["status"],message=auth["message"])
+            user = auth["user"]
+
+            if not Product.objects.filter(id=id).exists():
+                return DeleteProduct(status=False,message="product not found")
+            
+            product = Product.objects.get(id=id)
+
+            if not user.is_admin and product.user.id != user.id:
+                return DeleteProduct(status=False,message="you are not allowed to delete this product")
+            
+            product.delete()
+            return DeleteProduct(status=True,message="delete successful")
+        except Exception as e:
+            return DeleteProduct(status=False,message=e)
+        
+        
+        
+
+
+
+# class UpdateProductMutation(graphene.Mutation):
+#     product = graphene.Field(ProductType)
+
+#     class Arguments:
+#         id = graphene.Int(required=True)
+#         product_data = ProductInput(required=True)
+        
+
+#     @staticmethod
+#     def mutate(root, info, id=None, product_data=None):
+#         product = Product.objects.filter(id=id)
+#         product.update(**product_data)
+#         return CreateProduct(product=product.first())
 # =====================================================================================================================
 
 # product rating
@@ -617,9 +817,16 @@ class CreateCartItem(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, product_option_id, token=None, ip_address=None, quantity=1):
-        option = ProductOption.objects.get(id=product_option_id)
+        try:
+            option = ProductOption.objects.get(id=product_option_id)
+        except Exception:
+            return CreateCartItem(status=False,message="product option not found")
+        discounted_price = option.get_product_discounted_price()
+        price = option.get_product_price()
+        charge = option.get_product_charge()
         product = Product.objects.get(options__id=product_option_id)
         if token:
+            print("using token")
             auth = authenticate_user(token)
             if not auth["status"]:
                 return CreateCartItem(status=auth["status"],message=auth["message"])
@@ -630,14 +837,12 @@ class CreateCartItem(graphene.Mutation):
                 except Exception:
                     user_cart = Cart.objects.create(user=user)
                 
-                has_product = Cart.objects.filter(user=user, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
+                has_product = Cart.objects.filter(user=user, cart_item__product_option_id=product_option_id, cart_item__ordered=False)
 
                 if has_product:
-                    cart_item = CartItem.objects.get(cart__user=user, product=product, product__options=option, ordered=False)
-                    initial_price = cart_item.price/cart_item.quantity
+                    cart_item = CartItem.objects.get(cart__user=user, product_option_id=product_option_id, ordered=False)
                     quantity = int(cart_item.quantity) + quantity
-                    price = int(cart_item.price) + initial_price
-                    cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
+                    cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
@@ -645,10 +850,11 @@ class CreateCartItem(graphene.Mutation):
                     )
                 else:
                     try:
-                        if option.discounted_price:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                        if discounted_price > 0:
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                         else:
-                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                            if price <=0: charge = 0
+                            cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                         return CreateCartItem(
                             cart_item=cart_item,
                             status = True,
@@ -663,14 +869,12 @@ class CreateCartItem(graphene.Mutation):
             except Exception:
                 user_cart = Cart.objects.create(ip=ip_address)
 
-            has_product = Cart.objects.filter(ip=ip_address, cart_item__product=product, cart_item__product__options=option, cart_item__ordered=False)
+            has_product = Cart.objects.filter(ip=ip_address, cart_item__product_option_id=product_option_id, cart_item__ordered=False)
 
             if has_product:
-                cart_item = CartItem.objects.get(cart__ip=ip_address, product=product, product__options=option)
-                initial_price = cart_item.price/cart_item.quantity
+                cart_item = CartItem.objects.get(cart__ip=ip_address, product_option_id=product_option_id)
                 quantity = int(cart_item.quantity) + quantity
-                price = int(cart_item.price) + initial_price
-                cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity, price=price)
+                cart_item = CartItem.objects.filter(id=cart_item.id, product=cart_item.product).update(quantity=quantity)
                 return CreateCartItem(
                     cart_item=cart_item,
                     status = True,
@@ -679,10 +883,11 @@ class CreateCartItem(graphene.Mutation):
                 )
             else:
                 try:
-                    if option.discounted_price:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.discounted_price, cart=user_cart, product_option_id=product_option_id)
+                    if discounted_price > 0:
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=discounted_price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                     else:
-                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=option.price, cart=user_cart, product_option_id=product_option_id)
+                        if price <=0: charge = 0
+                        cart_item = CartItem.objects.create(product=product, quantity=quantity, price=price,charge=charge, cart=user_cart, product_option_id=product_option_id)
                     return CreateCartItem(
                         cart_item=cart_item,
                         status = True,
@@ -754,14 +959,10 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                 if CartItem.objects.filter(id=item_id, cart=cart).exists():
                     cart_item = CartItem.objects.get(id=item_id, cart=cart)
                     quantity = cart_item.quantity-1
-                    initial_price = cart_item.price/cart_item.quantity
-                    price = cart_item.price - initial_price
                     if quantity < 1:
-                        print("quantity", quantity)
                         CartItem.objects.filter(id=item_id).delete()
                     else:
-                        print("price",  price)
-                        CartItem.objects.filter(id=item_id).update(quantity=quantity, price=price)
+                        CartItem.objects.filter(id=item_id).update(quantity=quantity)
                     new_cart = CartItem.objects.get(id=item_id, cart=cart)
                     return DecreaseCartItemQuantity(
                         status = True,
@@ -790,6 +991,58 @@ class DecreaseCartItemQuantity(graphene.Mutation):
                 return DecreaseCartItemQuantity(status=False,message=e)
         else:
             return DecreaseCartItemQuantity(status=False,message="Invalid user")
+        
+
+class RemoveItemFromCartWithOptionId(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String()
+        ip = graphene.String()
+        product_option_id = graphene.String(required=True)
+        quantity = graphene.Int()
+
+    def mutate(self, info, quantity, product_option_id,token=None, ip=None):
+        cart: Cart
+        cart_item: CartItem
+        if token:
+            auth = authenticate_user(token)
+            if not auth["status"]:
+                return RemoveItemFromCartWithOptionId(status=auth["status"],message=auth["message"])
+            user = auth["user"]
+            try:
+                cart = Cart.objects.get(user=user)
+                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
+            except Exception as e:
+                return RemoveItemFromCartWithOptionId(status=False,message=e)
+        elif ip:
+            try:
+                cart = Cart.objects.get(ip=ip)
+                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
+            except Exception as e:
+                return RemoveItemFromCartWithOptionId(status=False,message=e)
+        elif not ip and not token:
+            return RemoveItemFromCartWithOptionId(status=False,message="provide ip or token")
+        
+        if not cart or not cart_item:
+            return RemoveItemFromCartWithOptionId(status=False,message="cart item not found")
+        
+        try:
+            quantity = cart_item.quantity-1
+            if quantity < 1:
+                CartItem.objects.filter(id=cart_item.id).delete()
+            else:
+                CartItem.objects.filter(id=cart_item.id).update(quantity=quantity)
+
+            return DeleteCart(
+                    status = True,
+                    message = "successful"
+                )
+        except Exception as e:
+            return RemoveItemFromCartWithOptionId(status=False,message=e)
+        
+
 # =====================================================================================================================
 class DeleteCartItem(graphene.Mutation):
     status = graphene.Boolean()
@@ -830,6 +1083,7 @@ class DeleteCartItem(graphene.Mutation):
                 return DeleteCartItem(status=False,message=e)
         else:
             return DeleteCartItem(status=False,message="Invalid user")
+
 # =====================================================================================================================
 
 # Cart Migrate Function
@@ -1007,26 +1261,168 @@ class FlashSalesMutation(graphene.Mutation):
         except Exception as e:
             return FlashSalesMutation(status=False,message=e) 
 
-def unpromote():
-    from datetime import datetime
-    now = timezone.now() # now = datetime.now()
-    filter = (Q(promo__end_date__lte = now)
-            | Q(promo__balance__lte=1))
-    all_products = Product.objects.filter(filter, promoted=True)
-    print("expired promotions", all_products)
-    for product in all_products:
-        seller_wallet = Wallet.objects.get(owner=ExtendUser.objects.get(id=product.user.id))
-        Product.objects.filter(id=product.id).update(promoted=False)
-        active_promos = ProductPromotion.objects.filter(product=product, active=True, balance__gte=1)
-        for pr in active_promos:
-            if not pr.is_admin:
-                sb = seller_wallet.balance
-                seller_wallet.balance = sb + pr.balance
-                seller_wallet.save()
-            pr.balance = 0
-            pr.save()
-        ProductPromotion.objects.filter(product=product).update(active=False)
-  
-sched.add_job(unpromote, 'interval', minutes=10)
-sched.start()
+
+
+class CreateProductCharges(graphene.Mutation):
+    product_charge = graphene.Field(ProductChargeType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        has_fixed_amount = graphene.Boolean()
+        charge = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, has_fixed_amount, charge):
+        auth = authenticate_admin(token)
+
+        if not auth["status"]:
+            return CreateProductCharges(status=auth["status"], message=auth["message"])
+
+        try:
+            has_charge = ProductCharge.objects.exists()
+
+            if has_charge:
+                return CreateProductCharges(status=False, message="Already created a charge, you can only update!!!")
+
+            product_charge = ProductCharge.objects.create(
+                has_fixed_amount=has_fixed_amount,
+                charge=charge
+            )
+
+            return CreateProductCharges(status=True, message="Successfully created product charges", product_charge=product_charge)
+
+        except Exception as e:
+            return CreateProductCharges(status=False, message=str(e))
+        
+class UpdateProductCharges(graphene.Mutation):
+    product_charge = graphene.Field(ProductChargeType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+        has_fixed_amount = graphene.Boolean()
+        charge = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, charge, id,  has_fixed_amount=False):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return CreateProductCharges(status=auth["status"],message=auth["message"])
+        try: 
+            charges = ProductCharge.objects.get(id=id)
+            if charges:
+                charges.charge = charge
+                charges.has_fixed_amount = has_fixed_amount
+                charges.save()
+                return CreateProductCharges(status=True,message="successfully updated!", product_charge=charges)
+    
+            return CreateProductCharges(status=False,message="Cannot find charge..Please create before updating")
+        except Exception as e:
+            return CreateProductCharges(status=False,message=e) 
+        
+class CreateStateDeliveryCharge(graphene.Mutation):
+    delivery_charge = graphene.Field(StateDeliveryType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        state = graphene.String(required=True)
+        city = graphene.String(required=True)
+        fee = graphene.Float(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, state=None, fee=None, city=None):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
+        update_state_delivery_fees()
+
+        if state not in nigerian_states:
+                return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
+        
+        if StateDeliveryFee.objects.filter(state__iexact=state, city__iexact=city).exists():
+            return UpdateStateDeliveryCharge(status=False,message="city already exists for state")
+        
+        try:   
+            state_fee = StateDeliveryFee.objects.create(
+                    state=state,
+                    city=city,
+                    fee=fee,
+                )
+            return UpdateStateDeliveryCharge(status=True,message="successfully created!", delivery_charge=state_fee)
+        
+        except Exception as e:
+            return UpdateStateDeliveryCharge(status=False,message=e) 
+        
+class UpdateStateDeliveryCharge(graphene.Mutation):
+    delivery_charge = graphene.Field(StateDeliveryType)
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+        state = graphene.String()
+        city = graphene.String()
+        fee = graphene.Float()
+
+    @staticmethod
+    def mutate(self, info, token,id, state=None, fee=None, city=None):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return UpdateStateDeliveryCharge(status=auth["status"],message=auth["message"])
+        update_state_delivery_fees()
+        if state:
+            if state not in nigerian_states:
+                    return UpdateStateDeliveryCharge(status=False,message="Cannot find state..Please check that you entered the correct state!!")
+        try:   
+            state_fee = StateDeliveryFee.objects.get(id=id)
+            if fee:
+                state_fee.fee = fee
+
+            if state:
+                state_fee.state = state
+
+            if city:
+                state_fee.city = city
+
+            state_fee.save()
+            return UpdateStateDeliveryCharge(status=True,message="successfully updated!", delivery_charge=state_fee)
+        
+        except Exception as e:
+            return UpdateStateDeliveryCharge(status=False,message=e) 
+        
+class DeleteDeliveryCharge(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, token,id):
+        auth = authenticate_admin(token)
+        if not auth["status"]:
+            return DeleteDeliveryCharge(status=auth["status"],message=auth["message"])
+        try:   
+            state_fee = StateDeliveryFee.objects.get(id=id)
+            if not state_fee:
+                return DeleteDeliveryCharge(status=False,message="state delivery doesn't exist")
+
+            
+
+            state_fee.delete()
+            return DeleteDeliveryCharge(status=True,message="successfully deleted!")
+        
+        except Exception as e:
+            return DeleteDeliveryCharge(status=False,message=e) 
+        
+
+
 
