@@ -469,201 +469,6 @@ class AccountNameRetrieval(graphene.Mutation):
             )
 
 
-class SellerVerification(graphene.Mutation):
-    message = graphene.String()
-    status = graphene.Boolean()
-
-    class Arguments:
-        token = graphene.String(required=True)
-        account_number = graphene.String(required=True)
-        prefered_id = graphene.String(required=True)
-        prefered_id_url = graphene.String(required=True)
-        bvn = graphene.String(required=True)
-        account_number = graphene.String(required=True)
-        account_name = graphene.String(required=True)
-        bank_name = graphene.String(required=True)
-        bank_sort_code = graphene.String(required=True)
-        accepted_vendor_policy = graphene.Boolean(required=True)
-
-    @staticmethod
-    def mutate(
-        self,
-        info,
-        token,
-        accepted_vendor_policy,
-        prefered_id,
-        prefered_id_url,
-        bvn,
-        account_number,
-        bank_name,
-        bank_sort_code,
-        account_name,
-    ):
-        auth = authenticate_user(token)
-        if not auth["status"]:
-            return SellerVerification(status=auth["status"], message=auth["message"])
-        c_user = auth["user"]
-        userid = c_user.id
-
-        seller = {}
-
-        try:
-            seller = SellerProfile.objects.get(user=userid)
-        except Exception as e:
-            return CompleteSellerVerification(
-                status=False, message="you are not yet a seller"
-            )
-
-        if seller.seller_is_verified == False:
-            if seller.accepted_vendor_policy == False:
-
-                try:
-                    (
-                        seller.accepted_vendor_policy,
-                        seller.prefered_id,
-                        seller.prefered_id_url,
-                    ) = (accepted_vendor_policy, prefered_id, prefered_id_url)
-                    (
-                        seller.bvn,
-                        seller.bank_name,
-                        seller.bank_sort_code,
-                        seller.bank_account_number,
-                    ) = (bvn, bank_name, bank_sort_code, account_number)
-                    seller.bank_account_name = account_name
-                    seller.save()
-                    return StartSelling(
-                        status=True,
-                        message="Verification in progress, this might take a few hours",
-                    )
-                except Exception as e:
-                    return StartSelling(status=True, message=e)
-            else:
-                return StartSelling(
-                    status=False, message="Verification is still pending"
-                )
-        else:
-            return StartSelling(status=False, message="Seller is already Verified")
-
-
-class CompleteSellerVerification(graphene.Mutation):
-    message = graphene.String()
-    status = graphene.Boolean()
-
-    class Arguments:
-        email = graphene.String(required=True)
-
-    @staticmethod
-    def mutate(self, info, email):
-        try:
-            c_user = ExtendUser.objects.get(email=email)
-            userid = c_user.id
-            print
-
-            seller = {}
-            try:
-                seller = SellerProfile.objects.get(user=userid)
-            except Exception as e:
-                return CompleteSellerVerification(
-                    status=False, message="user is not a seller"
-                )
-
-            seller.seller_is_verified = True
-            seller.seller_is_rejected = False
-            seller.save()
-            if seller.seller_is_verified == True:
-                store_name = seller.shop_name
-                if not StoreDetail.objects.filter(user=c_user).exists():
-                    while StoreDetail.objects.filter(store_name=store_name).exists():
-                        random_suffix = str(uuid.uuid4())[:8]
-                        store_name = f"{store_name} {random_suffix}"
-
-                    StoreDetail.objects.create(
-                        user=c_user,
-                        store_name=store_name,
-                        email=c_user.email,
-                        address=seller.shop_address,
-                    )
-
-                if not Wallet.objects.filter(owner=seller.user).exists():
-                    Wallet.objects.create(owner=seller.user)
-                if Notification.objects.filter(user=c_user).exists():
-                    notification = Notification.objects.get(user=c_user)
-                else:
-                    notification = Notification.objects.create(user=c_user)
-                notification_message = Message.objects.create(
-                    notification=notification,
-                    message=f"your seller verification has been completed",
-                    subject="Seller Verification Completed",
-                )
-                notification_info = {
-                    "notification": str(notification_message.notification.id),
-                    "message": notification_message.message,
-                    "subject": notification_message.subject,
-                }
-                push_to_client(c_user.id, notification_info)
-                email_send = SendEmailNotification(c_user.email)
-                email_send.send_only_one_paragraph(
-                    notification_message.subject, notification_message.message
-                )
-                return CompleteSellerVerification(status=True, message="Successful")
-            else:
-                return CompleteSellerVerification(
-                    status=False, message="Not Accepted as a Seller"
-                )
-        except Exception as e:
-            return CompleteSellerVerification(status=False, message=e)
-
-
-class RejectSellerVerification(graphene.Mutation):
-    message = graphene.String()
-    status = graphene.Boolean()
-
-    class Arguments:
-        email = graphene.String(required=True)
-
-    @staticmethod
-    def mutate(self, info, email):
-        try:
-            c_user = ExtendUser.objects.get(email=email)
-            userid = c_user.id
-            print
-
-            seller = {}
-            try:
-                seller = SellerProfile.objects.get(user=userid)
-            except Exception as e:
-                return CompleteSellerVerification(
-                    status=False, message="user is not a seller"
-                )
-
-            seller.seller_is_verified = False
-            seller.seller_is_rejected = True
-            seller.save()
-
-            if Notification.objects.filter(user=c_user).exists():
-                notification = Notification.objects.get(user=c_user)
-            else:
-                notification = Notification.objects.create(user=c_user)
-            notification_message = Message.objects.create(
-                notification=notification,
-                message=f"Seller Verification Failed",
-                subject="Failed Verification",
-            )
-            notification_info = {
-                "notification": str(notification_message.notification.id),
-                "message": notification_message.message,
-                "subject": notification_message.subject,
-            }
-            push_to_client(c_user.id, notification_info)
-            email_send = SendEmailNotification(c_user.email)
-            email_send.send_only_one_paragraph(
-                notification_message.subject, notification_message.message
-            )
-            return CompleteSellerVerification(status=True, message="Successful")
-        except Exception as e:
-            return CompleteSellerVerification(status=False, message=e)
-
-
 class UserAccountUpdate(graphene.Mutation):
     message = graphene.String()
     token = graphene.String()
@@ -777,6 +582,195 @@ class UserAccountUpdate(graphene.Mutation):
                 return UserAccountUpdate(status=False, message=tu)
 
 
+class SellerVerification(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        account_number = graphene.String(required=True)
+        prefered_id = graphene.String(required=True)
+        prefered_id_url = graphene.String(required=True)
+        bvn = graphene.String(required=True)
+        account_number = graphene.String(required=True)
+        account_name = graphene.String(required=True)
+        bank_name = graphene.String(required=True)
+        bank_sort_code = graphene.String(required=True)
+        accepted_vendor_policy = graphene.Boolean(required=True)
+
+    @staticmethod
+    def mutate(
+        self,
+        info,
+        token,
+        accepted_vendor_policy,
+        prefered_id,
+        prefered_id_url,
+        bvn,
+        account_number,
+        bank_name,
+        bank_sort_code,
+        account_name,
+    ):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return SellerVerification(status=auth["status"], message=auth["message"])
+        c_user = auth["user"]
+        userid = c_user.id
+
+        seller = {}
+
+        try:
+            seller = SellerProfile.objects.get(user=userid)
+        except Exception as e:
+            return SellerVerification(status=False, message="you are not yet a seller")
+
+        if not seller.seller_is_verified:
+            if not accepted_vendor_policy:
+                return SellerVerification(
+                    status=False, message="vendor policy must be accepted"
+                )
+            try:
+                seller.accepted_vendor_policy = accepted_vendor_policy
+                seller.prefered_id = prefered_id
+                seller.prefered_id_url = prefered_id_url
+
+                seller.bvn = bvn
+                seller.bank_name = bank_name
+                seller.bank_sort_code = bank_sort_code
+                seller.bank_account_number = account_number
+                seller.bank_account_name = account_name
+                seller.save()
+                return SellerVerification(
+                    status=True,
+                    message="Verification in progress, this might take a few hours",
+                )
+            except Exception as e:
+                return SellerVerification(status=True, message=e)
+        else:
+            return SellerVerification(
+                status=False, message="Seller is already Verified"
+            )
+
+
+class CompleteSellerVerification(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        email = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, email):
+        try:
+            c_user = ExtendUser.objects.get(email=email)
+            userid = c_user.id
+
+            seller = {}
+            try:
+                seller = SellerProfile.objects.get(user=userid)
+            except Exception as e:
+                return CompleteSellerVerification(
+                    status=False, message="user is not a seller"
+                )
+
+            seller.seller_is_verified = True
+            seller.seller_is_rejected = False
+            seller.save()
+            if seller.seller_is_verified == True:
+                store_name = seller.shop_name
+                if not StoreDetail.objects.filter(user=c_user).exists():
+                    while StoreDetail.objects.filter(store_name=store_name).exists():
+                        random_suffix = str(uuid.uuid4())[:8]
+                        store_name = f"{store_name} {random_suffix}"
+
+                    StoreDetail.objects.create(
+                        user=c_user,
+                        store_name=store_name,
+                        email=c_user.email,
+                        address=seller.shop_address,
+                    )
+
+                if not Wallet.objects.filter(owner=seller.user).exists():
+                    Wallet.objects.create(owner=seller.user)
+                if Notification.objects.filter(user=c_user).exists():
+                    notification = Notification.objects.get(user=c_user)
+                else:
+                    notification = Notification.objects.create(user=c_user)
+                notification_message = Message.objects.create(
+                    notification=notification,
+                    message=f"your seller verification has been completed",
+                    subject="Seller Verification Completed",
+                )
+                notification_info = {
+                    "notification": str(notification_message.notification.id),
+                    "message": notification_message.message,
+                    "subject": notification_message.subject,
+                }
+                push_to_client(c_user.id, notification_info)
+                email_send = SendEmailNotification(c_user.email)
+                email_send.send_only_one_paragraph(
+                    notification_message.subject, notification_message.message
+                )
+                return CompleteSellerVerification(status=True, message="Successful")
+            else:
+                return CompleteSellerVerification(
+                    status=False, message="Not Accepted as a Seller"
+                )
+        except Exception as e:
+            return CompleteSellerVerification(status=False, message=e)
+
+
+class RejectSellerVerification(graphene.Mutation):
+    message = graphene.String()
+    status = graphene.Boolean()
+
+    class Arguments:
+        email = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, email):
+        try:
+            c_user = ExtendUser.objects.get(email=email)
+            userid = c_user.id
+            print
+
+            seller = {}
+            try:
+                seller = SellerProfile.objects.get(user=userid)
+            except Exception as e:
+                return CompleteSellerVerification(
+                    status=False, message="user is not a seller"
+                )
+
+            seller.seller_is_verified = False
+            seller.seller_is_rejected = True
+            seller.save()
+
+            if Notification.objects.filter(user=c_user).exists():
+                notification = Notification.objects.get(user=c_user)
+            else:
+                notification = Notification.objects.create(user=c_user)
+            notification_message = Message.objects.create(
+                notification=notification,
+                message=f"Seller Verification Failed",
+                subject="Failed Verification",
+            )
+            notification_info = {
+                "notification": str(notification_message.notification.id),
+                "message": notification_message.message,
+                "subject": notification_message.subject,
+            }
+            push_to_client(c_user.id, notification_info)
+            email_send = SendEmailNotification(c_user.email)
+            email_send.send_only_one_paragraph(
+                notification_message.subject, notification_message.message
+            )
+            return CompleteSellerVerification(status=True, message="Successful")
+        except Exception as e:
+            return CompleteSellerVerification(status=False, message=e)
+
+
 class UserPasswordUpdate(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
@@ -841,21 +835,37 @@ class StoreUpdate(graphene.Mutation):
 
     class Arguments:
         token = graphene.String(required=True)
-        store_banner = graphene.String(required=True)
-        store_description = graphene.String(required=True)
+        store_banner = graphene.String()
+        store_description = graphene.String()
+        shop_url = graphene.String()
 
     @staticmethod
-    def mutate(self, info, token, store_banner, store_description):
+    def mutate(
+        self, info, token, store_banner=None, store_description=None, shop_url=None
+    ):
         auth = authenticate_user(token)
         if not auth["status"]:
             return StoreUpdate(status=auth["status"], message=auth["message"])
         c_user = auth["user"]
         try:
             seller = SellerProfile.objects.get(user=c_user.id)
-            seller.store_banner_url, seller.store_description = (
-                store_banner,
-                store_description,
-            )
+            if store_banner:
+                seller.store_banner_url = store_banner
+
+            if store_description:
+                seller.store_description = store_description
+
+            if shop_url:
+                if SellerProfile.objects.filter(shop_url=shop_url).exists():
+                    if (
+                        SellerProfile.objects.get(shop_url=shop_url).user.id
+                        != c_user.id
+                    ):
+                        return StoreUpdate(
+                            status=False, message="Shop url already taken"
+                        )
+
+                seller.shop_url = shop_url
             seller.save()
             if Notification.objects.filter(user=c_user).exists():
                 notification = Notification.objects.get(user=c_user)
