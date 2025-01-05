@@ -1,0 +1,87 @@
+name: Python CI
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test_build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.11]
+        postgres-version: ["15"]
+
+    steps:
+      # Step 1: Checkout code
+      - uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      # Step 3: Start PostgreSQL
+      - name: Start PostgreSQL
+        uses: harmon758/postgresql-action@v2
+        with:
+          postgresql version: ${{ matrix.postgres-version }}
+          postgresql username: test
+          postgresql password: test
+          postgresql database: test_db
+
+      - name: Add environment variables from .env
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+          echo "DATABASE=test_db" >> .env
+          echo "USER_NAME=test" >> .env
+          echo "PASSWORD=test" >> .env
+          echo "HOST=localhost" >> .env
+          echo "DB_PORT=5432" >> .env
+
+      # Step 6: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 7: Apply database migrations (if needed)
+      - name: Apply migrations
+        run: |
+          python manage.py migrate  # Update as needed for your project
+
+      #   # Step 8: Run tests
+      #   - name: Run tests
+      #     run: pytest
+      - name: remove .env
+        run: |
+          rm .env
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: test_build
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 3: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 4: Build and tag Docker image
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 -t ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
