@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.11]
-        postgres-version: ["15"]
+        postgres-version: ["15.10"]
 
     steps:
       # Step 1: Checkout code
