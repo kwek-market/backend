@@ -35,7 +35,7 @@ jobs:
 
       # Step 3: Set up PostgreSQL
       - name: Set up PostgreSQL
-        uses: sounisi5011/setup-postgresql@v1
+        uses: adepanges/postgresql-action@v1
         with:
           postgresql version: ${{ matrix.postgres-version }}
           postgresql db: test_db
