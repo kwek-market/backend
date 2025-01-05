@@ -100,21 +100,21 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
 
-#   deploy:
-#     runs-on: ubuntu-latest
-#     needs: docker-build
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker-build
 
-#     steps:
-#       - name: Deploy application via SSH
-#         uses: appleboy/ssh-action@v0.1.10
-#         with:
-#           host: ${{ secrets.SERVER_HOST }}
-#           username: ${{ secrets.SERVER_USER }}
-#           key: ${{ secrets.SERVER_SSH_KEY }}
-#           port: ${{ secrets.SERVER_PORT }}
-#           passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
-#           script: |
-#             docker pull ${{ secrets.DOCKER_USERNAME }}/sharepact-backend:latest
-#             docker compose down sharepact-backend
-#             docker compose up -d sharepact-backend
-#             docker image prune -f
+    steps:
+      - name: Deploy application via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
+            docker compose down kwek-backend
+            docker compose up -d kwek-backend
+            docker image prune -f

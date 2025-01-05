@@ -166,6 +166,6 @@ def start_market_jobs_scheduler():
     sched = BackgroundScheduler()
     sched.add_job(unpromote, "interval", minutes=10)
     sched.add_job(completeDelivery, "interval", minutes=10)
-    sched.add_job(keepAlive, "interval", seconds=30)
+    # sched.add_job(keepAlive, "interval", seconds=30)
     sched.start()
     print("started jobs scheduler !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
