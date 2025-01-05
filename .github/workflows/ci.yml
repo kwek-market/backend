@@ -61,7 +61,7 @@ jobs:
       - name: Apply migrations
         run: |
           python manage.py makemigrations bill market notifications users wallet
-          python manage.py migrate bill market notifications users wallet
+          python manage.py migrate
 
       #   # Step 8: Run tests
       #   - name: Run tests
