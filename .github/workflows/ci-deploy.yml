@@ -1,7 +1,7 @@
 name: Python CI
 
 on:
-  pull_request:
+  push:
     branches: ["prod"]
 
 jobs:
@@ -98,7 +98,7 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/sharepact-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
 
 #   deploy:
 #     runs-on: ubuntu-latest
