@@ -44,7 +44,7 @@ jobs:
 
       - name: Add environment variables from .env
         run: |
-          echo "${{ secrets.ENV_FILE }}" > .env
+          echo "${{ secrets.ENV_FILE }}" >> .env
           echo "DATABASE=test_db" >> .env
           echo "USER_NAME=test" >> .env
           echo "PASSWORD=test" >> .env
