@@ -60,7 +60,7 @@ jobs:
       # Step 7: Apply database migrations (if needed)
       - name: Apply migrations
         run: |
-          python manage.py migrate  # Update as needed for your project
+          python manage.py migrate bill market notifications users wallet
 
       #   # Step 8: Run tests
       #   - name: Run tests
