@@ -1,20 +1,18 @@
 from uuid import UUID
-
+import uuid
 import pytest
-from django.core.management.color import no_style
+
 from django.db import connection
 from django.test import TestCase
 
 from users.models import ExtendUser, SellerCustomer, SellerProfile
 
 
-def reset_sequences(model):
+def reset_sequences():
     with connection.cursor() as cursor:
-        table_name = model._meta.db_table
-        sequence_sql = connection.ops.sequence_reset_sql(no_style(), [model])
-        for sql in sequence_sql:
-            cursor.execute(sql)
-
+            cursor.execute(
+                "TRUNCATE TABLE users_extenduser RESTART IDENTITY CASCADE;"
+            )  # Reset primary key sequence
 
 class ExtendUserModelTests(TestCase):
     def setUp(self):
@@ -170,21 +168,26 @@ class BulkOperationTests(TestCase):
 @pytest.mark.django_db
 class TestBulkOperationPerformance:
     def test_bulk_create_users_performance(self, benchmark):
-        ExtendUser.objects.all().delete()  # Clear existing records
-        reset_sequences(ExtendUser)  # Reset the sequence
+        # Clear existing records
+        ExtendUser.objects.all().delete()
 
+        # Create users with unique emails
         users = [
             ExtendUser(
+                id=uuid.uuid4(),
                 username=f"user{i}",
-                email=f"user{i}@example.com",
+                email=f"user{i}_{uuid.uuid4()}@example.com",  # Ensure unique emails
                 password="password123",
                 full_name=f"User {i}",
             )
             for i in range(1000)
         ]
+
+        # Benchmark the bulk create operation
         benchmark(ExtendUser.objects.bulk_create, users)
 
     def test_bulk_update_users_performance(self, benchmark):
+
         users = [
             ExtendUser(
                 username=f"user{i}",
@@ -201,11 +204,7 @@ class TestBulkOperationPerformance:
         benchmark(ExtendUser.objects.bulk_update, users, ["is_verified"])
 
     def test_bulk_delete_users_performance(self, benchmark):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "TRUNCATE TABLE users_extenduser RESTART IDENTITY CASCADE;"
-            )  # Reset primary key sequence
-
+        reset_sequences()  # Reset the sequence
         users = [
             ExtendUser(
                 username=f"user{i}",

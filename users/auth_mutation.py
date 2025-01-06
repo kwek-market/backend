@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import graphene
 import jwt
+from users.sendmail import send_confirmation_email_deprecated
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password
@@ -55,39 +56,41 @@ class CreateUser(graphene.Mutation):
     @staticmethod
     def mutate(self, info, password1, password2, email, full_name):
         email = email.lower()
+
+        # Validate email and password
+        email_validation = validate_email(email)
+        if not email_validation["status"]:
+            return CreateUser(status=False, message=email_validation["message"])
+
+        password_validation = validate_passwords(password1, password2)
+        if not password_validation["status"]:
+            return CreateUser(status=False, message=password_validation["message"])
+
         user = get_user_model()(
             username=email,
             email=email,
             full_name=full_name,
         )
 
-        if validate_email(email)["status"] == False:
-            return CreateUser(status=False, message=validate_email(email)["message"])
-        elif validate_passwords(password1, password2)["status"] == False:
+        send_welcome_email(email, full_name)
+        sen_m = send_confirmation_email_deprecated(email, full_name)
+
+        if sen_m["status"] == True:
+            user.set_password(password1)
+            user.save()
+            
+            Cart.objects.create(user=user)
+            Wishlist.objects.create(user=user)
+            Notification.objects.create(user=user)
             return CreateUser(
-                status=False,
-                message=validate_passwords(password1, password2)["message"],
+                status=True,
+                message="Successfully created account for, {}".format(
+                    user.username
+                ),
             )
         else:
-
-            send_welcome_email(email, full_name)
-            sen_m = send_confirmation_email(email, full_name)
-
-            if sen_m["status"] == True:
-                user.set_password(password1)
-                user.save()
-                Cart.objects.create(user=user)
-                Wishlist.objects.create(user=user)
-                Notification.objects.create(user=user)
-                return CreateUser(
-                    status=True,
-                    message="Successfully created account for, {}".format(
-                        user.username
-                    ),
-                )
-            else:
-                # raise GraphQLError("Email Verification not sent")
-                return CreateUser(status=False, message=sen_m["message"])
+            # raise GraphQLError("Email Verification not sent")
+            return CreateUser(status=False, message=sen_m["message"])
 
 
 class ResendVerification(graphene.Mutation):
@@ -153,9 +156,9 @@ class LoginUser(graphene.Mutation):
     @staticmethod
     def mutate(self, info, email, password, ip):
         email = email.lower()
+        # Authenticate user using the custom authentication function
         user = authenticate(username=email, password=password)
-        print("showing user authenticate fail or success", user)
-
+        
         # Error messages
         error_message = "Invalid login credentials"
         verification_error = "Your email is not verified"
@@ -434,12 +437,12 @@ class AccountNameRetrieval(graphene.Mutation):
         # token = graphene.String()
         account_number = graphene.String()
         # bank_name = graphene.String()
-        bank_code = graphene.String()
+        bank_codeaccount_number = graphene.String()
 
     @staticmethod
     def mutate(self, info, account_number, bank_code):
         body, myurl = {
-            "account_number": account_number,
+            "": account_number,
             "account_bank": bank_code,
         }, "https://api.flutterwave.com/v3/accounts/resolve"
         response = send_post_request(myurl, body)
