@@ -1,3 +1,4 @@
+from typing import List
 import jwt
 import time
 from django.core.mail import send_mail, EmailMultiAlternatives
@@ -8,7 +9,9 @@ from django.conf import settings
 import datetime
 import requests
 import json
+import base64
 from .models import ExtendUser, SellerProfile
+from django.template.loader import render_to_string
 
 
 def user_loggedIN(token):
@@ -52,13 +55,38 @@ def expire_token(token):
     except Exception as e:
         return {"status": False, "token": token, "message": "Invalid Token"}
 
+def send_welcome_email(email:str, name:str):
+    template_name = 'users/welcome.html'
+    context = {
+    'email': email,
+    'name': name,
+    }
 
-def send_confirmation_email(email,full_name):
-    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN,"Kwek Market"
+    html_string = render_to_string(template_name, context)
+    send_generic_email_through_PHP([email], html_string, "Welcome to KwekMarket")
+
+def send_verification_email(email:str, name:str):
+    username, SECRET_KEY,APP_DOMAIN = email, settings.SECRET_KEY, settings.APP_DOMAIN
     token = jwt.encode({'user': username}, SECRET_KEY,
                        algorithm='HS256').decode("utf-8")
     token_path = "?token={}".format(token)
-    link = "{}/email_verification/{}".format(DOMAIN, token_path)
+    link = "{}/email_verification/{}".format(APP_DOMAIN, token_path)
+    template_name = 'users/verification.html'
+    context = {
+    'email': email,
+    'name': name,
+    'link': link
+    }
+
+    html_string = render_to_string(template_name, context)
+    send_generic_email_through_PHP([email], html_string, "Email Verification")
+
+def send_confirmation_email_deprecated(email,full_name):
+    username, SECRET_KEY, EMAIL_DOMAIN,APP_DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN, settings.APP_DOMAIN,"Kwek Market"
+    token = jwt.encode({'user': username}, SECRET_KEY,
+                       algorithm='HS256').decode("utf-8")
+    token_path = "?token={}".format(token)
+    link = "{}/email_verification/{}".format(APP_DOMAIN, token_path)
     payload = {
         "email": email,"name": full_name,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
         "from_email": settings.KWEK_EMAIL,"subject": 'Account Verification',"event": "email_verification",
@@ -77,13 +105,13 @@ def send_confirmation_email(email,full_name):
 
 
 def send_password_reset_email(email):
-    username, SECRET_KEY, DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN,"Kwek Market"
+    username, SECRET_KEY, EMAIL_DOMAIN,APP_DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN, settings.APP_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username, "validity": True, 'exp': int(('{}'.format(time.time())).split('.')[0]) + 300,
                         'origIat': int(('{}'.format(time.time())).split('.')[0])},
                        SECRET_KEY,
                        algorithm='HS256').decode('utf-8')
     token_path = "?token={}".format(token)
-    link = "{}/change_password/{}".format(DOMAIN, token_path)
+    link = "{}/change_password/{}".format(APP_DOMAIN, token_path)
     payload = {
         "email": email,"send_kwek_email": "","product_name": product,"api_key": settings.PHPWEB,
         "from_email": settings.KWEK_EMAIL,"subject": 'Password Reset',"event": "forgot_password",
@@ -100,10 +128,26 @@ def send_password_reset_email(email):
     except Exception as e:
         print(e)
         return {"status": False, "message": e}
+    
+def send_coupon_code(to: List[str], code:str, discount:str):
+    template_name = 'users/coupon.html'
+    context = {
+    'code': code,
+    "discount": discount,
+    'facebook': settings.FACEBOOK_URL,
+    'instagram': settings.INSTAGRAM_URL,
+    'twitter': settings.TWITTER_URL
+    }
+
+    html_string = render_to_string(template_name, context)
+    send_m = send_generic_email_through_PHP(to, html_string, "Kwek Market Coupon")
+
+
+
 
 
 def send_email_through_PHP(payload_dictionary):
-    url, payload, headers = "https://emailapi.kwekapi.com/", json.dumps(
+    url, payload, headers = "http://emailapi.kwekapi.com/", json.dumps(
         payload_dictionary), {'Content-Type': 'application/json'}
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
@@ -113,7 +157,41 @@ def send_email_through_PHP(payload_dictionary):
         else:
             return False, "error occured"
     except Exception as e:
-        return False,response.json()['message'] 
+        print(e)
+        return False,e 
+    
+
+def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
+    url, payload, headers = "http://emailapi.kwekapi.com/generic-mail/", json.dumps(
+        {   "email_template": get_base64(template),
+            "send_kwek_email": "",
+            "emails": to,
+            "api_key": settings.PHPWEB,
+            "from_email": settings.KWEK_EMAIL,
+            "subject": subject,
+            "product_name": "Kwek Market",
+         }), {'Content-Type': 'application/json'}
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        if response.json()["status"]:
+            return True,response.json()['message']
+        else:
+            return False, "error occured"
+    except Exception as e:
+        return False,e 
+    
+
+def get_base64(original_string:str) ->str :
+    # Convert the string to bytes
+    bytes_string = original_string.encode('utf-8')
+
+    # Encode the bytes to Base64
+    base64_bytes = base64.b64encode(bytes_string)
+
+    # Convert the Base64 bytes back to a string
+    base64_string = base64_bytes.decode('utf-8')
+
+    return base64_string
 
 
-# send_password_reset_email("gregoflash05@gmail.com")
+

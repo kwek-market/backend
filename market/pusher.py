@@ -10,11 +10,16 @@ pusher_client = pusher.Pusher(
     secret=config("PUSHER_SECRET"),
     cluster=config("PUSHER_CLUSTER"),
     ssl=True,
-)
+)  
 
 
 def push_to_client(channel: str, data: dict):
-    pusher_client.trigger(str(channel), str(channel), data)
+    try:
+        pusher_client.trigger(str(channel), str(channel), data)
+    except Exception as e:
+        print(e)
+    # pass
+    
 
 
 class SendEmailNotification():

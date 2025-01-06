@@ -1,29 +1,5 @@
 import graphene
-from notifications.mutation import ReadNotification
-from users.auth_mutation import (
-    StoreBanner,
-    AccountNameRetrieval,
-    SellerVerification,
-    CompleteSellerVerification,
-    UserAccountUpdate,
-    UserPasswordUpdate,
-    StoreUpdate,
-    StoreLocationUpdate,
-)
 
-from users.auth_mutation import (
-    CreateUser,
-    ResendVerification,
-    VerifyUser,
-    LoginUser,
-    VerifyToken,
-    RevokeToken,
-    RefreshToken,
-    SendPasswordResetEmail,
-    ChangePassword,
-    StartSelling,
-)
-from market.mutation import *
 from bill.mutation import (
     ApplyCoupon,
     BillingAddress,
@@ -32,17 +8,50 @@ from bill.mutation import (
     CancelOrder,
     CreateCoupon,
     PaymentInitiate,
-    PickUpLocation,
     PaymentVerification,
+    PickUpLocation,
     PickupLocationDelete,
     PickupLocationUpdate,
     PlaceOrder,
     TrackOrder,
     UnapplyCoupon,
     UpdateDeliverystatus,
-    UpdateOrderProgress
+    UpdateOrderProgress,
 )
-from wallet.mutation import CreateInvoice, FundWallet, WalletTransactionSuccess, WithdrawFromWallet
+from market.mutation import *
+from notifications.mutation import ReadNotification
+from users.auth_mutation import (
+    AccountNameRetrieval,
+    ChangePassword,
+    CompleteSellerVerification,
+    CreateUser,
+    FlagVendor,
+    LoginUser,
+    RefreshToken,
+    RejectSellerVerification,
+    ResendVerification,
+    RevokeToken,
+    SellerVerification,
+    SendEmailToUsers,
+    SendPasswordResetEmail,
+    StartSelling,
+    StoreBanner,
+    StoreLocationUpdate,
+    StoreUpdate,
+    UserAccountUpdate,
+    UserPasswordUpdate,
+    VerifyToken,
+    VerifyUser,
+)
+from wallet.mutation import (
+    CreateInvoice,
+    ForceRefund,
+    FundWallet,
+    RefundRequest,
+    WalletTransactionSuccess,
+    WithdrawFromWallet,
+)
+
 
 class AuthMutation(graphene.ObjectType):
     pass
@@ -58,19 +67,26 @@ class Mutation(AuthMutation, graphene.ObjectType):
     billing_address_update = BillingAddressUpdate.Field()
     billing_address_delete = BillingAddressDelete.Field()
     cancel_order = CancelOrder.Field()
+    cancel_product_promotion = CancelProductPromotion.Field()
     change_password = ChangePassword.Field()
     clicks_update = ProductClick.Field()
     complete_seller_verification = CompleteSellerVerification.Field()
+    reject_seller_verification = RejectSellerVerification.Field()
+    flag_vendor = FlagVendor.Field()
     contact_us = ContactUs.Field()
     create_user = CreateUser.Field()
     create_product = CreateProduct.Field()
+    update_product = UpdateProduct.Field()
+    delete_product = DeleteProduct.Field()
     create_subscriber = CreateSubscriber.Field()
+    new_flash_sales = FlashSalesMutation.Field()
     create_invoice = CreateInvoice.Field()
     create_coupon = CreateCoupon.Field()
     delete_category = DeleteCategory.Field()
     delete_cart = DeleteCart.Field()
     delete_cart_item = DeleteCartItem.Field()
     decrease_cart_item_quantity = DecreaseCartItemQuantity.Field()
+    remove_item_from_cart_with_option_id = RemoveItemFromCartWithOptionId.Field()
     fund_wallet = FundWallet.Field()
     login_user = LoginUser.Field()
     payment_link = PaymentInitiate.Field()
@@ -93,7 +109,6 @@ class Mutation(AuthMutation, graphene.ObjectType):
     track_order = TrackOrder.Field()
     unapply_coupon = UnapplyCoupon.Field()
     update_category = UpdateCategory.Field()
-    update_product = UpdateProductMutation.Field()
     update_order_progress = UpdateOrderProgress.Field()
     update_delivery_status = UpdateDeliverystatus.Field()
     user_account_update = UserAccountUpdate.Field()
@@ -102,5 +117,12 @@ class Mutation(AuthMutation, graphene.ObjectType):
     verify_token = VerifyToken.Field()
     verify_payment = PaymentVerification.Field()
     wallet_transaction_success = WalletTransactionSuccess.Field()
+    refund = RefundRequest.Field()
+    force_refund = ForceRefund.Field()
     withdraw_from_wallet = WithdrawFromWallet.Field()
-    
+    send_email_to_users = SendEmailToUsers.Field()
+    create_charge = CreateProductCharges.Field()
+    update_charge = UpdateProductCharges.Field()
+    create_state_delivery_fee = CreateStateDeliveryCharge.Field()
+    update_state_delivery_fee = UpdateStateDeliveryCharge.Field()
+    delete_state_delivery_fee = DeleteDeliveryCharge.Field()

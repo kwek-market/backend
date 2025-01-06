@@ -5,7 +5,8 @@ from .models import (
     PurchasedItem,
     Invoice,
     Wallet,
-    WalletTransaction
+    WalletTransaction,
+    WalletRefund
 )
 
 
@@ -28,6 +29,10 @@ class WalletType(DjangoObjectType):
     class Meta:
         model = Wallet
 
+class WalletRefundType(DjangoObjectType):
+    class Meta:
+        model = WalletRefund
+
 class WalletTransactionType(DjangoObjectType):
     class Meta:
         model = WalletTransaction
@@ -38,9 +43,17 @@ class InvoicePaginatedType(graphene.ObjectType):
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(InvoiceType)
+
 class WalletTransactionPaginatedType(graphene.ObjectType):
     page = graphene.Int()
     pages = graphene.Int()
     has_next = graphene.Boolean()
     has_prev = graphene.Boolean()
     objects = graphene.List(WalletTransactionType)
+
+class WalletRefundPaginatedType(graphene.ObjectType):
+    page = graphene.Int()
+    pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_prev = graphene.Boolean()
+    objects = graphene.List(WalletRefundType)

@@ -8,8 +8,6 @@ ssh.txt
 #docker files
 nginx/
 _ignored/
-docker-compose.yml
-Dockerfile
 entrypoint.sh
 prod.env
 .vscode/
@@ -145,3 +143,9 @@ dmypy.json
 .vscode
 asset
 user_token.txt
+
+updates.txt
+.DS_Store
+staticfiles/
+
+_ignore/

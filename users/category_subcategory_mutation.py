@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from graphql import GraphQLError
 from .validate import validate_email, validate_passwords, validate_user_passwords
-from .sendmail import send_confirmation_email, user_loggedIN, expire_token, send_password_reset_email, refresh_user_token
+from .sendmail import send_verification_email, user_loggedIN, expire_token, send_password_reset_email, refresh_user_token
 from .models import ExtendUser, SellerProfile
 from graphql_jwt.utils import jwt_encode, jwt_payload
 from django.contrib.auth import authenticate

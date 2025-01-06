@@ -18,7 +18,7 @@ import django_heroku
 #     MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
 # else:
 #     MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
-EMAIL_BACKEND_DOMAIN = "https://kwekapi.herokuapp.com"
+# EMAIL_BACKEND_DOMAIN = "https://kwek-api.herokuapp.com"
 # ?/////////////////////////////Heroku
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'

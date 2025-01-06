@@ -1,7 +1,7 @@
 import graphene
 
 from django.contrib.auth import authenticate
-from bill.models import Payment
+from bill.models import *
 from market.pusher import SendEmailNotification, push_to_client
 import json, ast
 
@@ -12,16 +12,20 @@ from .models import (
     StoreDetail,
     Wallet,
     PurchasedItem,
-    WalletTransaction
+    WalletTransaction,
+    WalletRefund
+    
 )
 
 from .object_types import (
     InvoiceType,
-    WalletType
+    WalletType,
+    WalletRefundType
+    
 )
 
 from users.models import ExtendUser, SellerProfile
-from users.validate import authenticate_user
+from users.validate import authenticate_user, authenticate_admin
 
 
 
@@ -130,6 +134,8 @@ class FundWallet(graphene.Mutation):
         if not auth["status"]:
             return FundWallet(status=auth["status"],message=auth["message"])
         user = auth["user"]
+        amount = 0
+        p_status = False
         if Wallet.objects.filter(owner=user).exists():
             if Payment.objects.filter(ref=payment_ref).exists():
                 payment = Payment.objects.get(ref=payment_ref)
@@ -141,22 +147,28 @@ class FundWallet(graphene.Mutation):
                         )
                     else:
                         amount = payment.amount
+                        p_status=True
                 else:
                     return FundWallet(
                         status = False,
                         message = "Payment has not been verified"
                     )
+                
                 try:
                     seller_wallet = Wallet.objects.get(owner=user)
                     wallet = WalletTransaction.objects.create(
                         wallet=seller_wallet,
                         amount=amount,
                         remark=remark,
+                        status=p_status,
                         transaction_type="Funding"
                     )
                     balance = seller_wallet.balance
                     new_balance = balance + amount
                     Wallet.objects.filter(owner=user).update(balance=new_balance)
+
+                    payment.used = True
+                    payment.save()
                     if Notification.objects.filter(user=user).exists():
                         notification = Notification.objects.get(
                             user=user
@@ -274,7 +286,7 @@ class WalletTransactionSuccess(graphene.Mutation):
     def mutate(self, info, token, wallet_transaction_id):
         auth = authenticate_user(token)
         if not auth["status"]:
-            return WithdrawFromWallet(status=auth["status"],message=auth["message"])
+            return WalletTransactionSuccess(status=auth["status"],message=auth["message"])
         user = auth["user"]
         try:
             seller_wallet = WalletTransaction.objects.filter(owner=user, transaction__id=wallet_transaction_id)
@@ -296,4 +308,92 @@ class WalletTransactionSuccess(graphene.Mutation):
                     status=False,
                     message=e
                 )
+
+class RefundRequest(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+    refund = graphene.Field(WalletRefundType)
+
+    class Arguments:
+        token = graphene.String(required=True)
+        order_id = graphene.String(required=True)
+        cart_item_id = graphene.String(required=True)
+        account_number = graphene.String(required=True)
+        bank_name = graphene.String(required=True)
+        number_of_product = graphene.String()
+        
+    @staticmethod
+    def mutate(self, info, token, cart_item_id, order_id, account_number, bank_name, number_of_product=1):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return RefundRequest(status=auth["status"],message=auth["message"])
+        try:
+            if Order.objects.filter(id=order_id).exists() and CartItem.objects.filter(id=cart_item_id).exists():
+               order = Order.objects.get(id=order_id)
+               number_of_cartitems= order.cart_items.count()
+               order_product = order.cart_items.filter(id=cart_item_id)
+               if  order_product.exists():
+                   product = order_product.get(id=cart_item_id)
+                   if WalletRefund.objects.filter(order=order).exists():
+                        order_refund_request = WalletRefund.objects.filter(order=order).count()
+                        product_refund_request = WalletRefund.objects.filter(order=order, product=product).count()
+                        if (order_refund_request > number_of_cartitems) or (product_refund_request > order_product.count()):
+                                return RefundRequest(status= False, message="Already refunded for that product")
+               else:
+                   return RefundRequest(status= False, message="Cart item does not exist in order")
+                  
+               refund_request = WalletRefund.objects.create(
+                   order=order,
+                   account_number=account_number,
+                   product=product,
+                   bank_name=bank_name,
+                   number_of_product=number_of_product
+               )
+
+               return RefundRequest(status= True, message="Refund in progress", refund=refund_request)   
+            else:
+               return RefundRequest(status= False, message="Could not find order")      
+        except Exception as e:
+            return RefundRequest(status= False, message=e)   
+
+class ForceRefund(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments():
+        token = graphene.String(required=True)
+        refund_id = graphene.String(required=True)
+
+    @staticmethod
+    def mutate(self, info, token, refund_id):
+        auth = authenticate_user(token)
+        if not auth["status"]:
+            return ForceRefund(status=auth["status"],message=auth["message"])
+        try:
+
+            if WalletRefund.objects.filter(id=refund_id).exists():
+                refund_item = WalletRefund.objects.get(id=refund_id)
+                if not refund_item.status:
+                    refunded_item = CartItem.objects.get(id=refund_item.product.id)
+                    refunded_item_seller = Product.objects.get(id=refunded_item.product.id).user
+                    item_price = round(refunded_item.price * refund_item.number_of_product, 2)
+                    seller_wallet = Wallet.objects.get(owner=refunded_item_seller.id)
+                    refund_amount = seller_wallet.balance - item_price
+                    seller_wallet.balance = refund_amount
+                    seller_wallet.save()
+                    refund_item.status=True
+                    refund_item.save()
+                    return ForceRefund(status=True, message="Amount successfully deducted from sellers wallet")
+                return ForceRefund(status=False, message="Already refunded")
+            return ForceRefund(status=False, message="Refund does not exist")
+        except Exception as e:
+            
+            return ForceRefund(status=False, message=e)
+            
+            
+                
+
+
+
+
 

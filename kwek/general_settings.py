@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "users",
     "notifications",
     "wallet",
+    "kwek_admin",
 
 
     "graphene_django",
@@ -55,19 +56,21 @@ INSTALLED_APPS = [
     "graphql_auth",
     "corsheaders",
     "graphql_playground",
+    'debug_toolbar',
     
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = "kwek.urls"
@@ -110,9 +113,10 @@ DATABASES = {
         "USER": config("USER_NAME"),
         "PASSWORD": config("PASSWORD"),
         "HOST": config("HOST"),
-        "PORT": config("PORT"),
+        "PORT": config("DB_PORT"),
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -156,6 +160,7 @@ AUTHENTICATION_BACKENDS = [
     # 'graphql_jwt.backends.JSONWebTokenBackend',
     "graphql_auth.backends.GraphQLAuthBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "users.auth_backends.EmailOrUsernameAuthBackend",
 ]
 
 GRAPHQL_JWT = {
@@ -174,14 +179,20 @@ REGISTER_MUTATION_FIELDS = {
     "full_name": "String",
 }
 
-EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
+# EMAIL_BACKEND_DOMAIN = "http://www.kwekapi.com"
+EMAIL_BACKEND_DOMAIN = os.getenv("EMAIL_BACKEND_DOMAIN")
+APP_DOMAIN = os.getenv("APP_DOMAIN")
+PORT = os.getenv("PORT", "8000")
 DOMAIN = "www.kwekmarket.com"
-KWEK_EMAIL = "support@kwekmarket.com"
+KWEK_EMAIL = "support@kwekapi.com"
 PHPWEB = "kwekmailapiphpmailsystem"
+FACEBOOK_URL = "https://www.facebook.com/Kwekmarket/"
+INSTAGRAM_URL = "https://www.instagram.com/invites/contact/?i=lthbstut4tp&utm_content=6szcidd"
+TWITTER_URL = "https://twitter.com/kwekmarket?t=gFj8_Lp-EA2gJEZ0QZkEFQ&s=09"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = "gregoflash01@gmail.com"  # this is exactly the value 'apikey'
-EMAIL_HOST_PASSWORD = "greg1998"
+EMAIL_HOST_PASSWORD = ""
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 PROMOTION_CLICK_CHARGE = 1
@@ -195,7 +206,7 @@ CORS_ORIGIN_WHITELIST = (
     "https://localhost:3000",
     "https://kwek.vercel.app",
     "http://kwek.vercel.app",
-    "http://kwekapi.com",
+    "http://kwekapi.com",   
     "https://kwekapi.com",
 )
 
@@ -225,3 +236,6 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 FLUTTER_SEC_KEY = "FLWSECK-0d9c039a89fd946d83898a0a0b1e7b6c-X"
+
+"""This ensures all auto-created primary keys use BigAutoField."""
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

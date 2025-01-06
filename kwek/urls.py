@@ -33,3 +33,10 @@ urlpatterns = [
     path("v1/graphql", csrf_exempt(GraphQLPlaygroundView.as_view(endpoint="kwekql"))),
 ]
 urlpatterns += static(settings.MEDIA_URL, view=serve, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, view=serve, document_root=settings.STATIC_ROOT)
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

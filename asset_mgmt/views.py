@@ -11,6 +11,7 @@ from django.http import (
 )
 from django.contrib.auth import get_user_model
 import uuid
+import threading
 
 import mimetypes
 from PIL import Image
@@ -19,6 +20,8 @@ from django.views.static import directory_index, was_modified_since
 from django.utils._os import safe_join
 from pathlib import Path
 from kwek.vendor_array import data
+from market.data import STATES
+from market.models import StateDeliveryFee
 from market.models import (
     Category,
     Product,
@@ -62,24 +65,59 @@ class FileAssetView(View):
 
 class PopulateCategory(View):
     def get(self, request):
-        for array in data:
-            if Category.objects.filter(name=array[0]).exists():
+        thread = threading.Thread(target=populate_categories)
+        thread.start()
+        return JsonResponse({"status": True, "message": "started populating"})
+
+def get_icon(category_name:str) -> str:
+    switch = {
+        "Automotive & Industrial": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/car_1_eymdl8.svg",
+        "Baby and Toddler Toys": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/toys_1_tg5gsv.svg",
+        "Health, Beauty and Personal care": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/stones_1_jlcfsd.svg",
+        "Books & Media Library": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Computer Electronics and Accessories": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Foods, Drinks & Groceries": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Electronics": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Protectors & Skins": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296185/stones_1_jlcfsd.svg",
+        "Home and Kitchen": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/electronics_1_kitsab.svg",
+        "Kwek Fashion and Style": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/dress_1_sjs5ac.svg",
+        "Kwek Phones and Tablets": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Office & School Supplies": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/house_1_s9j3uo.svg",
+        "Sports and Fitness": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/sports_1_bbdtco.svg",
+        "Kwek Other Searches": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "Accessories": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg",
+        "": "https://res.cloudinary.com/psami-wondah/image/upload/v1685296183/layers_1_wgfk8s.svg"
+    }
+
+    icon = switch[category_name]
+    return icon if icon != "" else switch[""]
+
+def populate_categories():
+    category_count = 1
+    sub_category_count = 1
+    for array in data:
+        print("category count", category_count, array[0])
+        category_count+= 1
+        icon = get_icon(array[0]) 
+        if Category.objects.filter(name=array[0]).exists():
+            cate = Category.objects.get(name=array[0])
+            cate.icon = icon
+            cate.save()
+        else:
+            Category.objects.create(name=array[0], icon=icon)
+        count = 1
+        while count < len(array):
+            print("sub category count", sub_category_count)
+            sub_category_count+=1
+            print("total category count", sub_category_count+category_count)
+            parent = Category.objects.get(name=array[count - 1])
+            if Category.objects.filter(name=array[count]).exists():
                 pass
             else:
-                Category.objects.create(name=array[0])
-            count = 1
-            while count < len(array):
-                parent = Category.objects.get(name=array[count - 1])
-                if Category.objects.filter(name=array[count]).exists():
-                    pass
-                else:
-                    Category.objects.create(name=array[count], parent=parent)
-                count += 1
-        return JsonResponse(
-            {"status": True, "message": "Categories and Subcategories populated"}
-        )
+                Category.objects.create(name=array[count], parent=parent)
+            count += 1
 
-
+    print("population done")
 class ImageAssetView(View):
     def post(self, request, *args, **kwargs):
         upload = request.FILES.getlist("upload")
@@ -149,9 +187,7 @@ class PopulateProduct(View):
             if Product.objects.filter(product_title=product["productTitle"]).exists():
                 continue
             else:
-                keyword = []
-                keyword.append(product["productTitle"])
-                keyword.append(product["brand"])
+                keyword = product["keyword"]
                 for word in keyword:
                     if not Keyword.objects.filter(keyword=word).exists():
                         Keyword.objects.create(keyword=word)
@@ -174,6 +210,7 @@ class PopulateProduct(View):
                     ProductOption.objects.create(
                         product=created_product,
                         size=option["size"],
+                        color="" if "color" not in option else option["color"],
                         quantity=option["quantity"],
                         price=option["price"],
                         discounted_price=option["discountedPrice"],
@@ -187,38 +224,21 @@ class PopulateProduct(View):
                         price=34,
                         discounted_price=30,
                     )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-                ProductImage.objects.create(
-                    product=created_product,
-                    image_url="https://source.unsplash.com/random/200x200?sig=incrementingIdentifier",
-                )
-
+                image_url = product["productImageUrl"]
+                for i in range(5):
+                    ProductImage.objects.create(product=created_product,image_url=image_url,)
                 rates = [1, 2, 3, 4, 5]
                 user_to_review = ExtendUser.objects.all()
 
-                Rating.objects.create(
-                    product=created_product,
-                    rating=random.choice(rates),
-                    review="This is a very good product",
-                    user=random.choice(user_to_review),
-                    likes=random.choice(range(1, 41)),
-                    dislikes=random.choice(range(1, 21)),
-                )
+                for i in range(3):
+                    Rating.objects.create(
+                        product=created_product,
+                        rating=random.choice(rates),
+                        review="This is a very good product",
+                        user=random.choice(user_to_review),
+                        likes=random.choice(range(1, 41)),
+                        dislikes=random.choice(range(1, 21)),
+                    )
         half_products = Product.objects.all().count() / 2
         i = 0
         while i < half_products:
@@ -276,3 +296,13 @@ class PopulateSellers(View):
 
         return JsonResponse(data="Sellers created successfully",safe=False)
         pass
+class PopulateStates(View):
+    def get(self, request):
+        for i in STATES:
+            state = StateDeliveryFee.objects.filter(state=i)
+            if state:
+                print(f"{i} already exists!")
+                continue
+            else:   
+             StateDeliveryFee.objects.create(state=i)
+        return JsonResponse(data="States created successfully",safe=False)

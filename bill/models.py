@@ -1,17 +1,18 @@
 import uuid
 import secrets
 import string
+from django.apps import apps
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone
 from users.models import ExtendUser
-from market.models import Cart, CartItem, Product
+from django.db import transaction
 # Create your models here.
 
 
 class Billing(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    full_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255, db_index=True)
     contact = models.CharField(max_length=15)
     address = models.CharField(max_length=355)
     state = models.CharField(max_length=255)
@@ -30,11 +31,11 @@ class Billing(models.Model):
 
 class Pickup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
     contact = models.CharField(max_length=13)
     address = models.CharField(max_length=355)
-    state = models.CharField(max_length=255)
-    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255, db_index=True)
+    city = models.CharField(max_length=255, db_index=True)
 
     def __str__(self) -> str:
         return self.name
@@ -47,8 +48,9 @@ class Pickup(models.Model):
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     amount = models.FloatField(default=0)
-    ref = models.CharField(max_length=200)
+    ref = models.CharField(max_length=200, db_index=True)
     user_id = models.CharField(max_length=225, default=None)
+    gateway = models.CharField(max_length=225, default="flutterwave")
     email = models.EmailField(blank=False)
     name = models.CharField(max_length=225, default="admin")
     phone = models.CharField(max_length=15, default="+1809384583")
@@ -78,7 +80,7 @@ class Payment(models.Model):
 
 class Coupon(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    code = models.CharField(max_length=10, help_text="If left blank, it will be created automatically", unique=True)
+    code = models.CharField(max_length=10, help_text="If left blank, it will be created automatically", unique=True, db_index=True)
     value = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     valid_until = models.DateTimeField()
@@ -152,44 +154,93 @@ class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     progress = models.CharField(max_length=30, default="Order Placed")
     order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="progress")
-    
 
+    def __str__(self) -> str:
+        return self.order.order_id
+   
+   
+
+class OrderManager(models.Manager):
+    def create(self, **kwargs):
+        # Extract and remove cart_items from kwargs if present
+        cart_items = kwargs.pop('cart_items', None)
+
+        order = self.model(**kwargs)
+        total_coupon_price = 0
+
+        if order.coupon:
+            for id in order.coupon:
+                coupon_item = Coupon.objects.get(id=id)
+                total_coupon_price += int(coupon_item.value)
+
+        with transaction.atomic():
+            while not order.order_id:
+                order_id = f"KWEK-{secrets.token_urlsafe(8)}"
+                if not Order.objects.filter(order_id=order_id).exists():
+                    order.order_id = order_id
+
+            order.save()
+            # Transfer CartItems from Cart to Order
+            if cart_items is None:
+                CartItem = apps.get_model('market', 'CartItem')
+                cart_items = CartItem.objects.filter(cart__user=order.user, ordered=False)
+            order.cart_items.set(cart_items)
+            cart_items.update(ordered=True, cart=None, order=order)
+
+
+            order_price = 0
+            products_charge_total = 0
+            for cart_item in order.cart_items.all():
+                products_charge_total += (cart_item.quantity * cart_item.charge)
+                order_price += (cart_item.quantity * cart_item.price)
+
+            first_order_price = order_price
+
+            if total_coupon_price > 0:
+                order_price = order_price - total_coupon_price
+                if order_price < 0:
+                    order_price = 0
+
+            if order.delivery_fee > 0:
+                order_price += order.delivery_fee
+
+            order_price_total = order_price
+
+            Order.objects.filter(id=order.id).update(order_price=first_order_price, order_price_total=order_price_total, products_charge_total=products_charge_total)
+
+        return order
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(ExtendUser, on_delete=models.CASCADE)
-    order_id = models.CharField(max_length=30)
-    cart_items = models.ManyToManyField(CartItem,related_name='order_cart_items')
+    user = models.ForeignKey(ExtendUser, related_name="order", on_delete=models.CASCADE)
+    order_id = models.CharField(max_length=30, db_index=True)
+    cart_items = models.ManyToManyField('market.CartItem',related_name='order_cart_items')
     payment_method = models.CharField(max_length=30)
     delivery_method = models.CharField(max_length=30)
-    delivery_status = models.CharField(max_length=30, default="Order in progress")
+    delivery_status = models.CharField(max_length=30, default="Order in progress", db_index=True)
     closed = models.BooleanField(default=False)
     coupon = ArrayField(models.CharField(max_length=225), blank=True, null=True)
     paid = models.BooleanField(default=False)
     door_step = models.ForeignKey(Billing, on_delete=models.CASCADE, null=True)
     pickup = models.ForeignKey(Pickup, on_delete=models.CASCADE, null=True)
+    disbursed_to_wallet = models.BooleanField(null=False, default=False)
     order_price = models.PositiveBigIntegerField(default=0)
     order_price_total = models.PositiveBigIntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True)
+    wallet_transaction_handled = models.BooleanField(null=False, default=False)
+    delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
+    products_charge_total = models.FloatField(blank=False, null=False, default=0.00)
 
-    def save(self, *args, **kwargs):
-        total_coupon_price = 0
 
-        if self.coupon:
-            for id in self.coupon:
-                coupon_item = Coupon.objects.get(id=id)
-                total_coupon_price += int(coupon_item.value)
-        self.order_price_total = self.order_price - total_coupon_price
-        if self.order_price_total < 0:
-
-            self.order_price_total = 0
-        while not self.order_id:
-            order_id = f"KWEK-{secrets.token_urlsafe(8)}"
-
-            object_with_similar_order_id = Order.objects.filter(order_id=order_id)
-            if not object_with_similar_order_id.exists():
-                self.order_id = order_id
-        
-        super().save(*args, **kwargs)
-    
+    objects = OrderManager()
     def __str__(self) -> str:
         return self.order_id
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["-date_created"]),
+            models.Index(fields=["wallet_transaction_handled"]),
+            # models.Index(fields=['delivered_at'], name='delivered_at_idx'),
+            models.Index(fields=['closed', 'delivery_status', 'paid', 'delivered_at']),
+        ]
+
