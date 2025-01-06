@@ -43,5 +43,5 @@ $ python manage.py runserver
 6. run test
 
 ```bash
-$ python manage.py test --settings=kwek.test_settings
+$ pytest
 ```
