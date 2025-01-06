@@ -39,6 +39,7 @@ from .validate import (
 
 
 class CreateUser(graphene.Mutation):
+    print("lets start creating some users")
     sender = settings.EMAIL_HOST_USER
     status = graphene.Boolean()
     message = graphene.String()

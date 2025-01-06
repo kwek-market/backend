@@ -70,7 +70,7 @@ class ExtendUser(AbstractUser):
 
 class SellerProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    user = models.ForeignKey(ExtendUser, related_name="seller_profile", on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(ExtendUser, related_name="seller_profile", on_delete=models.CASCADE, null=True, unique=True)
     firstname = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     lastname = models.CharField(max_length=255, blank=False, null=True, db_index=True)
     phone_number = models.CharField(max_length=255, blank=False, null=True)
