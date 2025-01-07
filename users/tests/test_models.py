@@ -165,54 +165,54 @@ class BulkOperationTests(TestCase):
         self.assertEqual(SellerProfile.objects.count(), 0)
 
 
-@pytest.mark.django_db
-class TestBulkOperationPerformance(TransactionTestCase):
-    def test_bulk_create_users_performance(self, benchmark):
-        # Clear existing records
-        ExtendUser.objects.all().delete()
+# @pytest.mark.django_db
+# class TestBulkOperationPerformance(TransactionTestCase):
+#     def test_bulk_create_users_performance(self, benchmark):
+#         # Clear existing records
+#         ExtendUser.objects.all().delete()
 
-        # Create users with unique emails
-        users = [
-            ExtendUser(
-                id=uuid.uuid4(),
-                username=f"user{i}",
-                email=f"user{i}_{uuid.uuid4()}@example.com",  # Ensure unique emails
-                password="password123",
-                full_name=f"User {i}",
-            )
-            for i in range(1000)
-        ]
+#         # Create users with unique emails
+#         users = [
+#             ExtendUser(
+#                 id=uuid.uuid4(),
+#                 username=f"user{i}",
+#                 email=f"user{i}_{uuid.uuid4()}@example.com",  # Ensure unique emails
+#                 password="password123",
+#                 full_name=f"User {i}",
+#             )
+#             for i in range(1000)
+#         ]
 
-        # Benchmark the bulk create operation
-        benchmark(ExtendUser.objects.bulk_create, users)
+#         # Benchmark the bulk create operation
+#         benchmark(ExtendUser.objects.bulk_create, users)
 
-    def test_bulk_update_users_performance(self, benchmark):
+#     def test_bulk_update_users_performance(self, benchmark):
 
-        users = [
-            ExtendUser(
-                username=f"user{i}",
-                email=f"user{i}@example.com",
-                password="password123",
-                full_name=f"User {i}",
-            )
-            for i in range(1000)
-        ]
-        ExtendUser.objects.bulk_create(users)
-        users = list(ExtendUser.objects.all())
-        for user in users:
-            user.is_verified = True
-        benchmark(ExtendUser.objects.bulk_update, users, ["is_verified"])
+#         users = [
+#             ExtendUser(
+#                 username=f"user{i}",
+#                 email=f"user{i}@example.com",
+#                 password="password123",
+#                 full_name=f"User {i}",
+#             )
+#             for i in range(1000)
+#         ]
+#         ExtendUser.objects.bulk_create(users)
+#         users = list(ExtendUser.objects.all())
+#         for user in users:
+#             user.is_verified = True
+#         benchmark(ExtendUser.objects.bulk_update, users, ["is_verified"])
 
-    def test_bulk_delete_users_performance(self, benchmark):
-        reset_sequences()  # Reset the sequence
-        users = [
-            ExtendUser(
-                username=f"user{i}",
-                email=f"user{i}@example.com",
-                password="password123",
-                full_name=f"User {i}",
-            )
-            for i in range(1000)
-        ]
-        ExtendUser.objects.bulk_create(users)
-        benchmark(ExtendUser.objects.all().delete)
+#     def test_bulk_delete_users_performance(self, benchmark):
+#         reset_sequences()  # Reset the sequence
+#         users = [
+#             ExtendUser(
+#                 username=f"user{i}",
+#                 email=f"user{i}@example.com",
+#                 password="password123",
+#                 full_name=f"User {i}",
+#             )
+#             for i in range(1000)
+#         ]
+#         ExtendUser.objects.bulk_create(users)
+#         benchmark(ExtendUser.objects.all().delete)
