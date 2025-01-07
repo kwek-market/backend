@@ -130,13 +130,11 @@ class VerifyUser(graphene.Mutation):
     @staticmethod
     def mutate(self, info, token):
         try:
-            username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
-                "user"
-            ]
+            username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["user"]
             user = ExtendUser.objects.get(email=username)
             if user.is_verified:
                 return VerifyUser(status=False, message="User is already verified.")
-
+            
             user.is_verified = True
             user.save()
             return VerifyUser(status=True, message="Verification successful")
@@ -361,6 +359,64 @@ class ChangePassword(graphene.Mutation):
             # return ChangePassword(status=True, message = "Verification Successful")
         except Exception as e:
             return ChangePassword(status=False, message=e)
+
+
+class UserPasswordUpdate(graphene.Mutation):
+    status = graphene.Boolean()
+    message = graphene.String()
+
+    class Arguments:
+        token = graphene.String(required=True)
+        current_password = graphene.String()
+        new_password = graphene.String()
+
+    @staticmethod
+    def mutate(self, info, token, current_password, new_password):
+        try:
+            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
+                "username"
+            ]
+            c_user = ExtendUser.objects.get(email=email)
+            hashed_password = c_user.password
+            vup = validate_user_passwords(new_password)
+            if vup:
+                check_password
+                matchcheck = check_password(current_password, hashed_password)
+                # user_t = auth.authenticate(username=email,password=current_password)
+                # if user_t is not None:
+                if matchcheck:
+                    c_user.set_password(new_password)
+                    c_user.save()
+                    if Notification.objects.filter(user=c_user).exists():
+                        notification = Notification.objects.get(user=c_user)
+                    else:
+                        notification = Notification.objects.create(user=c_user)
+                    notification_message = Message.objects.create(
+                        notification=notification,
+                        message=f"Your password was reset successfully",
+                        subject="Password reset",
+                    )
+                    notification_info = {
+                        "notification": str(notification_message.notification.id),
+                        "message": notification_message.message,
+                        "subject": notification_message.subject,
+                    }
+                    push_to_client(c_user.id, notification_info)
+                    email_send = SendEmailNotification(c_user.email)
+                    email_send.send_only_one_paragraph(
+                        notification_message.subject, notification_message.message
+                    )
+                    return UserPasswordUpdate(
+                        status=True, message="Password Change Successful"
+                    )
+                else:
+                    return UserPasswordUpdate(
+                        status=False, message="Current Password is incorrect"
+                    )
+            else:
+                return UserPasswordUpdate(status=False, message=vup["message"])
+        except Exception as e:
+            return UserPasswordUpdate(status=False, message=e)
 
 
 class StartSelling(graphene.Mutation):
@@ -803,64 +859,6 @@ class RejectSellerVerification(graphene.Mutation):
             return CompleteSellerVerification(status=True, message="Successful")
         except Exception as e:
             return CompleteSellerVerification(status=False, message=e)
-
-
-class UserPasswordUpdate(graphene.Mutation):
-    status = graphene.Boolean()
-    message = graphene.String()
-
-    class Arguments:
-        token = graphene.String(required=True)
-        current_password = graphene.String()
-        new_password = graphene.String()
-
-    @staticmethod
-    def mutate(self, info, token, current_password, new_password):
-        try:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
-                "username"
-            ]
-            c_user = ExtendUser.objects.get(email=email)
-            hashed_password = c_user.password
-            vup = validate_user_passwords(new_password)
-            if vup:
-                check_password
-                matchcheck = check_password(current_password, hashed_password)
-                # user_t = auth.authenticate(username=email,password=current_password)
-                # if user_t is not None:
-                if matchcheck:
-                    c_user.set_password(new_password)
-                    c_user.save()
-                    if Notification.objects.filter(user=c_user).exists():
-                        notification = Notification.objects.get(user=c_user)
-                    else:
-                        notification = Notification.objects.create(user=c_user)
-                    notification_message = Message.objects.create(
-                        notification=notification,
-                        message=f"Your password was reset successfully",
-                        subject="Password reset",
-                    )
-                    notification_info = {
-                        "notification": str(notification_message.notification.id),
-                        "message": notification_message.message,
-                        "subject": notification_message.subject,
-                    }
-                    push_to_client(c_user.id, notification_info)
-                    email_send = SendEmailNotification(c_user.email)
-                    email_send.send_only_one_paragraph(
-                        notification_message.subject, notification_message.message
-                    )
-                    return UserPasswordUpdate(
-                        status=True, message="Password Change Successful"
-                    )
-                else:
-                    return UserPasswordUpdate(
-                        status=False, message="Current Password is incorrect"
-                    )
-            else:
-                return UserPasswordUpdate(status=False, message=vup["message"])
-        except Exception as e:
-            return UserPasswordUpdate(status=False, message=e)
 
 
 class StoreUpdate(graphene.Mutation):
