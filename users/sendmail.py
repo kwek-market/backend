@@ -68,7 +68,8 @@ def send_welcome_email(email:str, name:str):
 def send_verification_email(email:str, name:str):
     username, SECRET_KEY,APP_DOMAIN = email, settings.SECRET_KEY, settings.APP_DOMAIN
     token = jwt.encode({'user': username}, SECRET_KEY,
-                       algorithm='HS256').decode("utf-8")
+                       algorithm='HS256')
+    # .decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/email_verification/{}".format(APP_DOMAIN, token_path)
     template_name = 'users/verification.html'
@@ -84,7 +85,8 @@ def send_verification_email(email:str, name:str):
 def send_confirmation_email_deprecated(email,full_name):
     username, SECRET_KEY, EMAIL_DOMAIN,APP_DOMAIN,product = email, settings.SECRET_KEY, settings.EMAIL_BACKEND_DOMAIN, settings.APP_DOMAIN,"Kwek Market"
     token = jwt.encode({'user': username}, SECRET_KEY,
-                       algorithm='HS256').decode("utf-8")
+                       algorithm='HS256')
+    # .decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/email_verification/{}".format(APP_DOMAIN, token_path)
     payload = {

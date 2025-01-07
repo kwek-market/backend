@@ -37,7 +37,6 @@ class TestUserFlow:
         }
         """
         response = client.execute(mutation, variables=user_data)
-
         assert response["data"]["createUser"]["status"] is True
         assert (
             "Successfully created account for"
