@@ -2,7 +2,9 @@ name: Python CI
 
 on:
   pull_request:
-    branches: ["prod"]
+    branches: ["prod", "main"]
+  push:
+    branches: ["main"]
 
 jobs:
   test_build:
