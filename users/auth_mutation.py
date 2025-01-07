@@ -4,7 +4,6 @@ from typing import Dict, List
 
 import graphene
 import jwt
-from users.sendmail import send_confirmation_email_deprecated
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password
@@ -16,6 +15,7 @@ from market.models import Cart, Wishlist
 from market.mutation import verify_cart
 from market.pusher import SendEmailNotification, push_to_client
 from notifications.models import Message, Notification
+from users.sendmail import send_confirmation_email_deprecated
 from wallet.models import StoreDetail, Wallet
 
 from .model_object_type import SellerProfileType, UserType
@@ -78,15 +78,13 @@ class CreateUser(graphene.Mutation):
         if sen_m["status"] == True:
             user.set_password(password1)
             user.save()
-            
+
             Cart.objects.create(user=user)
             Wishlist.objects.create(user=user)
             Notification.objects.create(user=user)
             return CreateUser(
                 status=True,
-                message="Successfully created account for, {}".format(
-                    user.username
-                ),
+                message="Successfully created account for, {}".format(user.username),
             )
         else:
             # raise GraphQLError("Email Verification not sent")
@@ -112,7 +110,7 @@ class ResendVerification(graphene.Mutation):
             )
 
         sen_m = send_verification_email(email, f_user.full_name)
-        if sen_m["status"] == True:
+        if sen_m["status"]:
             return ResendVerification(
                 status=True,
                 message="Successfully sent email to {}".format(email),
@@ -131,14 +129,25 @@ class VerifyUser(graphene.Mutation):
 
     @staticmethod
     def mutate(self, info, token):
-        username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["user"]
         try:
+            username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
+                "user"
+            ]
             user = ExtendUser.objects.get(email=username)
+            if user.is_verified:
+                return VerifyUser(status=False, message="User is already verified.")
+
             user.is_verified = True
             user.save()
-            return CreateUser(status=True, message="Verification Successful")
+            return VerifyUser(status=True, message="Verification successful")
+        except jwt.ExpiredSignatureError:
+            return VerifyUser(status=False, message="Token has expired")
+        except jwt.DecodeError:
+            return VerifyUser(status=False, message="Invalid token")
+        except ExtendUser.DoesNotExist:
+            return VerifyUser(status=False, message="User does not exist")
         except Exception as e:
-            return CreateUser(status=False, message=e)
+            return VerifyUser(status=False, message=str(e))
 
 
 class LoginUser(graphene.Mutation):
@@ -158,7 +167,7 @@ class LoginUser(graphene.Mutation):
         email = email.lower()
         # Authenticate user using the custom authentication function
         user = authenticate(username=email, password=password)
-        
+
         # Error messages
         error_message = "Invalid login credentials"
         verification_error = "Your email is not verified"
@@ -181,14 +190,33 @@ class LoginUser(graphene.Mutation):
             "exp": ct + 151200,  # Token expiration time (e.g., 42 hours)
             "origIat": ct,
         }
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode("utf-8")
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode(
+            "utf-8"
+        )
 
         # Create refresh token
         refresh_token = create_refresh_token(user)
 
         # Log successful login
         print(f"DEBUG: Successful login for email: {email}")
-
+        verify_cart(ip, token)
+        if Notification.objects.filter(user=user).exists():
+            notification = Notification.objects.get(user=user)
+        else:
+            notification = Notification.objects.create(user=user)
+        notification_message = Message.objects.create(
+            notification=notification, message=f"Login successful", subject="New Login"
+        )
+        notification_info = {
+            "notification": str(notification_message.notification.id),
+            "message": notification_message.message,
+            "subject": notification_message.subject,
+        }
+        push_to_client(user.id, notification_info)
+        email_send = SendEmailNotification(user.email)
+        email_send.send_only_one_paragraph(
+            notification_message.subject, notification_message.message
+        )
         return LoginUser(
             user=user,
             status=True,
