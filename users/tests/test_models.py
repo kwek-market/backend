@@ -1,7 +1,7 @@
 from uuid import UUID
 import uuid
 import pytest
-
+from django.test import TransactionTestCase
 from django.db import connection
 from django.test import TestCase
 
@@ -166,7 +166,7 @@ class BulkOperationTests(TestCase):
 
 
 @pytest.mark.django_db
-class TestBulkOperationPerformance:
+class TestBulkOperationPerformance(TransactionTestCase):
     def test_bulk_create_users_performance(self, benchmark):
         # Clear existing records
         ExtendUser.objects.all().delete()

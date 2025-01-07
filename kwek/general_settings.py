@@ -203,10 +203,11 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
+    "http://localhost:3100",
     "https://localhost:3000",
     "https://kwek.vercel.app",
     "http://kwek.vercel.app",
-    "http://kwekapi.com",   
+    "http://kwekapi.com",
     "https://kwekapi.com",
 )
 

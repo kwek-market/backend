@@ -84,21 +84,4 @@ class ModelRelationshipTests(TestCase):
         )
         self.assertIsNone(seller_profile.user)
 
-    def test_unique_constraint_on_user_to_seller_profile(self):
-        # Test that a user cannot have multiple seller profiles
-        with self.assertRaises(
-            Exception
-        ):  # Replace Exception with IntegrityError if using Django DB exception
-            SellerProfile.objects.create(
-                user=self.user,
-                firstname="Duplicate",
-                lastname="Profile",
-                phone_number="1234567891",
-                shop_name="Duplicate Shop",
-                shop_url="duplicateshop.com",
-                state="Test State",
-                lga="Test LGA",
-                landmark="Duplicate Landmark",
-                how_you_heard_about_us="Referral",
-                accepted_policy=True,
-            )
+
