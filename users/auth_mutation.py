@@ -188,9 +188,10 @@ class LoginUser(graphene.Mutation):
             "exp": ct + 151200,  # Token expiration time (e.g., 42 hours)
             "origIat": ct,
         }
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode(
-            "utf-8"
-        )
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+        # .decode(
+        #     "utf-8"
+        # )
 
         # Create refresh token
         refresh_token = create_refresh_token(user)
@@ -643,7 +644,8 @@ class UserAccountUpdate(graphene.Mutation):
             payload = {"username": new_email, "exp": ct + 151200, "origIat": ct}
             n_token = jwt.encode(
                 payload, settings.SECRET_KEY, algorithm="HS256"
-            ).decode("utf-8")
+            )
+            # .decode("utf-8")
             tu = u_update(email)
             if tu == True:
                 if Notification.objects.filter(user=c_user).exists():
