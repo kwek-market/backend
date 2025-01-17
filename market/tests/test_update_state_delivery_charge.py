@@ -28,6 +28,7 @@ def state_fee_id():
     return "valid_state_fee_id"
 
 
+@pytest.mark.django_db
 def test_update_state_delivery_charge_success(client, valid_token, state_fee_id):
     mutation = """
         mutation {
@@ -50,6 +51,7 @@ def test_update_state_delivery_charge_success(client, valid_token, state_fee_id)
     )
 
 
+@pytest.mark.django_db
 def test_update_state_delivery_charge_invalid_token(
     client, invalid_token, state_fee_id
 ):
@@ -69,6 +71,7 @@ def test_update_state_delivery_charge_invalid_token(
     )
 
 
+@pytest.mark.django_db
 def test_update_state_delivery_charge_invalid_state(client, valid_token, state_fee_id):
     mutation = """
         mutation {
@@ -86,6 +89,7 @@ def test_update_state_delivery_charge_invalid_state(client, valid_token, state_f
     )
 
 
+@pytest.mark.django_db
 def test_update_state_delivery_charge_non_existing_id(client, valid_token):
     mutation = """
         mutation {

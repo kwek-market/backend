@@ -32,6 +32,7 @@ def product(user):
     )
 
 
+@pytest.mark.django_db
 def test_delete_product_success(client, user, product):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
@@ -50,6 +51,7 @@ def test_delete_product_success(client, user, product):
     assert data["message"] == "delete successful"
 
 
+@pytest.mark.django_db
 def test_delete_product_not_found(client, user):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
@@ -68,6 +70,7 @@ def test_delete_product_not_found(client, user):
     assert data["message"] == "product not found"
 
 
+@pytest.mark.django_db
 def test_delete_product_not_authorized(client, user, product):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
@@ -92,6 +95,7 @@ def client():
     return Client(schema)
 
 
+@pytest.mark.django_db
 def test_update_product_success(client, user, product):
     query = """
     mutation UpdateProduct($token: String!, $productId: String!, $productTitle: String!) {
@@ -118,6 +122,7 @@ def test_update_product_success(client, user, product):
     assert data["product"]["productTitle"] == "Updated Product Title"
 
 
+@pytest.mark.django_db
 def test_update_product_not_found(client, user):
     query = """
     mutation UpdateProduct($token: String!, $productId: String!) {
@@ -136,6 +141,7 @@ def test_update_product_not_found(client, user):
     assert data["message"] == "product not found"
 
 
+@pytest.mark.django_db
 def test_update_product_not_authorized(client, user, product):
     query = """
     mutation UpdateProduct($token: String!, $productId: String!, $productTitle: String!) {
