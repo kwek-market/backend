@@ -27,11 +27,47 @@ def user_loggedIN(token):
 
 
 def refresh_user_token(email):
-    ct = int(('{}'.format(time.time())).split('.')[0])
-    payload = {user.USERNAME_FIELD: email, 'exp': ct + 151200, 'origIat': ct}
-    token = jwt.encode(payload, settings.SECRET_KEY,
-                       algorithm='HS256').decode('utf-8')
-    return {"status": False, "token": token, "message": "New Token"}
+    """
+    Generate a new token for the given email if the user exists.
+
+    Args:
+        email (str): The email address of the user.
+
+    Returns:
+        dict: A dictionary containing the status, token, and message.
+    """
+    try:
+        # Validate that the user exists
+        user = ExtendUser.objects.get(email=email)
+        current_time = int(time.time())
+
+        # Create a payload for the token
+        payload = {
+            "user": email,
+            "exp": current_time + 151200,  # Token expiry time (e.g., 42 hours)
+            "origIat": current_time,
+        }
+
+        # Encode the token
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+        return {
+            "status": True,
+            "token": token,
+            "message": "Token refreshed successfully",
+        }
+    except ExtendUser.DoesNotExist:
+        return {
+            "status": False,
+            "token": "bow",
+            "message": "User with the provided email does not exist",
+        }
+    except Exception as e:
+        return {
+            "status": False,
+            "token": "rain",
+            "message": f"An error occurred: {str(e)}",
+        }
 
 
 def expire_token(token):
@@ -54,7 +90,7 @@ def expire_token(token):
             return {"status": False, "token": token, "message": "Invalid Token"}
     except Exception as e:
         return {"status": False, "token": token, "message": "Invalid Token"}
-
+    z
 def send_welcome_email(email:str, name:str):
     template_name = 'users/welcome.html'
     context = {
@@ -130,7 +166,7 @@ def send_password_reset_email(email):
     except Exception as e:
         print(e)
         return {"status": False, "message": e}
-    
+
 def send_coupon_code(to: List[str], code:str, discount:str):
     template_name = 'users/coupon.html'
     context = {
@@ -143,9 +179,6 @@ def send_coupon_code(to: List[str], code:str, discount:str):
 
     html_string = render_to_string(template_name, context)
     send_m = send_generic_email_through_PHP(to, html_string, "Kwek Market Coupon")
-
-
-
 
 
 def send_email_through_PHP(payload_dictionary):
@@ -161,7 +194,7 @@ def send_email_through_PHP(payload_dictionary):
     except Exception as e:
         print(e)
         return False,e 
-    
+
 
 def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
     url, payload, headers = "http://emailapi.kwekapi.com/generic-mail/", json.dumps(
@@ -181,7 +214,7 @@ def send_generic_email_through_PHP(to:List[str], template:str, subject:str):
             return False, "error occured"
     except Exception as e:
         return False,e 
-    
+
 
 def get_base64(original_string:str) ->str :
     # Convert the string to bytes
@@ -194,6 +227,3 @@ def get_base64(original_string:str) ->str :
     base64_string = base64_bytes.decode('utf-8')
 
     return base64_string
-
-
-

@@ -66,6 +66,7 @@ class ExtendUser(AbstractUser):
             'date_joined': self.date_joined,
             'total_spent': self.get_total_spent()
         }
+        
 
 
 class SellerProfile(models.Model):

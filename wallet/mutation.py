@@ -29,12 +29,6 @@ from users.validate import authenticate_user, authenticate_admin
 
 
 
-
-
-
-
-
-
 class CreateInvoice(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()

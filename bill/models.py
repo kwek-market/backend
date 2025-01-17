@@ -28,7 +28,6 @@ class Billing(models.Model):
         return f"{self.address} {self.state} {self.city}"
 
 
-
 class Pickup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255, db_index=True)
@@ -75,7 +74,6 @@ class Payment(models.Model):
             if not object_with_similar_ref.exists():
                 self.ref = ref
         super().save(*args, **kwargs)
-
 
 
 class Coupon(models.Model):
@@ -148,7 +146,7 @@ class CouponUser(models.Model):
     
     def __str__(self) -> str:
         return super().__str__(self.user)
-    
+
 
 class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
@@ -157,8 +155,7 @@ class OrderProgress(models.Model):
 
     def __str__(self) -> str:
         return self.order.order_id
-   
-   
+
 
 class OrderManager(models.Manager):
     def create(self, **kwargs):
@@ -231,11 +228,10 @@ class Order(models.Model):
     delivery_fee = models.FloatField(blank=False, null=False, default=0.00)
     products_charge_total = models.FloatField(blank=False, null=False, default=0.00)
 
-
     objects = OrderManager()
     def __str__(self) -> str:
         return self.order_id
-    
+
     class Meta:
         indexes = [
             models.Index(fields=["-date_created"]),
@@ -243,4 +239,4 @@ class Order(models.Model):
             # models.Index(fields=['delivered_at'], name='delivered_at_idx'),
             models.Index(fields=['closed', 'delivery_status', 'paid', 'delivered_at']),
         ]
-
+        ordering = ["-date_created"]
