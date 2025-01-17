@@ -14,5 +14,3 @@ if DEBUG:
     MEDIA_ROOT = os.path.join(BASE_DIR, "asset")
 else:
     MEDIA_ROOT = "/home/kwekxbyu/kwekapi.com/asset"
-
-
