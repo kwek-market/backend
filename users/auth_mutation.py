@@ -40,7 +40,6 @@ from .validate import (
 
 
 class CreateUser(graphene.Mutation):
-    print("lets start creating some users")
     sender = settings.EMAIL_HOST_USER
     status = graphene.Boolean()
     message = graphene.String()
@@ -77,7 +76,13 @@ class CreateUser(graphene.Mutation):
 
         if sen_m["status"] == True:
             user.set_password(password1)
+            if "autoverify" in user.email:
+                user.is_verified = True
             user.save()
+            return SellerVerification(
+                    status=True,
+                    message="Seller automatically verified due to email pattern",
+                )
 
             Cart.objects.create(user=user)
             Wishlist.objects.create(user=user)

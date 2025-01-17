@@ -1,10 +1,10 @@
 import pytest
 from graphene.test import Client
-from mutations import (
+from market.mutation import (
     CreateStateDeliveryCharge,
     UpdateStateDeliveryCharge,
 )  # Assuming mutations are in this path
-from project.schema import schema
+from users.schema import schema
 
 
 @pytest.fixture

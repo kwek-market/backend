@@ -1,7 +1,7 @@
 import pytest
 from graphene.test import Client
-from mutation import DeleteDeliveryCharge  
-#from project.schema import schema
+from market.mutation import DeleteDeliveryCharge  
+from users.schema import schema
 
 
 @pytest.fixture
