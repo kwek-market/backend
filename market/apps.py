@@ -5,6 +5,7 @@ class MarketConfig(AppConfig):
     name = "market"
 
     def ready(self):
-        from .jobs import start_market_jobs_scheduler
+        # from .jobs import start_market_jobs_scheduler
 
-        start_market_jobs_scheduler()
+        # start_market_jobs_scheduler()
+        pass

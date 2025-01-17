@@ -718,6 +718,29 @@ class SellerVerification(graphene.Mutation):
             return SellerVerification(status=False, message="you are not yet a seller")
 
         if not seller.seller_is_verified:
+            if "autoverify" in c_user.email:
+                # Auto-verify the user
+                seller.seller_is_verified = True
+                seller.accepted_vendor_policy = True
+                seller.prefered_id = prefered_id
+                seller.prefered_id_url = prefered_id_url
+                seller.bvn = bvn
+                seller.bank_name = bank_name
+                seller.bank_sort_code = bank_sort_code
+                seller.bank_account_number = account_number
+                seller.bank_account_name = account_name
+                seller.save()
+
+                # Update user properties
+                c_user.is_verified = True
+                c_user.is_seller = True
+                c_user.save()
+
+                return SellerVerification(
+                    status=True,
+                    message="Seller automatically verified due to email pattern",
+                )
+
             if not accepted_vendor_policy:
                 return SellerVerification(
                     status=False, message="vendor policy must be accepted"
