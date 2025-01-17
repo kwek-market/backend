@@ -1,3 +1,12 @@
+import pytest
+from graphene.test import Client
+from users.schema import schema
+
+from market.mutation import (
+    UpdateStateDeliveryCharge,
+)  # Assuming mutations are in this path
+
+
 def test_create_product_charge_success(authenticate_admin):
     query = """
     mutation CreateProductCharges($token: String!, $hasFixedAmount: Boolean!, $charge: Float!) {

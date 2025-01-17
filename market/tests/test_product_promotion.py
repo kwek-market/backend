@@ -26,6 +26,7 @@ def authenticate_user(create_user):
     return "valid_token"
 
 
+@pytest.mark.django_db
 def test_promote_product_success(create_product, authenticate_user):
     query = """
     mutation PromoteProduct($token: String!, $productId: String!, $days: Int!, $amount: Float!) {
@@ -54,6 +55,7 @@ def test_promote_product_success(create_product, authenticate_user):
     assert response["data"]["promoteProduct"]["product"]["promoted"] is True
 
 
+@pytest.mark.django_db
 def test_promote_product_insufficient_balance(create_product, authenticate_user):
     query = """
     mutation PromoteProduct($token: String!, $productId: String!, $days: Int!, $amount: Float!) {
@@ -81,6 +83,7 @@ def test_promote_product_insufficient_balance(create_product, authenticate_user)
     assert response["data"]["promoteProduct"]["message"] == "Insufficient balance"
 
 
+@pytest.mark.django_db
 def test_promote_product_invalid_product(create_user, authenticate_user):
     query = """
     mutation PromoteProduct($token: String!, $productId: String!, $days: Int!, $amount: Float!) {
@@ -104,6 +107,7 @@ def test_promote_product_invalid_product(create_user, authenticate_user):
     assert response["data"]["promoteProduct"]["message"] == "Product does not exist"
 
 
+@pytest.mark.django_db
 def test_cancel_product_promotion_success(create_product, authenticate_user):
     # Assume there's an active promotion for the product
     query = """
@@ -125,6 +129,7 @@ def test_cancel_product_promotion_success(create_product, authenticate_user):
     )
 
 
+@pytest.mark.django_db
 def test_cancel_product_promotion_invalid_user(create_product, authenticate_user):
     # Assume the user is not the product owner
     query = """
