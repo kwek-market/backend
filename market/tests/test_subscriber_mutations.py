@@ -10,11 +10,12 @@ from market.models import (
     ProductOption,
 )
 from market.mutation import CreateSubscriber, ContactUs, WishListMutation, CreateCartItem
-
+from users.schema import schema
 
 # Create Subscriber Test Case
 @pytest.mark.django_db
 class TestCreateSubscriber(GraphQLTestCase):
+    GRAPHQL_SCHEMA = schema
 
     def test_create_subscriber(self):
         query = """

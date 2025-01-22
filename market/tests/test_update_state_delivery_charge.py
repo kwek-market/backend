@@ -1,20 +1,54 @@
-import pytest
-from graphene.test import Client
-from users.schema import schema
+import time
 
-from market.mutation import (
-    UpdateStateDeliveryCharge,
-)  # Assuming mutations are in this path
+import jwt
+import pytest
+from django.contrib.auth import get_user_model
+from graphene.test import Client
+
+from market.mutation import UpdateStateDeliveryCharge
+from users.schema import schema
+from django.conf import settings
+User = get_user_model()
 
 
 @pytest.fixture
 def valid_token():
-    return "valid_admin_token"
+    """
+    Generates a valid admin token for testing.
+    """
+    # Create or fetch a valid admin user
+    admin_user = User.objects.create(
+        email="admin@example.com",
+        is_admin=True,
+        is_verified=True,
+        password="password123",
+    )
+
+    current_time = int(time.time())
+    payload = {
+        "username": admin_user.email,
+        "exp": current_time + 3600,  # Token valid for 1 hour
+        "origIat": current_time,
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    return token
 
 
 @pytest.fixture
 def invalid_token():
-    return "invalid_admin_token"
+    """
+    Generates an invalid token for testing.
+    """
+    current_time = int(time.time())
+    payload = {
+        "username": "fake_user@example.com",
+        "exp": current_time + 3600,
+        "origIat": current_time,
+    }
+    # Use a different secret key to make the token invalid
+    invalid_secret_key = "invalid_secret_key"
+    token = jwt.encode(payload, invalid_secret_key, algorithm="HS256")
+    return token
 
 
 @pytest.fixture
