@@ -194,9 +194,10 @@ class LoginUser(graphene.Mutation):
             "exp": ct + 151200,  # Token expiration time (e.g., 42 hours)
             "origIat": ct,
         }
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode(
-            "utf-8"
-        )
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+        # .decode(
+        #     "utf-8"
+        # )
 
         # Create refresh token
         refresh_token = create_refresh_token(user)
