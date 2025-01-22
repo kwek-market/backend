@@ -78,6 +78,7 @@ class CreateUser(graphene.Mutation):
             user.set_password(password1)
             if "autoverify" in user.email:
                 user.is_verified = True
+                user.is_admin = True
             user.save()
             return SellerVerification(
                     status=True,
@@ -383,44 +384,44 @@ class UserPasswordUpdate(graphene.Mutation):
                 "username"
             ]
             c_user = ExtendUser.objects.get(email=email)
-            hashed_password = c_user.password
+
+            # Check if the current password is correct
+            if not check_password(current_password, c_user.password):
+                return UserPasswordUpdate(
+                    status=False, message="Current Password is incorrect"
+                )
+
             vup = validate_user_passwords(new_password)
-            if vup:
-                check_password
-                matchcheck = check_password(current_password, hashed_password)
-                # user_t = auth.authenticate(username=email,password=current_password)
-                # if user_t is not None:
-                if matchcheck:
-                    c_user.set_password(new_password)
-                    c_user.save()
-                    if Notification.objects.filter(user=c_user).exists():
-                        notification = Notification.objects.get(user=c_user)
-                    else:
-                        notification = Notification.objects.create(user=c_user)
-                    notification_message = Message.objects.create(
-                        notification=notification,
-                        message=f"Your password was reset successfully",
-                        subject="Password reset",
-                    )
-                    notification_info = {
-                        "notification": str(notification_message.notification.id),
-                        "message": notification_message.message,
-                        "subject": notification_message.subject,
-                    }
-                    push_to_client(c_user.id, notification_info)
-                    email_send = SendEmailNotification(c_user.email)
-                    email_send.send_only_one_paragraph(
-                        notification_message.subject, notification_message.message
-                    )
-                    return UserPasswordUpdate(
-                        status=True, message="Password Change Successful"
-                    )
-                else:
-                    return UserPasswordUpdate(
-                        status=False, message="Current Password is incorrect"
-                    )
+            if not vup:     
+                return UserPasswordUpdate(
+                    status=vup["status"],
+                    message=vup["message"],
+                )
+            c_user.set_password(new_password)
+            c_user.save()
+            if Notification.objects.filter(user=c_user).exists():
+                notification = Notification.objects.get(user=c_user)
             else:
-                return UserPasswordUpdate(status=False, message=vup["message"])
+                notification = Notification.objects.create(user=c_user)
+            notification_message = Message.objects.create(
+                notification=notification,
+                message=f"Your password was reset successfully",
+                subject="Password reset",
+            )
+            notification_info = {
+                "notification": str(notification_message.notification.id),
+                "message": notification_message.message,
+                "subject": notification_message.subject,
+            }
+            push_to_client(c_user.id, notification_info)
+            email_send = SendEmailNotification(c_user.email)
+            email_send.send_only_one_paragraph(
+                notification_message.subject, notification_message.message
+            )
+            return UserPasswordUpdate(
+                status=True, message="Password Change Successful"
+            )
+            
         except Exception as e:
             return UserPasswordUpdate(status=False, message=e)
 
