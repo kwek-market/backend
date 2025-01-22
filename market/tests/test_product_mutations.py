@@ -13,27 +13,34 @@ User = get_user_model()
 
 @pytest.fixture
 def user():
-    return User.objects.create(username="admin", password="password", is_admin=True)
+    return User.objects.create_user(username="admin", password="password", is_admin=True)
+
+
+@pytest.fixture
+def token(user):
+    from graphql_jwt.shortcuts import get_token
+    return get_token(user)  
+
+
+@pytest.fixture
+def client():
+    return Client(schema)
 
 
 @pytest.fixture
 def product(user):
     category = Category.objects.create(name="Electronics")
     return Product.objects.create(
-        product_title="Test Product", category=category, user=user, price=100.00
-    )
-
-
-@pytest.fixture
-def product(user):
-    category = Category.objects.create(name="Electronics")
-    return Product.objects.create(
-        product_title="Test Product", category=category, user=user, price=100.00
+        product_title="Test Product",
+        category=category,
+        user=user,
+        charge_five_percent_vat=True,  # Set a valid boolean value
+        keyword=["electronics", "test"],  # Provide a valid list of keywords
     )
 
 
 @pytest.mark.django_db
-def test_delete_product_success(client, user, product):
+def test_delete_product_success(client, token, product):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
         deleteProduct(token: $token, id: $productId) {
@@ -42,7 +49,7 @@ def test_delete_product_success(client, user, product):
         }
     }
     """
-    variables = {"token": "fake_token_for_admin", "productId": str(product.id)}
+    variables = {"token": token, "productId": str(product.id)}
 
     response = client.execute(query, variables=variables)
     data = response.get("data")["deleteProduct"]
@@ -52,7 +59,7 @@ def test_delete_product_success(client, user, product):
 
 
 @pytest.mark.django_db
-def test_delete_product_not_found(client, user):
+def test_delete_product_not_found(client, token):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
         deleteProduct(token: $token, id: $productId) {
@@ -61,7 +68,7 @@ def test_delete_product_not_found(client, user):
         }
     }
     """
-    variables = {"token": "fake_token_for_admin", "productId": "nonexistent_product_id"}
+    variables = {"token": token, "productId": "nonexistent_product_id"}
 
     response = client.execute(query, variables=variables)
     data = response.get("data")["deleteProduct"]
@@ -71,7 +78,7 @@ def test_delete_product_not_found(client, user):
 
 
 @pytest.mark.django_db
-def test_delete_product_not_authorized(client, user, product):
+def test_delete_product_not_authorized(client, product):
     query = """
     mutation DeleteProduct($token: String!, $productId: String!) {
         deleteProduct(token: $token, id: $productId) {
@@ -80,8 +87,11 @@ def test_delete_product_not_authorized(client, user, product):
         }
     }
     """
-    user.token = "fake_token_for_non_admin"
-    variables = {"token": user.token, "productId": str(product.id)}
+    # Assuming `token` for a non-admin user
+    non_admin_user = User.objects.create_user(username="user", password="password")
+    non_admin_token = graphql_jwt.shortcuts.get_token(non_admin_user)
+
+    variables = {"token": non_admin_token, "productId": str(product.id)}
 
     response = client.execute(query, variables=variables)
     data = response.get("data")["deleteProduct"]
@@ -90,13 +100,8 @@ def test_delete_product_not_authorized(client, user, product):
     assert data["message"] == "you are not allowed to delete this product"
 
 
-@pytest.fixture
-def client():
-    return Client(schema)
-
-
 @pytest.mark.django_db
-def test_update_product_success(client, user, product):
+def test_update_product_success(client, token, product):
     query = """
     mutation UpdateProduct($token: String!, $productId: String!, $productTitle: String!) {
         updateProduct(token: $token, productId: $productId, productTitle: $productTitle) {
@@ -109,7 +114,7 @@ def test_update_product_success(client, user, product):
     }
     """
     variables = {
-        "token": "fake_token_for_admin",
+        "token": token,
         "productId": str(product.id),
         "productTitle": "Updated Product Title",
     }
@@ -123,16 +128,20 @@ def test_update_product_success(client, user, product):
 
 
 @pytest.mark.django_db
-def test_update_product_not_found(client, user):
+def test_update_product_not_found(client, token):
     query = """
-    mutation UpdateProduct($token: String!, $productId: String!) {
-        updateProduct(token: $token, productId: $productId) {
+    mutation UpdateProduct($token: String!, $productId: String!, $productTitle: String!) {
+        updateProduct(token: $token, productId: $productId, productTitle: $productTitle) {
             status
             message
         }
     }
     """
-    variables = {"token": "fake_token_for_admin", "productId": "nonexistent_product_id"}
+    variables = {
+        "token": token,
+        "productId": "nonexistent_product_id",
+        "productTitle": "New Title",
+    }
 
     response = client.execute(query, variables=variables)
     data = response.get("data")["updateProduct"]
@@ -142,7 +151,7 @@ def test_update_product_not_found(client, user):
 
 
 @pytest.mark.django_db
-def test_update_product_not_authorized(client, user, product):
+def test_update_product_not_authorized(client, product):
     query = """
     mutation UpdateProduct($token: String!, $productId: String!, $productTitle: String!) {
         updateProduct(token: $token, productId: $productId, productTitle: $productTitle) {
@@ -151,11 +160,13 @@ def test_update_product_not_authorized(client, user, product):
         }
     }
     """
-    user.token = "fake_token_for_non_admin"
+    non_admin_user = User.objects.create_user(username="user", password="password")
+    non_admin_token = graphql_jwt.shortcuts.get_token(non_admin_user)
+
     variables = {
-        "token": user.token,
+        "token": non_admin_token,
         "productId": str(product.id),
-        "productTitle": "New Title",
+        "productTitle": "Unauthorized Title",
     }
 
     response = client.execute(query, variables=variables)

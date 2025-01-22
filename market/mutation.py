@@ -77,7 +77,7 @@ class AddCategory(graphene.Mutation):
     def mutate(self, info, name, visibility, parent=None, icon=None, publish_date=None):
         if Category.objects.filter(name=name).exists() and parent is None:
             return AddCategory(status=False,message="Category already exists")
-        else:
+        else:      
             try:
                 if parent is None:
                     if icon is None:

@@ -14,7 +14,7 @@ def test_send_password_reset_email_success(client):
     """
     variables = {"email": "test@example.com"}
 
-    with patch("users.schema.send_password_reset_email") as mock_send_email:
+    with patch("users.sendmail.send_password_reset_email") as mock_send_email:
         mock_send_email.return_value = {"status": True}
 
         response = client.execute(mutation, variables=variables)

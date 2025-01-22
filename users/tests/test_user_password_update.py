@@ -1,13 +1,25 @@
-import pytest
-from users.models import ExtendUser
 import jwt
+import pytest
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from graphene.test import Client
+
+from users.schema import schema
+
+User = get_user_model()
+
+
+@pytest.fixture
+def client():
+    return Client(schema)
 
 
 @pytest.mark.django_db
 def test_user_password_update_success(client):
-    user = ExtendUser.objects.create_user(
-        email="test@example.com", password="current_password"
+    user = User.objects.create_user(
+        email="test@example.com",
+        password="current_password",
+        username="test@example.com",
     )
     token = jwt.encode({"username": user.email}, settings.SECRET_KEY, algorithm="HS256")
 
