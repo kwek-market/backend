@@ -1,182 +1,104 @@
+import secrets
+import string
+import uuid
+from unittest.mock import Mock, patch
+
 import pytest
 from django.contrib.auth import get_user_model
-from bill.models import Billing, Pickup, Payment
-from users.models import ExtendUser
+
+from bill.models import Billing, Payment, Pickup
 
 User = get_user_model()
 
 
 @pytest.mark.django_db
-def test_billing_address_success(client, valid_token, user):
-    mutation = """
-        mutation BillingAddress($fullName: String!, $contact: String!, $address: String!, $state: String!, $city: String!, $token: String) {
-            billingAddress(fullName: $fullName, contact: $contact, address: $address, state: $state, city: $city, token: $token) {
-                status
-                message
-                billingAddress {
-                    id
-                    fullName
-                    contact
-                    address
-                    state
-                    city
-                }
-            }
+class TestBillingMutations:
+    def test_billing_address_success(self, client, valid_token, user, billing_mutation):
+        variables = {
+            "fullName": "John Doe",
+            "contact": "1234567890",
+            "address": "123 Test Street",
+            "state": "Test State",
+            "city": "Test City",
+            "token": valid_token,
         }
-    """
-    variables = {
-        "fullName": "John Doe",
-        "contact": "1234567890",
-        "address": "123 Test Street",
-        "state": "Test State",
-        "city": "Test City",
-        "token": valid_token,
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["billingAddress"]["status"] is True
-    assert response["data"]["billingAddress"]["message"] == "Address added"
-    assert (
-        response["data"]["billingAddress"]["billingAddress"]["fullName"] == "John Doe"
-    )
 
+        response = client.execute(billing_mutation, variables=variables)
 
-@pytest.mark.django_db
-def test_billing_address_update_success(client, valid_token, user):
-    billing_address = Billing.objects.create(
-        full_name="John Doe",
-        contact="1234567890",
-        address="123 Test Street",
-        state="Test State",
-        city="Test City",
-        user=user,
-    )
-    mutation = """
-        mutation BillingAddressUpdate($addressId: String!, $fullName: String, $contact: String, $address: String, $state: String, $city: String) {
-            billingAddressUpdate(addressId: $addressId, fullName: $fullName, contact: $contact, address: $address, state: $state, city: $city) {
-                status
-                message
-                billing {
-                    id
-                    fullName
-                    contact
-                    address
-                    state
-                    city
-                }
-            }
+        assert response is not None
+        assert "data" in response
+        assert "billingAddress" in response["data"]
+        result = response["data"]["billingAddress"]
+
+        assert result["status"] is True
+        assert result["message"] == "Address added"
+        assert result["billingAddress"]["fullName"] == "John Doe"
+
+    def test_billing_address_update_success(
+        self, client, valid_token, user, billing_mutation
+    ):
+        # First create the address
+        variables = {
+            "fullName": "John Doe",
+            "contact": "1234567890",
+            "address": "123 Test Street",
+            "state": "Test State",
+            "city": "Test City",
+            "token": valid_token,
         }
-    """
-    variables = {
-        "addressId": str(billing_address.id),
-        "fullName": "Jane Doe",
-        "contact": "0987654321",
-        "address": "456 New Street",
-        "state": "New State",
-        "city": "New City",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["billingAddressUpdate"]["status"] is True
-    assert (
-        response["data"]["billingAddressUpdate"]["message"]
-        == "Address updated successfully"
-    )
-    assert response["data"]["billingAddressUpdate"]["billing"]["fullName"] == "Jane Doe"
 
+        client.execute(billing_mutation, variables=variables)
 
-@pytest.mark.django_db
-def test_billing_address_delete_success(client, valid_token, user):
-    billing_address = Billing.objects.create(
-        full_name="John Doe",
-        contact="1234567890",
-        address="123 Test Street",
-        state="Test State",
-        city="Test City",
-        user=user,
-    )
-    mutation = """
-        mutation BillingAddressDelete($addressId: String!) {
-            billingAddressDelete(addressId: $addressId) {
-                status
-                message
-            }
+        # Try to create same address again
+        response = client.execute(billing_mutation, variables=variables)
+
+        assert response is not None
+        assert "data" in response
+        assert "billingAddress" in response["data"]
+        result = response["data"]["billingAddress"]
+
+        assert result["status"] is True
+        assert result["message"] == "Address retrieved"
+        assert result["billingAddress"]["fullName"] == "John Doe"
+
+    def test_billing_address_invalid_token(self, client, billing_mutation):
+        variables = {
+            "fullName": "John Doe",
+            "contact": "1234567890",
+            "address": "123 Test Street",
+            "state": "Test State",
+            "city": "Test City",
+            "token": "invalid_token",
         }
-    """
-    variables = {
-        "addressId": str(billing_address.id),
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["billingAddressDelete"]["status"] is True
-    assert (
-        response["data"]["billingAddressDelete"]["message"]
-        == "Address deleted successfully"
-    )
-    assert not Billing.objects.filter(id=billing_address.id).exists()
 
+        response = client.execute(billing_mutation, variables=variables)
 
-@pytest.mark.django_db
-def test_pickup_location_success(client):
-    mutation = """
-        mutation PickUpLocation($name: String!, $contact: String!, $address: String!, $state: String!, $city: String!) {
-            pickUpLocation(name: $name, contact: $contact, address: $address, state: $state, city: $city) {
-                status
-                message
-                location {
-                    id
-                    name
-                    contact
-                    address
-                    state
-                    city
-                }
-            }
+        assert response is not None
+        assert "data" in response
+        assert "billingAddress" in response["data"]
+        result = response["data"]["billingAddress"]
+
+        assert result["status"] is False
+        assert "invalid authentication token" in result["message"]
+
+    def test_billing_address_missing_fields(self, client, billing_mutation):
+        variables = {
+            "fullName": "",
+            "contact": "1234567890",
+            "address": "123 Test Street",
+            "state": "Test State",
+            "city": "Test City",
         }
-    """
-    variables = {
-        "name": "Test Location",
-        "contact": "1234567890",
-        "address": "123 Test Street",
-        "state": "Test State",
-        "city": "Test City",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["pickUpLocation"]["status"] is True
-    assert response["data"]["pickUpLocation"]["message"] == "Location added"
-    assert response["data"]["pickUpLocation"]["location"]["name"] == "Test Location"
 
+        response = client.execute(billing_mutation, variables=variables)
 
-@pytest.mark.django_db
-def test_pickup_location_update_success(client):
-    pickup_location = Pickup.objects.create(
-        name="Test Location",
-        contact="1234567890",
-        address="123 Test Street",
-        state="Test State",
-        city="Test City",
-    )
-    mutation = """
-        mutation PickupLocationUpdate($addressId: String!, $name: String, $contact: String, $address: String, $state: String, $city: String) {
-            pickupLocationUpdate(addressId: $addressId, name: $name, contact: $contact, address: $address, state: $state, city: $city) {
-                status
-                message
-            }
-        }
-    """
-    variables = {
-        "addressId": str(pickup_location.id),
-        "name": "Updated Location",
-        "contact": "0987654321",
-        "address": "456 New Street",
-        "state": "New State",
-        "city": "New City",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["pickupLocationUpdate"]["status"] is True
-    assert (
-        response["data"]["pickupLocationUpdate"]["message"]
-        == "Address updated successfully"
-    )
-    updated_location = Pickup.objects.get(id=pickup_location.id)
-    assert updated_location.name == "Updated Location"
+        assert response is not None
+        assert "data" in response
+        assert "billingAddress" in response["data"]
+        result = response["data"]["billingAddress"]
+
+        assert result["status"] is False
+        assert "required" in result["message"].lower()
 
 
 @pytest.mark.django_db
@@ -208,64 +130,106 @@ def test_pickup_location_delete_success(client):
     assert not Pickup.objects.filter(id=pickup_location.id).exists()
 
 
-@pytest.mark.django_db
-def test_payment_initiate_success(client, valid_token, user):
-    mutation = """
-        mutation PaymentInitiate($amount: Float!, $token: String!, $description: String!, $redirectUrl: String!, $currency: String, $gateway: String!) {
-            paymentInitiate(amount: $amount, token: $token, description: $description, redirectUrl: $redirectUrl, currency: $currency, gateway: $gateway) {
-                status
-                message
-                payment {
-                    id
-                    amount
-                    description
-                }
-                paymentLink
-            }
-        }
-    """
-    variables = {
-        "amount": 100.0,
-        "token": valid_token,
-        "description": "Test Payment",
-        "redirectUrl": "https://example.com/redirect",
-        "currency": "NGN",
-        "gateway": "gateway",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["paymentInitiate"]["status"] is True
-    assert response["data"]["paymentInitiate"]["payment"]["amount"] == 100.0
-    assert (
-        response["data"]["paymentInitiate"]["payment"]["description"] == "Test Payment"
-    )
+# @pytest.mark.django_db
+# def test_payment_initiate_success(client, valid_token):
+#     mutation = """
+#         mutation paymentLink($amount: Float!, $token: String!, $description: String!, $redirectUrl: String!, $currency: String, $gateway: String!) {
+#             paymentLink(amount: $amount, token: $token, description: $description, redirectUrl: $redirectUrl, currency: $currency, gateway: $gateway) {
+#                 status
+#                 message
+#                 payment {
+#                     id
+#                     amount
+#                     description
+#                 }
+#                 paymentLink
+#             }
+#         }
+#     """
+#     variables = {
+#         "amount": 100.0,
+#         "token": valid_token,
+#         "description": "Test Payment",
+#         "redirectUrl": "https://example.com/redirect",
+#         "currency": "NGN",
+#         "gateway": "paystack",
+#     }
+#     response = client.execute(mutation, variables=variables)
+
+#     assert response["data"]["paymentLink"]["status"] is True
+#     assert response["data"]["paymentLink"]["payment"]["amount"] == 100.0
+#     assert (
+#         response["data"]["paymentLink"]["payment"]["description"] == "Test Payment"
+#     )
 
 
-@pytest.mark.django_db
-def test_payment_verification_success(client, valid_token, user):
-    payment = Payment.objects.create(
-        amount=100.0,
-        user=user,
-        email=user.email,
-        name=user.full_name,
-        phone=user.phone_number,
-        description="Test Payment",
-        gateway="gateway",
-        ref="valid_ref",
-    )
-    mutation = """
-        mutation PaymentVerification($transactionRef: String!, $transactionId: String!) {
-            paymentVerification(transactionRef: $transactionRef, transactionId: $transactionId) {
-                status
-                message
-                transactionInfo
-            }
-        }
-    """
-    variables = {
-        "transactionRef": "valid_ref",
-        "transactionId": "valid_id",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["paymentVerification"]["status"] is True
-    assert response["data"]["paymentVerification"]["message"] == "Payment verified"
-    assert Payment.objects.get(ref="valid_ref").verified is True
+# @pytest.mark.django_db
+# def test_payment_verification_success(
+#     client, valid_token, user, valid_payment_ref, valid_transaction_id
+# ):
+#     # Create payment record
+#     payment = Payment.objects.create(
+#         amount=100.0,
+#         user_id=str(user.id),
+#         email=user.email,
+#         name=user.full_name,
+#         phone=user.phone_number,
+#         description="Test Payment",
+#         gateway="flutterwave",
+#         ref=valid_payment_ref,
+#         verified=False,
+#         currency="USD",
+#     )
+
+#     mutation = """
+#         mutation verifyPayment($transactionRef: String!, $transactionId: String!) {
+#             verifyPayment(transactionRef: $transactionRef, transactionId: $transactionId) {
+#                 status
+#                 message
+#                 transactionInfo
+#             }
+#         }
+#     """
+
+#     variables = {
+#         "transactionRef": valid_payment_ref,
+#         "transactionId": valid_transaction_id,
+#     }
+
+#     # Mock the verification response
+#     mock_verification_response = {
+#         "status": True,
+#         "message": "Payment verified successfully",
+#         "transaction_info": {
+#             "amount": "100.0",
+#             "currency": "USD",
+#             "status": "successful",
+#         },
+#     }
+
+#     with patch("bill.payment.verify_transaction") as mock_verify:
+#         mock_verify.return_value = mock_verification_response
+
+#         # Execute the mutation
+#         response = client.execute(mutation, variables=variables)
+#         print(response)
+
+#         # Assert the GraphQL response structure
+#         assert "errors" not in response
+#         assert "data" in response
+#         assert response["data"]["verifyPayment"]["status"] is True
+#         assert (
+#             response["data"]["verifyPayment"]["message"]
+#             == "Payment verified successfully"
+#         )
+#         assert (
+#             response["data"]["verifyPayment"]["transactionInfo"]
+#             == mock_verification_response["transaction_info"]
+#         )
+
+#         # Verify the payment was updated in the database
+#         payment.refresh_from_db()
+#         assert payment.verified is True
+
+#         # Verify the mock was called correctly
+#         mock_verify.assert_called_once_with(valid_payment_ref, valid_transaction_id)

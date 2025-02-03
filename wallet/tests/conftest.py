@@ -1,16 +1,24 @@
 import time
-
+from decimal import Decimal
+import uuid
 import jwt
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from bill.models import Payment
-from market.models import Product
+from market.models import Cart, CartItem, Product, ProductOption
 from notifications.models import Message, Notification
 from users.models import ExtendUser, SellerProfile
-from wallet.models import PurchasedItem, StoreDetail, Wallet, WalletTransaction, Order, WalletRefund
-from market.models import Cart, CartItem
+from wallet.models import (
+    Order,
+    PurchasedItem,
+    StoreDetail,
+    Wallet,
+    WalletRefund,
+    WalletTransaction,
+)
+
 User = get_user_model()
 
 
@@ -24,12 +32,35 @@ def user():
 
 
 @pytest.fixture
+def product(user):
+    return Product.objects.create(
+        product_title="Test Product",
+        user=user,
+        charge_five_percent_vat=False,
+        keyword=[],
+    )
+
+
+@pytest.fixture
+def product_option(product):
+    return ProductOption.objects.create(
+        product=product,
+        size="M",
+        color="Red",
+        quantity=10,
+        price=100.00,
+        discounted_price=90.00,
+        option_total_price=100.00,
+    )
+
+
+@pytest.fixture
 def seller_profile(user):
     return SellerProfile.objects.create(
         user=user,
         shop_name="Test Shop",
         shop_address="123 Test Street",
-        accepted_policy=True, 
+        accepted_policy=True,
     )
 
 
@@ -49,13 +80,18 @@ def wallet(user):
 
 
 @pytest.fixture
+def seller_wallet(user):
+    return Wallet.objects.create(owner=user, balance=Decimal("1000.00"))
+
+
+@pytest.fixture
 def payment(user):
     return Payment.objects.create(
         ref="valid_ref",
         amount=500,
         verified=True,
         used=False,
-        user_id=user,
+        user_id=user.id,
     )
 
 
@@ -77,24 +113,19 @@ def order(user, cart_item):
 
 
 @pytest.fixture
-def cart_item(user):
-    product = Product.objects.create(
-        product_title="Test Product",
-        user=user,
-        charge_five_percent_vat = False,
-        keyword = []
-    )
+def cart_item(user, product):
     return CartItem.objects.create(
         product=product,
         quantity=1,
-        price=100,
+        price=Decimal("100.00"),
+        ordered=True, 
     )
 
 
 @pytest.fixture
 def wallet_refund(order, cart_item):
     return WalletRefund.objects.create(
-        order=order,
+        order=order,  
         product=cart_item,
         account_number="1234567890",
         bank_name="Test Bank",

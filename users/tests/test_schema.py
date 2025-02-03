@@ -1,4 +1,8 @@
+import time
+
+import jwt
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client
 from graphene.test import Client
@@ -8,6 +12,7 @@ from market.models import Cart, Wishlist
 from notifications.models import Notification
 from users.schema import schema
 
+User = get_user_model()
 
 @pytest.fixture
 def client():
@@ -27,21 +32,30 @@ def user_data():
 
 @pytest.mark.django_db
 class TestUserFlow:
+
     def test_create_user(self, client, user_data):
         mutation = """
-        mutation CreateUser($email: String!, $full_name: String!, $password1: String!, $password2: String!) {
-            createUser(email: $email, fullName: $full_name, password1: $password1, password2: $password2) {
+        mutation CreateUser($email: String!, $fullName: String!, $password1: String!, $password2: String!) {
+            createUser(email: $email, fullName: $fullName, password1: $password1, password2: $password2) {
                 status
                 message
             }
         }
         """
-        response = client.execute(mutation, variables=user_data)
-        assert response["data"]["createUser"]["status"] is True
-        assert (
-            "Successfully created account for"
-            in response["data"]["createUser"]["message"]
+        response = client.execute(
+            mutation,
+            variables={
+                "email": user_data["email"],
+                "fullName": user_data["full_name"],
+                "password1": user_data["password1"],
+                "password2": user_data["password2"],
+            },
         )
+
+        assert response.get("data", {}).get("createUser") is not None
+        create_user_result = response["data"]["createUser"]
+        assert create_user_result["status"] is True
+        assert "Successfully created account for" in create_user_result["message"]
 
         user = get_user_model().objects.get(email=user_data["email"])
         assert user is not None
@@ -50,13 +64,53 @@ class TestUserFlow:
         assert Wishlist.objects.filter(user=user).exists()
         assert Notification.objects.filter(user=user).exists()
 
-    # def test_resend_verification_email(self, client, user_data):
+    # def test_verify_email(self, client, user_data):
+    #     # Create unverified user
     #     user = get_user_model().objects.create_user(
     #         email=user_data["email"],
-    #         username=user_data["username"],
+    #         username=user_data["email"],  # Use email as username
     #         full_name=user_data["full_name"],
     #         password=user_data["password1"],
+    #         is_verified=False,
     #     )
+
+    #     # Create verification token
+    #     ct = int(time.time())
+    #     payload = {
+    #         User.USERNAME_FIELD: user_data["email"],
+    #         "exp": ct + 151200,
+    #         "origIat": ct,
+    #     }
+    #     token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+    #     mutation = """
+    #     mutation VerifyUser($token: String!) {
+    #         verifyUser(token: $token) {
+    #             status
+    #             message
+    #         }
+    #     }
+    #     """
+    #     response = client.execute(mutation, variables={"token": token})
+
+    #     assert response.get("data", {}).get("verifyUser") is not None
+    #     verify_result = response["data"]["verifyUser"]
+    #     assert verify_result["status"] is True
+    #     assert "Email verified successfully" in verify_result["message"]
+
+    #     user.refresh_from_db()
+    #     assert user.is_verified
+
+    # def test_resend_verification_email(self, client, user_data):
+    #     # Create unverified user
+    #     user = get_user_model().objects.create_user(
+    #         email=user_data["email"],
+    #         username=user_data["email"],
+    #         full_name=user_data["full_name"],
+    #         password=user_data["password1"],
+    #         is_verified=False,
+    #     )
+
     #     mutation = """
     #     mutation ResendVerification($email: String!) {
     #         resendVerification(email: $email) {
@@ -65,44 +119,12 @@ class TestUserFlow:
     #         }
     #     }
     #     """
-    #     variables = {"email": user_data["email"]}
-    #     response = client.execute(mutation, variables=variables)
+    #     response = client.execute(mutation, variables={"email": user_data["email"]})
 
-    #     assert response["data"]["resendVerification"]["status"] is True
-    #     assert (
-    #         "Successfully sent email to"
-    #         in response["data"]["resendVerification"]["message"]
-    #     )
-
-    # def test_verify_email(self, client, user_data):
-    #     user = get_user_model().objects.create_user(
-    #         email=user_data["email"],
-    #         username=user_data["username"],
-    #         full_name=user_data["full_name"],
-    #         password=user_data["password1"],
-    #         is_verified=False,
-    #     )
-    #     mutation = """
-    #     mutation VerifyEmail($email: String!) {
-    #         verifyEmail(email: $email) {
-    #             status
-    #             message
-    #         }
-    #     }
-    #     """
-    #     variables = {"email": user_data["email"], "username": user_data["email"]}
-    #     response = client.execute(mutation, variables=variables)
-        
-    #     print(response)  # Debugging
-
-    #     assert "data" in response
-    #     assert response["data"]["verifyEmail"]["status"] is True
-    #     assert (
-    #         "Email verified successfully" in response["data"]["verifyEmail"]["message"]
-    #     )
-
-    #     user.refresh_from_db()
-    #     assert user.is_verified
+    #     assert response.get("data", {}).get("resendVerification") is not None
+    #     resend_result = response["data"]["resendVerification"]
+    #     assert resend_result["status"] is True
+    #     assert "Verification email sent successfully" in resend_result["message"]
 
     def test_login_user(self, client, user_data):
         user = get_user_model().objects.create_user(

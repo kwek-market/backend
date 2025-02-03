@@ -78,6 +78,7 @@ def authenticate_user(token: str):
 
     except ExpiredSignatureError:
         return {"status": False, "message": "token expired", "user": None}
+    
     except DecodeError:
         return {
             "status": False,
@@ -89,7 +90,7 @@ def authenticate_user(token: str):
     except Exception as e:
         return {
             "status": False,
-            "message": "invalid authentication token",
+            "message": str(e),
             "user": None,
         }
 

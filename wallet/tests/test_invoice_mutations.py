@@ -91,4 +91,4 @@ def test_create_invoice_invalid_user(client):
     }
     response = client.execute(mutation, variables=variables)
     assert response["data"]["createInvoice"]["status"] is False
-    assert "Invalid login credentials" in response["data"]["createInvoice"]["message"]
+    assert "invalid authentication token" in response["data"]["createInvoice"]["message"]

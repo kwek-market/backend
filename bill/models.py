@@ -150,7 +150,7 @@ class CouponUser(models.Model):
 
 class OrderProgress(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    progress = models.CharField(max_length=30, default="Order Placed")
+    progress = models.CharField(max_length=30, default="Order Placed successfully")
     order = models.OneToOneField("Order", on_delete=models.CASCADE, related_name="progress")
 
     def __str__(self) -> str:
@@ -182,9 +182,12 @@ class OrderManager(models.Manager):
                 CartItem = apps.get_model('market', 'CartItem')
                 cart_items = CartItem.objects.filter(cart__user=order.user, ordered=False)
             order.cart_items.set(cart_items)
-            cart_items.update(ordered=True, cart=None, order=order)
-
-
+            # Update each cart item individually
+            for cart_item in cart_items:
+                cart_item.ordered = True
+                cart_item.cart = None
+                cart_item.order = order
+                cart_item.save()
             order_price = 0
             products_charge_total = 0
             for cart_item in order.cart_items.all():
@@ -203,9 +206,17 @@ class OrderManager(models.Manager):
 
             order_price_total = order_price
 
-            Order.objects.filter(id=order.id).update(order_price=first_order_price, order_price_total=order_price_total, products_charge_total=products_charge_total)
+            # Update order with final prices
+            order.order_price = first_order_price
+            order.order_price_total = order_price_total
+            order.products_charge_total = products_charge_total
+            order.save()
+
+            # Create OrderProgress for the new order
+            OrderProgress.objects.create(order=order)
 
         return order
+
 class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(ExtendUser, related_name="order", on_delete=models.CASCADE)

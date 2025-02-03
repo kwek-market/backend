@@ -1,8 +1,5 @@
-from datetime import datetime, timedelta
-
 import pytest
-from django.utils import timezone
-
+import uuid
 from bill.models import (
     Billing,
     Coupon,
@@ -12,11 +9,6 @@ from bill.models import (
     Payment,
     Pickup,
 )
-from market.models import Product, ProductOption, Cart,CartItem
-from notifications.models import Message, Notification
-from users.models import ExtendUser, SellerCustomer, SellerProfile
-from wallet.models import Wallet
-from bill.models import Coupon
 
 
 @pytest.mark.django_db
@@ -50,7 +42,7 @@ def test_cancel_order_invalid_id(client, valid_token):
         }
     """
     variables = {
-        "orderId": "invalid_order_id",
+        "orderId": str(uuid.uuid4()),
     }
     response = client.execute(mutation, variables=variables)
     assert response["data"]["cancelOrder"]["status"] is False
@@ -142,7 +134,7 @@ def test_apply_coupon_expired(client, valid_token, user, expired_coupon):
             applyCoupon(token: $token, couponId: $couponId) {
                 status
                 message
-            }
+            }   
         }
     """
     variables = {
@@ -181,7 +173,7 @@ def test_unapply_coupon_success(client, valid_token, user, coupon):
 
 
 @pytest.mark.django_db
-def test_delete_coupon_success(client, valid_token, admin_user, coupon):
+def test_delete_coupon_success(client, admin_token, coupon):
     mutation = """
         mutation DeleteCoupon($token: String!, $couponId: String!) {
             deleteCoupon(token: $token, couponId: $couponId) {
@@ -191,10 +183,11 @@ def test_delete_coupon_success(client, valid_token, admin_user, coupon):
         }
     """
     variables = {
-        "token": valid_token,
+        "token": admin_token,
         "couponId": str(coupon.id),
     }
     response = client.execute(mutation, variables=variables)
+    
     assert response["data"]["deleteCoupon"]["status"] is True
-    assert response["data"]["deleteCoupon"]["message"] == "Coupon unapplied"
+    assert response["data"]["deleteCoupon"]["message"] == "Coupon deleted successfully"
     assert not Coupon.objects.filter(id=coupon.id).exists()

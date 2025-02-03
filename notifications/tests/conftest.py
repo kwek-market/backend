@@ -15,6 +15,19 @@ def user():
 
 
 @pytest.fixture
+def valid_token(user):
+    import jwt
+    from django.conf import settings
+
+    payload = {
+        "username": user.email,
+        "exp": int(time.time()) + 3600,  # Token valid for 1 hour
+        "origIat": int(time.time()),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
+
+
+@pytest.fixture
 def notification(user):
     return Notification.objects.create(user=user)
 
@@ -27,19 +40,6 @@ def message(notification):
         subject="Test Subject",
         read=False,
     )
-
-
-@pytest.fixture
-def valid_token(user):
-    import jwt
-    from django.conf import settings
-
-    payload = {
-        "username": user.email,
-        "exp": int(time.time()) + 3600,  # Token valid for 1 hour
-        "origIat": int(time.time()),
-    }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
 @pytest.fixture
