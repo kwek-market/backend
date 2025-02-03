@@ -1,254 +1,153 @@
-# import graphene
 # import pytest
-# from graphene_django.utils.testing import graphql_query
-# from market.models import Cart, CartItem, Product, User, Wishlist
+# from market.models import Cart, CartItem
 
 
 # @pytest.mark.django_db
 # class TestDeleteCartMutation:
-#     def test_delete_cart_by_token(self):
-#         # Create a user and a cart
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         cart = Cart.objects.create(user=user)
+#     def test_delete_cart_by_token(
+#         self, client, cart, valid_token, delete_cart_mutation
+#     ):
+#         variables = {"cartId": str(cart.id), "token": valid_token}
 
-#         # Define the mutation query
-#         mutation = """
-#         mutation DeleteCart($cartId: String!, $token: String) {
-#             deleteCart(cartId: $cartId, token: $token) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
+#         response = client.execute(delete_cart_mutation, variables=variables)
 
-#         # Set the input variables
-#         variables = {
-#             "cartId": str(cart.id),
-#             "token": user.token,  # assuming the user has a valid token
-#         }
+#         assert response.get("data", {}).get("deleteCart", {}).get("status") is True
+#         assert (
+#             response.get("data", {}).get("deleteCart", {}).get("message")
+#             == "Deleted successfully"
+#         )
+#         assert not Cart.objects.filter(id=cart.id).exists()
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
+#     def test_delete_cart_by_ip(self, client, cart_with_ip, delete_cart_mutation):
+#         variables = {"cartId": str(cart_with_ip.id), "ip": "192.168.0.1"}
 
-#         # Assert the response
-#         assert response["data"]["deleteCart"]["status"] is True
-#         assert response["data"]["deleteCart"]["message"] == "Deleted successfully"
+#         response = client.execute(delete_cart_mutation, variables=variables)
 
-#     def test_delete_cart_invalid_token(self):
-#         # Create a user and a cart
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         cart = Cart.objects.create(user=user)
+#         assert response.get("data", {}).get("deleteCart", {}).get("status") is True
+#         assert (
+#             response.get("data", {}).get("deleteCart", {}).get("message")
+#             == "Deleted successfully"
+#         )
+#         assert not Cart.objects.filter(id=cart_with_ip.id).exists()
 
-#         # Define the mutation query
-#         mutation = """
-#         mutation DeleteCart($cartId: String!, $token: String) {
-#             deleteCart(cartId: $cartId, token: $token) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
-
-#         # Set the input variables with an invalid token
+#     def test_delete_cart_invalid_authentication(
+#         self, client, cart, delete_cart_mutation
+#     ):
 #         variables = {"cartId": str(cart.id), "token": "invalid_token"}
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
+#         response = client.execute(delete_cart_mutation, variables=variables)
 
-#         # Assert the response
-#         assert response["data"]["deleteCart"]["status"] is False
-#         assert response["data"]["deleteCart"]["message"] == "Invalid user"
-
-#     def test_delete_cart_by_ip(self):
-#         # Create a cart with IP
-#         cart = Cart.objects.create(ip="192.168.0.1")
-
-#         # Define the mutation query
-#         mutation = """
-#         mutation DeleteCart($cartId: String!, $ip: String) {
-#             deleteCart(cartId: $cartId, ip: $ip) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
-
-#         # Set the input variables
-#         variables = {"cartId": str(cart.id), "ip": "192.168.0.1"}
-
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
-
-#         # Assert the response
-#         assert response["data"]["deleteCart"]["status"] is True
-#         assert response["data"]["deleteCart"]["message"] == "Deleted successfully"
-
-#     def test_delete_cart_invalid_ip(self):
-#         # Create a cart with a different IP
-#         cart = Cart.objects.create(ip="192.168.0.2")
-
-#         # Define the mutation query
-#         mutation = """
-#         mutation DeleteCart($cartId: String!, $ip: String) {
-#             deleteCart(cartId: $cartId, ip: $ip) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
-
-#         # Set the input variables with an invalid IP
-#         variables = {"cartId": str(cart.id), "ip": "192.168.0.1"}
-
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
-
-#         # Assert the response
-#         assert response["data"]["deleteCart"]["status"] is False
-#         assert response["data"]["deleteCart"]["message"] == "Invalid user"
+#         assert response.get("data", {}).get("deleteCart", {}).get("status") is False
+#         assert (
+#             response.get("data", {}).get("deleteCart", {}).get("message")
+#             == "invalid authentication token"
+#         )
+#         assert Cart.objects.filter(id=cart.id).exists()
 
 
 # @pytest.mark.django_db
 # class TestDecreaseCartItemQuantityMutation:
-#     def test_decrease_cart_item_quantity(self):
-#         # Create a user, product, cart, and cart item
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         product = Product.objects.create(name="Product 1")
-#         cart = Cart.objects.create(user=user)
-#         cart_item = CartItem.objects.create(cart=cart, product=product, quantity=5)
-
-#         # Define the mutation query
-#         mutation = """
-#         mutation DecreaseCartItemQuantity($cartId: String!, $itemId: String!, $token: String) {
-#             decreaseCartItemQuantity(cartId: $cartId, itemId: $itemId, token: $token) {
-#                 status
-#                 message
-#                 cartItem {
-#                     quantity
-#                 }
-#             }
-#         }
-#         """
-
-#         # Set the input variables
+#     def test_decrease_cart_item_quantity(
+#         self, client, cart, cart_item, valid_token, decrease_cart_item_quantity_mutation
+#     ):
 #         variables = {
 #             "cartId": str(cart.id),
 #             "itemId": str(cart_item.id),
-#             "token": user.token,  # assuming the user has a valid token
+#             "token": valid_token,
 #         }
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
+#         response = client.execute(
+#             decrease_cart_item_quantity_mutation, variables=variables
+#         )
 
-#         # Assert the response
-#         assert response["data"]["decreaseCartItemQuantity"]["status"] is True
 #         assert (
-#             response["data"]["decreaseCartItemQuantity"]["message"]
+#             response.get("data", {}).get("decreaseCartItemQuantity", {}).get("status")
+#             is True
+#         )
+#         assert (
+#             response.get("data", {}).get("decreaseCartItemQuantity", {}).get("message")
 #             == "Quantity reduced successfully"
 #         )
-#         assert response["data"]["decreaseCartItemQuantity"]["cartItem"]["quantity"] == 4
 
-#     def test_decrease_cart_item_quantity_invalid_item(self):
-#         # Create a user and cart
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         cart = Cart.objects.create(user=user)
+#         cart_item.refresh_from_db()
+#         assert cart_item.quantity == 4
 
-#         # Define the mutation query
-#         mutation = """
-#         mutation DecreaseCartItemQuantity($cartId: String!, $itemId: String!, $token: String) {
-#             decreaseCartItemQuantity(cartId: $cartId, itemId: $itemId, token: $token) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
+#     def test_decrease_cart_item_to_zero(
+#         self, client, cart, cart_item, valid_token, decrease_cart_item_quantity_mutation
+#     ):
+#         cart_item.quantity = 1
+#         cart_item.save()
 
-#         # Set the input variables with an invalid item ID
 #         variables = {
 #             "cartId": str(cart.id),
-#             "itemId": "invalid_item_id",
-#             "token": user.token,
+#             "itemId": str(cart_item.id),
+#             "token": valid_token,
 #         }
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
-
-#         # Assert the response
-#         assert response["data"]["decreaseCartItemQuantity"]["status"] is False
-#         assert (
-#             response["data"]["decreaseCartItemQuantity"]["message"]
-#             == "Cart Item does not exist"
+#         response = client.execute(
+#             decrease_cart_item_quantity_mutation, variables=variables
 #         )
+
+#         assert (
+#             response.get("data", {}).get("decreaseCartItemQuantity", {}).get("status")
+#             is True
+#         )
+#         assert (
+#             response.get("data", {}).get("decreaseCartItemQuantity", {}).get("message")
+#             == "Item removed from cart"
+#         )
+#         assert not CartItem.objects.filter(id=cart_item.id).exists()
 
 
 # @pytest.mark.django_db
 # class TestRemoveItemFromCartWithOptionIdMutation:
-#     def test_remove_item_from_cart_with_option_id(self):
-#         # Create a user, cart, product option, and cart item
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         product = Product.objects.create(name="Product 1")
-#         cart = Cart.objects.create(user=user)
-#         cart_item = CartItem.objects.create(
-#             cart=cart, product=product, product_option_id="option_1", quantity=5
-#         )
-
-#         # Define the mutation query
-#         mutation = """
-#         mutation RemoveItemFromCartWithOptionId($productOptionId: String!, $quantity: Int!, $token: String) {
-#             removeItemFromCartWithOptionId(productOptionId: $productOptionId, quantity: $quantity, token: $token) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
-
-#         # Set the input variables
+#     def test_remove_item_from_cart(
+#         self, client, cart_item, valid_token, remove_item_from_cart_mutation
+#     ):
 #         variables = {
-#             "productOptionId": "option_1",
+#             "productOptionId": cart_item.product_option_id,
 #             "quantity": 1,
-#             "token": user.token,  # assuming the user has a valid token
+#             "token": valid_token,
 #         }
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
+#         response = client.execute(remove_item_from_cart_mutation, variables=variables)
 
-#         # Assert the response
-#         assert response["data"]["removeItemFromCartWithOptionId"]["status"] is True
 #         assert (
-#             response["data"]["removeItemFromCartWithOptionId"]["message"]
-#             == "successful"
+#             response.get("data", {})
+#             .get("removeItemFromCartWithOptionId", {})
+#             .get("status")
+#             is True
+#         )
+#         assert (
+#             response.get("data", {})
+#             .get("removeItemFromCartWithOptionId", {})
+#             .get("message")
+#             == "Item removed successfully"
 #         )
 
+#         cart_item.refresh_from_db()
+#         assert cart_item.quantity == 4
 
-# @pytest.mark.django_db
-# class TestDeleteCartItemMutation:
-#     def test_delete_cart_item(self):
-#         # Create a user, cart, product, and cart item
-#         user = User.objects.create_user(email="test@example.com", password="password")
-#         product = Product.objects.create(name="Product 1")
-#         cart = Cart.objects.create(user=user)
-#         cart_item = CartItem.objects.create(cart=cart, product=product, quantity=5)
-
-#         # Define the mutation query
-#         mutation = """
-#         mutation DeleteCartItem($cartId: String!, $itemId: String!, $token: String) {
-#             deleteCartItem(cartId: $cartId, itemId: $itemId, token: $token) {
-#                 status
-#                 message
-#             }
-#         }
-#         """
-
-#         # Set the input variables
+#     def test_remove_nonexistent_item(
+#         self, client, valid_token, remove_item_from_cart_mutation
+#     ):
 #         variables = {
-#             "cartId": str(cart.id),
-#             "itemId": str(cart_item.id),
-#             "token": user.token,
+#             "productOptionId": "nonexistent-id",
+#             "quantity": 1,
+#             "token": valid_token,
 #         }
 
-#         # Perform the query
-#         response = graphql_query(mutation, variables=variables)
+#         response = client.execute(remove_item_from_cart_mutation, variables=variables)
 
-#         # Assert the response
-#         assert response["data"]["deleteCartItem"]["status"] is True
-#         assert response["data"]["deleteCartItem"]["message"] == "Deleted successfully"
+#         assert (
+#             response.get("data", {})
+#             .get("removeItemFromCartWithOptionId", {})
+#             .get("status")
+#             is False
+#         )
+#         assert (
+#             response.get("data", {})
+#             .get("removeItemFromCartWithOptionId", {})
+#             .get("message")
+#             == "Cart not found"
+#         )

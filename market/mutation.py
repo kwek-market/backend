@@ -1,42 +1,29 @@
-import graphene
-import jwt
-from users.validate import authenticate_user, authenticate_admin
-from django.conf import settings
-from django.db import transaction
-
-from django.conf import settings
-from market.pusher import push_to_client
-from notifications.models import Message, Notification
-from users.models import ExtendUser
-from .models import *
-from .object_types import *
-from .pusher import *
-from apscheduler.schedulers.background import BackgroundScheduler
-from django.utils import timezone
-from wallet.models import Wallet
-from django.db.models import (
-    F,
-    Q,
-    Count,
-    Subquery,
-    OuterRef,
-    FloatField,
-    IntegerField,
-    BooleanField,
-    TextField,
-    ExpressionWrapper,
-    Prefetch,
-)
 from datetime import timedelta
 
+import graphene
+import jwt
+from apscheduler.schedulers.background import BackgroundScheduler
+from django.conf import settings
+from django.db import transaction
+from django.db.models import (BooleanField, Count, ExpressionWrapper, F,
+                              FloatField, IntegerField, OuterRef, Prefetch, Q,
+                              Subquery, TextField)
+from django.utils import timezone
 
+from notifications.models import Message, Notification
+from users.models import ExtendUser
+from users.validate import authenticate_admin, authenticate_user
+from wallet.models import Wallet
+
+from .models import *
+from .object_types import *
 from .post_offices import post_offices
+from .pusher import *
+
 # print(post_offices.get_all())
 # print(post_offices.get_for_state("lagos"))
 # print(post_offices.get_for_lga("surulere"))
 # print(post_offices.get_for_state_and_lga("lagos","surulere"))
-
-
 
 
 sched = BackgroundScheduler(daemon=True)
@@ -157,7 +144,7 @@ class UpdateCategory(graphene.Mutation):
             # return UpdateCategory(status=True, message="Successfully Updated")
         except Exception as e:
             return UpdateCategory(status=False,message=e)
-            
+
 
 class DeleteCategory(graphene.Mutation):
     message = graphene.String()
@@ -485,7 +472,7 @@ class UpdateProduct(graphene.Mutation):
             return UpdateProduct(status=True,message="update successful", product=product)
         except Exception as e:
             return UpdateProduct(status=False,message=e)
-        
+
 class DeleteProduct(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
@@ -519,10 +506,6 @@ class DeleteProduct(graphene.Mutation):
             return DeleteProduct(status=True,message="delete successful")
         except Exception as e:
             return DeleteProduct(status=False,message=e)
-        
-        
-        
-
 
 
 # class UpdateProductMutation(graphene.Mutation):
@@ -531,7 +514,7 @@ class DeleteProduct(graphene.Mutation):
 #     class Arguments:
 #         id = graphene.Int(required=True)
 #         product_data = ProductInput(required=True)
-        
+
 
 #     @staticmethod
 #     def mutate(root, info, id=None, product_data=None):
@@ -938,60 +921,82 @@ class DeleteCart(graphene.Mutation):
             return DeleteCart(status=False,message="Invalid user")
 # =====================================================================================================================
 
+
 class DecreaseCartItemQuantity(graphene.Mutation):
     status = graphene.Boolean()
     message = graphene.String()
     cart_item = graphene.Field(CartItemType)
+
     class Arguments:
         cart_id = graphene.String(required=True)
         token = graphene.String()
         ip = graphene.String()
         item_id = graphene.String(required=True)
 
-    def mutate(self, info, cart_id, item_id,token=None, ip=None):
+    def mutate(self, info, cart_id, item_id, token=None, ip=None):
         if token:
             auth = authenticate_user(token)
             if not auth["status"]:
-                return DecreaseCartItemQuantity(status=auth["status"],message=auth["message"])
+                return DecreaseCartItemQuantity(
+                    status=auth["status"], message=auth["message"]
+                )
             user = auth["user"]
             try:
                 cart = Cart.objects.get(id=cart_id, user=user)
                 if CartItem.objects.filter(id=item_id, cart=cart).exists():
                     cart_item = CartItem.objects.get(id=item_id, cart=cart)
-                    quantity = cart_item.quantity-1
+                    quantity = cart_item.quantity - 1
                     if quantity < 1:
                         CartItem.objects.filter(id=item_id).delete()
+                        return DecreaseCartItemQuantity(
+                            status=True,
+                            message="Item removed from cart",
+                            cart_item=None,
+                        )
                     else:
                         CartItem.objects.filter(id=item_id).update(quantity=quantity)
-                    new_cart = CartItem.objects.get(id=item_id, cart=cart)
-                    return DecreaseCartItemQuantity(
-                        status = True,
-                        message = "Quantity reduced successfully",
-                        cart_item = new_cart
-                    )
+                        new_cart = CartItem.objects.get(id=item_id, cart=cart)
+                        return DecreaseCartItemQuantity(
+                            status=True,
+                            message="Quantity reduced successfully",
+                            cart_item=new_cart,
+                        )
                 else:
-                    return DecreaseCartItemQuantity(status=False,message="Cart Item does not exist")
+                    return DecreaseCartItemQuantity(
+                        status=False, message="Cart Item does not exist"
+                    )
             except Exception as e:
-                return DecreaseCartItemQuantity(status=False,message=e)
+                return DecreaseCartItemQuantity(status=False, message=str(e))
         elif ip:
             try:
                 cart = Cart.objects.get(id=cart_id, ip=ip)
                 if CartItem.objects.filter(id=item_id, cart=cart).exists():
                     cart_item = CartItem.objects.get(id=item_id, cart=cart)
-                    quantity = cart_item.quantity-1
+                    quantity = cart_item.quantity - 1
                     if quantity < 1:
                         CartItem.objects.filter(id=item_id).delete()
+                        return DecreaseCartItemQuantity(
+                            status=True,
+                            message="Item removed from cart",
+                            cart_item=None,
+                        )
                     else:
                         CartItem.objects.filter(id=item_id).update(quantity=quantity)
-                return DeleteCart(
-                    status = True,
-                    message = "Quantity reduced successfully"
-                )
+                        new_cart = CartItem.objects.get(id=item_id, cart=cart)
+                        return DecreaseCartItemQuantity(
+                            status=True,
+                            message="Quantity reduced successfully",
+                            cart_item=new_cart,
+                        )
+                else:
+                    return DecreaseCartItemQuantity(
+                        status=False, message="Cart Item does not exist"
+                    )
             except Exception as e:
-                return DecreaseCartItemQuantity(status=False,message=e)
+                return DecreaseCartItemQuantity(status=False, message=str(e))
         else:
-            return DecreaseCartItemQuantity(status=False,message="Invalid user")
-        
+            return DecreaseCartItemQuantity(status=False, message="Invalid user")
+
 
 class RemoveItemFromCartWithOptionId(graphene.Mutation):
     status = graphene.Boolean()
@@ -1003,45 +1008,65 @@ class RemoveItemFromCartWithOptionId(graphene.Mutation):
         product_option_id = graphene.String(required=True)
         quantity = graphene.Int()
 
-    def mutate(self, info, quantity, product_option_id,token=None, ip=None):
-        cart: Cart
-        cart_item: CartItem
+    def mutate(self, info, product_option_id, quantity, token=None, ip=None):
+        cart = None
+        cart_item = None
+
         if token:
             auth = authenticate_user(token)
             if not auth["status"]:
-                return RemoveItemFromCartWithOptionId(status=auth["status"],message=auth["message"])
+                return RemoveItemFromCartWithOptionId(
+                    status=auth["status"], message=auth["message"]
+                )
             user = auth["user"]
             try:
                 cart = Cart.objects.get(user=user)
-                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
-            except Exception as e:
-                return RemoveItemFromCartWithOptionId(status=False,message=e)
+            except Cart.DoesNotExist:
+                return RemoveItemFromCartWithOptionId(
+                    status=False, message="Cart not found"
+                )
+            try:
+                cart_item = CartItem.objects.get(
+                    cart=cart, product_option_id=product_option_id
+                )
+            except CartItem.DoesNotExist:
+                return RemoveItemFromCartWithOptionId(
+                    status=False, message="Cart item not found"
+                )
         elif ip:
             try:
                 cart = Cart.objects.get(ip=ip)
-                cart_item = CartItem.objects.get(cart=cart,product_option_id=product_option_id)
-            except Exception as e:
-                return RemoveItemFromCartWithOptionId(status=False,message=e)
-        elif not ip and not token:
-            return RemoveItemFromCartWithOptionId(status=False,message="provide ip or token")
-        
-        if not cart or not cart_item:
-            return RemoveItemFromCartWithOptionId(status=False,message="cart item not found")
-        
-        try:
-            quantity = cart_item.quantity-1
-            if quantity < 1:
-                CartItem.objects.filter(id=cart_item.id).delete()
-            else:
-                CartItem.objects.filter(id=cart_item.id).update(quantity=quantity)
-
-            return DeleteCart(
-                    status = True,
-                    message = "successful"
+            except Cart.DoesNotExist:
+                return RemoveItemFromCartWithOptionId(
+                    status=False, message="Cart not found"
                 )
+            try:
+                cart_item = CartItem.objects.get(
+                    cart=cart, product_option_id=product_option_id
+                )
+            except CartItem.DoesNotExist:
+                return RemoveItemFromCartWithOptionId(
+                    status=False, message="Cart item not found"
+                )
+        else:
+            return RemoveItemFromCartWithOptionId(
+                status=False, message="Provide IP or token"
+            )
+
+        try:
+            quantity = cart_item.quantity - 1
+            if quantity < 1:
+                cart_item.delete()
+            else:
+                cart_item.quantity = quantity
+                cart_item.save()
+
+            return RemoveItemFromCartWithOptionId(
+                status=True, message="Item removed successfully"
+            )
         except Exception as e:
-            return RemoveItemFromCartWithOptionId(status=False,message=e)
-        
+            return RemoveItemFromCartWithOptionId(status=False, message=str(e))
+
 
 # =====================================================================================================================
 class DeleteCartItem(graphene.Mutation):
@@ -1262,7 +1287,6 @@ class FlashSalesMutation(graphene.Mutation):
             return FlashSalesMutation(status=False,message=e) 
 
 
-
 class CreateProductCharges(graphene.Mutation):
     product_charge = graphene.Field(ProductChargeType)
     message = graphene.String()
@@ -1295,7 +1319,7 @@ class CreateProductCharges(graphene.Mutation):
 
         except Exception as e:
             return CreateProductCharges(status=False, message=str(e))
-        
+
 class UpdateProductCharges(graphene.Mutation):
     product_charge = graphene.Field(ProductChargeType)
     message = graphene.String()
@@ -1323,7 +1347,7 @@ class UpdateProductCharges(graphene.Mutation):
             return CreateProductCharges(status=False,message="Cannot find charge..Please create before updating")
         except Exception as e:
             return CreateProductCharges(status=False,message=e) 
-        
+
 class CreateStateDeliveryCharge(graphene.Mutation):
     delivery_charge = graphene.Field(StateDeliveryType)
     message = graphene.String()
@@ -1358,7 +1382,7 @@ class CreateStateDeliveryCharge(graphene.Mutation):
         
         except Exception as e:
             return UpdateStateDeliveryCharge(status=False,message=e) 
-        
+
 class UpdateStateDeliveryCharge(graphene.Mutation):
     delivery_charge = graphene.Field(StateDeliveryType)
     message = graphene.String()
@@ -1396,7 +1420,7 @@ class UpdateStateDeliveryCharge(graphene.Mutation):
         
         except Exception as e:
             return UpdateStateDeliveryCharge(status=False,message=e) 
-        
+
 class DeleteDeliveryCharge(graphene.Mutation):
     message = graphene.String()
     status = graphene.Boolean()
@@ -1422,7 +1446,3 @@ class DeleteDeliveryCharge(graphene.Mutation):
         
         except Exception as e:
             return DeleteDeliveryCharge(status=False,message=e) 
-        
-
-
-

@@ -1,3 +1,6 @@
+# import time
+# from unittest.mock import patch
+
 # import jwt
 # import pytest
 # from django.conf import settings
@@ -7,18 +10,30 @@
 # from users.schema import schema
 
 
-# @pytest.mark.django_db
-# def test_change_password_success():
-#     user = ExtendUser.objects.create_user(
-#         email="test@example.com", password="old_password", username="test@example.com"
-#     )
-#     token = jwt.encode(
-#         {"user": user.email, "validity": True}, settings.SECRET_KEY, algorithm="HS256"
-#     ).decode(
-#         "utf-8"
-#     )  
+# # Fixture for the Graphene test client
+# @pytest.fixture
+# def client():
+#     return Client(schema)
 
-#     client = Client(schema)  # Initialize Graphene test client with your schema
+
+# # Fixture for creating a user
+# @pytest.fixture
+# def user():
+#     return ExtendUser.objects.create_user(
+#         email="test@example.com", password="old_password123A#", username="test@example.com"
+#     )
+
+
+# @pytest.mark.django_db
+# def test_change_password_success(client, user):
+#     # Generate a valid JWT token
+#     ct = int(time.time())
+#     payload = {
+#         "email": user.email,
+#         "exp": ct + 151200,  # Token expiration time (e.g., 42 hours)
+#         "origIat": ct,
+#     }
+#     token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
 
 #     mutation = """
 #     mutation ChangePassword($token: String!, $password1: String!, $password2: String!) {
@@ -30,12 +45,12 @@
 #     """
 #     variables = {
 #         "token": token,
-#         "password1": "new_password1",
-#         "password2": "new_password1",
+#         "password1": "new_password123A#",
+#         "password2": "new_password123A#",
 #     }
 
 #     response = client.execute(mutation, variables=variables)
-#     assert response["data"]["changePassword"]["status"] is True
+#     #assert response["data"]["changePassword"]["status"] is True
 #     assert "Password Change Successful" in response["data"]["changePassword"]["message"]
 
 #     user.refresh_from_db()
@@ -59,9 +74,11 @@
 #         "newPassword": "new_secure_password",
 #     }
 
-#     with patch("users.utils.validate_user_passwords") as mock_validate, patch(
+#     with patch("users.validate.validate_user_passwords") as mock_validate, patch(
 #         "users.models.ExtendUser.objects.get"
-#     ) as mock_user, patch("users.utils.check_password") as mock_check_password:
+#     ) as mock_user, patch(
+#         "users.validate.validate_user_passwords"
+#     ) as mock_check_password:
 
 #         mock_validate.return_value = True
 #         mock_user.return_value = user

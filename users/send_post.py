@@ -5,7 +5,7 @@ import simplejson
 from django.conf import settings   
 
 
-def send_post_request(myurl,body):
+def send_flutter_post_request(myurl,body):
     headers = {'Content-Type': 'application/json','Authorization': settings.FLUTTER_SEC_KEY}
 
     response = requests.post(myurl, data=json.dumps(body), headers=headers)

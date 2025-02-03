@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 from typing import Dict, List
@@ -7,6 +8,8 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.shortcuts import get_object_or_404
 from django.template import Context, Template
 from graphql_jwt.shortcuts import create_refresh_token
@@ -20,7 +23,7 @@ from wallet.models import StoreDetail, Wallet
 
 from .model_object_type import SellerProfileType, UserType
 from .models import ExtendUser, SellerProfile
-from .send_post import send_post_request
+from .send_post import send_flutter_post_request
 from .sendmail import (
     expire_token,
     refresh_user_token,
@@ -79,12 +82,12 @@ class CreateUser(graphene.Mutation):
             if "autoverify" in user.email:
                 user.is_verified = True
                 user.is_admin = True
-            user.save()
-            return SellerVerification(
+                user.save()
+                return SellerVerification(
                     status=True,
                     message="Seller automatically verified due to email pattern",
                 )
-
+            user.save()
             Cart.objects.create(user=user)
             Wishlist.objects.create(user=user)
             Notification.objects.create(user=user)
@@ -97,33 +100,80 @@ class CreateUser(graphene.Mutation):
             return CreateUser(status=False, message=sen_m["message"])
 
 
-class ResendVerification(graphene.Mutation):
-    status = graphene.Boolean()
-    message = graphene.String()
-    email_text = graphene.String()
+class ResendVerificationResponse(graphene.ObjectType):
+    status = graphene.Boolean(description="Operation success status")
+    message = graphene.String(description="Response message")
+    email_text = graphene.String(description="Email content if needed")
 
+
+class ResendVerification(graphene.Mutation):
     class Arguments:
-        email = graphene.String(required=True)
+        email = graphene.String(
+            required=True, description="Email address to resend verification"
+        )
+
+    Output = ResendVerificationResponse
+
+    @staticmethod
+    def validate_email(email):
+        """Validate email format using Django's built-in validator."""
+        try:
+            validate_email(email)  # Use Django's built-in email validator
+            return True
+        except ValidationError:
+            return False
 
     @staticmethod
     def mutate(self, info, email):
-        try:
-            f_user = ExtendUser.objects.get(email=email)
-        except ExtendUser.DoesNotExist:
-            return ResendVerification(
+        # Normalize email
+        email = email.lower().strip()
+
+        # Validate email format
+        if not ResendVerification.validate_email(email):
+            return ResendVerificationResponse(
                 status=False,
-                message="No user with this email found. Please check the email address and try again.",
+                message="Invalid email format. Please provide a valid email address.",
             )
 
-        sen_m = send_verification_email(email, f_user.full_name)
-        if sen_m["status"]:
-            return ResendVerification(
-                status=True,
-                message="Successfully sent email to {}".format(email),
+        try:
+            # Get user and verify they need verification
+            user = ExtendUser.objects.get(email=email)
+
+            # Send verification email
+            verification_result = send_verification_email(
+                email=email, name=user.full_name
             )
-        else:
-            # raise Error("Email Verification not sent")
-            return ResendVerification(status=False, message=sen_m["message"])
+
+            if verification_result["status"]:
+                return ResendVerificationResponse(
+                    status=True,
+                    message=f"Verification email sent successfully to {email}",
+                )
+
+            # Log failed email sending
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to send verification email to {email}: {verification_result['message']}"
+            )
+            return ResendVerificationResponse(
+                status=False,
+                message=verification_result["message"]
+                or "Failed to send verification email",
+            )
+
+        except ExtendUser.DoesNotExist:
+            return ResendVerificationResponse(
+                status=False,
+                message="No user found with this email address. Please check and try again.",
+            )
+        except Exception as e:
+            # Log unexpected errors
+            logger = logging.getLogger(__name__)
+            logger.exception(f"Error in ResendVerification mutation: {str(e)}")
+            return ResendVerificationResponse(
+                status=False,
+                message="An unexpected error occurred. Please try again later.",
+            )
 
 
 class VerifyUser(graphene.Mutation):
@@ -136,11 +186,13 @@ class VerifyUser(graphene.Mutation):
     @staticmethod
     def mutate(self, info, token):
         try:
-            username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])["user"]
+            username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
+                "user"
+            ]
             user = ExtendUser.objects.get(email=username)
             if user.is_verified:
                 return VerifyUser(status=False, message="User is already verified.")
-            
+
             user.is_verified = True
             user.save()
             return VerifyUser(status=True, message="Verification successful")
@@ -195,10 +247,6 @@ class LoginUser(graphene.Mutation):
             "origIat": ct,
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-        # .decode(
-        #     "utf-8"
-        # )
-
         # Create refresh token
         refresh_token = create_refresh_token(user)
 
@@ -380,9 +428,12 @@ class UserPasswordUpdate(graphene.Mutation):
     @staticmethod
     def mutate(self, info, token, current_password, new_password):
         try:
-            email = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
-                "username"
-            ]
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            email = payload.get("email")  # Ensure this matches the token payload key
+            if not email:
+                return UserPasswordUpdate(
+                    status=False, message="Invalid token structure"
+                )
             c_user = ExtendUser.objects.get(email=email)
 
             # Check if the current password is correct
@@ -392,7 +443,7 @@ class UserPasswordUpdate(graphene.Mutation):
                 )
 
             vup = validate_user_passwords(new_password)
-            if not vup:     
+            if not vup:
                 return UserPasswordUpdate(
                     status=vup["status"],
                     message=vup["message"],
@@ -418,10 +469,8 @@ class UserPasswordUpdate(graphene.Mutation):
             email_send.send_only_one_paragraph(
                 notification_message.subject, notification_message.message
             )
-            return UserPasswordUpdate(
-                status=True, message="Password Change Successful"
-            )
-            
+            return UserPasswordUpdate(status=True, message="Password Change Successful")
+
         except Exception as e:
             return UserPasswordUpdate(status=False, message=e)
 
@@ -525,44 +574,40 @@ class AccountNameRetrieval(graphene.Mutation):
     status = graphene.Boolean()
 
     class Arguments:
-        # token = graphene.String()
         account_number = graphene.String()
-        # bank_name = graphene.String()
-        bank_codeaccount_number = graphene.String()
+        bank_code = graphene.String()
 
     @staticmethod
     def mutate(self, info, account_number, bank_code):
-        body, myurl = {
-            "": account_number,
-            "account_bank": bank_code,
-        }, "https://api.flutterwave.com/v3/accounts/resolve"
-        response = send_post_request(myurl, body)
-        response_status, response_message = response["status"], response["message"]
-        account_number, account_name = "null", "null"
-        if response_status == "success":
-            account_number, account_name = (
-                response["data"]["account_number"],
-                response["data"]["account_name"],
-            )
+        try:
+            body = {
+                "account_number": account_number,
+                "account_bank": bank_code,
+            }
+            myurl = "https://api.flutterwave.com/v3/accounts/resolve"
+
+            response = send_flutter_post_request(myurl, body)
+            response_status = response.get("status", "error")
+            response_message = response.get("message", "Unknown error")
+
+            if response_status == "success":
+                return AccountNameRetrieval(
+                    status=True,
+                    message="Account found",
+                    account_number=response["data"]["account_number"],
+                    account_name=response["data"]["account_name"],
+                )
+            else:
+                return AccountNameRetrieval(
+                    status=False,
+                    message=response_message,
+                    account_number=None,
+                    account_name=None,
+                )
+
+        except Exception as e:
             return AccountNameRetrieval(
-                status=True,
-                message="Bank info Retreived",
-                account_number=account_number,
-                account_name=account_name,
-            )
-        elif response_status == "error":
-            return AccountNameRetrieval(
-                status=False,
-                message=response_message,
-                account_number=account_number,
-                account_name=account_name,
-            )
-        else:
-            return AccountNameRetrieval(
-                status=False,
-                message=response_message,
-                account_number=account_number,
-                account_name=account_name,
+                status=False, message=str(e), account_number=None, account_name=None
             )
 
 
@@ -648,9 +693,7 @@ class UserAccountUpdate(graphene.Mutation):
         else:
             ct = int(("{}".format(time.time())).split(".")[0])
             payload = {"username": new_email, "exp": ct + 151200, "origIat": ct}
-            n_token = jwt.encode(
-                payload, settings.SECRET_KEY, algorithm="HS256"
-            )
+            n_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
             # .decode("utf-8")
             tu = u_update(email)
             if tu == True:

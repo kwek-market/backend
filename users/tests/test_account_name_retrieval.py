@@ -4,6 +4,11 @@
 # from users.schema import schema
 
 
+# @pytest.fixture
+# def client():
+#     return Client(schema)
+
+
 # @pytest.mark.django_db
 # def test_account_name_retrieval_success(client):
 #     mutation = """
@@ -18,7 +23,7 @@
 #     """
 #     variables = {"accountNumber": "1234567890", "bankCode": "001"}
 
-#     with patch("users.utils.send_post_request") as mock_send_request:
+#     with patch("users.send_post.send_flutter_post_request") as mock_send_request:
 #         mock_send_request.return_value = {
 #             "status": "success",
 #             "message": "Account found",
@@ -29,6 +34,7 @@
 #         data = response["data"]["accountNameRetrieval"]
 
 #         assert data["status"] is True
+#         assert data["message"] == "Account found"
 #         assert data["accountNumber"] == "1234567890"
 #         assert data["accountName"] == "John Doe"
 
@@ -47,8 +53,8 @@
 #     """
 #     variables = {"accountNumber": "9876543210", "bankCode": "999"}
 
-#     with patch("users.utils.send_post_request") as mock_post_request:
-#         mock_post_request.return_value = {
+#     with patch("users.send_post.send_flutter_post_request") as mock_send_request:
+#         mock_send_request.return_value = {
 #             "status": "error",
 #             "message": "Invalid bank code",
 #         }
@@ -58,5 +64,5 @@
 
 #         assert data["status"] is False
 #         assert data["message"] == "Invalid bank code"
-#         assert data["accountNumber"] == "null"
-#         assert data["accountName"] == "null"
+#         assert data["accountNumber"] is None
+#         assert data["accountName"] is None
