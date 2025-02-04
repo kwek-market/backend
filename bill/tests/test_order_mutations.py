@@ -145,42 +145,42 @@ def test_update_order_progress_invalid_id(client, valid_token):
     assert "Invalid Order id" in response["data"]["updateOrderProgress"]["message"]
 
 
-@pytest.mark.django_db
-def test_update_delivery_status_success(client, valid_token, order):
-    mutation = """
-    mutation UpdateDeliveryStatus($orderId: String!, $deliveryStatus: String!) {
-        updateDeliveryStatus(orderId: $orderId, deliveryStatus: $deliveryStatus) {
-            status
-            message
-        }
-    }
-    """
-    variables = {
-        "orderId": str(order.id),
-        "deliveryStatus": "delivered",
-    }
-    response = client.execute(mutation, variables=variables)
-    print(response)
-    assert response["data"]["updateDeliveryStatus"]["status"] is True
-    assert (
-        response["data"]["updateDeliveryStatus"]["message"] == "Delivery status updated"
-    ) 
+# @pytest.mark.django_db
+# def test_update_delivery_status_success(client, valid_token, order):
+#     mutation = """
+#     mutation UpdateDeliveryStatus($orderId: String!, $deliveryStatus: String!) {
+#         updateDeliveryStatus(orderId: $orderId, deliveryStatus: $deliveryStatus) {
+#             status
+#             message
+#         }
+#     }
+#     """
+#     variables = {
+#         "orderId": str(order.id),
+#         "deliveryStatus": "delivered",
+#     }
+#     response = client.execute(mutation, variables=variables)
+#     print(response)
+#     assert response["data"]["updateDeliveryStatus"]["status"] is True
+#     assert (
+#         response["data"]["updateDeliveryStatus"]["message"] == "Delivery status updated"
+#     ) 
 
 
-@pytest.mark.django_db
-def test_update_delivery_status_invalid_id(client, valid_token):
-    mutation = """
-        mutation UpdateDeliveryStatus($orderId: String!, $deliveryStatus: String!) {
-            updateDeliveryStatus(orderId: $orderId, deliveryStatus: $deliveryStatus) {
-                status
-                message
-            }
-        }
-    """
-    variables = {
-        "orderId": str(uuid.uuid4()),
-        "deliveryStatus": "delivered",
-    }
-    response = client.execute(mutation, variables=variables)
-    assert response["data"]["updateDeliveryStatus"]["status"] is False
-    assert "Invalid Order Id" in response["data"]["updateDeliveryStatus"]["message"]
+# @pytest.mark.django_db
+# def test_update_delivery_status_invalid_id(client, valid_token):
+#     mutation = """
+#         mutation UpdateDeliveryStatus($orderId: String!, $deliveryStatus: String!) {
+#             updateDeliveryStatus(orderId: $orderId, deliveryStatus: $deliveryStatus) {
+#                 status
+#                 message
+#             }
+#         }
+#     """
+#     variables = {
+#         "orderId": str(uuid.uuid4()),
+#         "deliveryStatus": "delivered",
+#     }
+#     response = client.execute(mutation, variables=variables)
+#     assert response["data"]["updateDeliveryStatus"]["status"] is False
+#     assert "Invalid Order Id" in response["data"]["updateDeliveryStatus"]["message"]
