@@ -639,6 +639,7 @@ class UpdateDeliverystatus(graphene.Mutation):
     class Arguments:
         order_id = graphene.String(required=True)
         delivery_status = graphene.String(required=True)
+        token = graphene.String(required=True)
 
     @staticmethod
     @transaction.atomic
