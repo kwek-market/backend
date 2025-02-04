@@ -1,4 +1,8 @@
-# def test_flash_sales_creation_success(create_product, authenticate_user):
+# import pytest
+
+
+# @pytest.mark.django_db
+# def test_flash_sales_creation_success(client, create_product, authenticate_user):
 #     query = """
 #     mutation FlashSalesMutation($token: String!, $productOptionId: String!, $discountPercent: Float!, $days: Int!) {
 #         flashSalesMutation(token: $token, productOptionId: $productOptionId, discountPercent: $discountPercent, days: $days) {
@@ -19,7 +23,6 @@
 #         "days": 5,
 #     }
 
-#     client = Client(schema)
 #     response = client.execute(query, variables=variables)
 
 #     assert response["data"]["flashSalesMutation"]["status"] is True
@@ -32,7 +35,8 @@
 #     )
 
 
-# def test_flash_sales_already_exists(create_product, authenticate_user):
+# @pytest.mark.django_db
+# def test_flash_sales_already_exists(client, create_product, authenticate_user):
 #     query = """
 #     mutation FlashSalesMutation($token: String!, $productOptionId: String!, $discountPercent: Float!, $days: Int!) {
 #         flashSalesMutation(token: $token, productOptionId: $productOptionId, discountPercent: $discountPercent, days: $days) {
@@ -48,7 +52,6 @@
 #         "days": 3,
 #     }
 
-#     client = Client(schema)
 #     response = client.execute(query, variables=variables)
 
 #     # After first execution, the product already has a flash sale, so we expect this to fail

@@ -15,7 +15,7 @@
 #         }
 #     }
 #     """
-#     variables = {"token": "expired_token", "email": "test@example.com"}
+#     variables = {"token": "expired_token", "email": "test@exewample.com"}
 
 #     # Initialize the Graphene test client
 #     client = Client(schema)

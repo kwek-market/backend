@@ -7,6 +7,7 @@ from bill.mutation import (
     BillingAddressUpdate,
     CancelOrder,
     CreateCoupon,
+    DeleteCoupon,
     PaymentInitiate,
     PaymentVerification,
     PickUpLocation,
@@ -126,3 +127,4 @@ class Mutation(AuthMutation, graphene.ObjectType):
     create_state_delivery_fee = CreateStateDeliveryCharge.Field()
     update_state_delivery_fee = UpdateStateDeliveryCharge.Field()
     delete_state_delivery_fee = DeleteDeliveryCharge.Field()
+    deleteCoupon = DeleteCoupon.Field()
