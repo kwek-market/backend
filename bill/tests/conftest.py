@@ -84,7 +84,7 @@ def valid_token(user):
         "exp": ct + 151200,  
         "origIat": ct
     }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 @pytest.fixture
 def client():
@@ -111,7 +111,7 @@ def admin_token(admin_user):
         "exp": ct + 151200,  
         "origIat": ct
     }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 @pytest.fixture
 def cart(user):

@@ -694,7 +694,7 @@ class UserAccountUpdate(graphene.Mutation):
             ct = int(("{}".format(time.time())).split(".")[0])
             payload = {"username": new_email, "exp": ct + 151200, "origIat": ct}
             n_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-            # .decode("utf-8")
+           
             tu = u_update(email)
             if tu == True:
                 if Notification.objects.filter(user=c_user).exists():

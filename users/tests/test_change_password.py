@@ -33,7 +33,7 @@
 #         "exp": ct + 151200,  # Token expiration time (e.g., 42 hours)
 #         "origIat": ct,
 #     }
-#     token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
+#     token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 #     mutation = """
 #     mutation ChangePassword($token: String!, $password1: String!, $password2: String!) {
