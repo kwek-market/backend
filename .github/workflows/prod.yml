@@ -115,7 +115,7 @@ jobs:
           script: |
             cd prod/
             docker pull ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.ref_name }}
-            ./updateRedstoneApiImageVersion.sh '${{ github.ref_name }}'
+            ./updateProdApiImage.sh '${{ github.ref_name }}'
             docker compose down kwek-backend
             docker compose up -d kwek-backend
             docker image prune -f
