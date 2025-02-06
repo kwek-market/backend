@@ -24,7 +24,7 @@ def valid_token(user):
         "exp": int(time.time()) + 3600,  # Token valid for 1 hour
         "origIat": int(time.time()),
     }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256").decode()
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
 @pytest.fixture

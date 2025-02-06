@@ -97,7 +97,8 @@ def expire_token(token):
                     "payload": dt,
                     "token": jwt.encode(
                         pt, settings.SECRET_KEY, algorithm="HS256"
-                    ).decode("utf-8"),
+                    ),
+                    # .decode("utf-8"),
                     "message": "Logged Out",
                 }
         else:
@@ -244,7 +245,8 @@ def send_password_reset_email(email):
         },
         SECRET_KEY,
         algorithm="HS256",
-    ).decode("utf-8")
+    )
+    # .decode("utf-8")
     token_path = "?token={}".format(token)
     link = "{}/change_password/{}".format(APP_DOMAIN, token_path)
     payload = {
