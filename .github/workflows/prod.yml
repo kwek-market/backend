@@ -2,7 +2,8 @@ name: Python CI
 
 on:
   push:
-    branches: ["prod"]
+    tags:
+      - "v*"
 
 jobs:
   tests_and_migration:
@@ -92,11 +93,11 @@ jobs:
       - name: Build Docker image
         run: |
           docker build --platform linux/amd64 -t ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
+          docker tag ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.ref_name }}
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.ref_name }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -112,8 +113,9 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
           script: |
-            cd staging/
-            docker pull ${{ secrets.DOCKER_USERNAME }}/kwek-backend:latest
+            cd prod/
+            docker pull ${{ secrets.DOCKER_USERNAME }}/kwek-backend:${{ github.ref_name }}
+            ./updateRedstoneApiImageVersion.sh '${{ github.ref_name }}'
             docker compose down kwek-backend
             docker compose up -d kwek-backend
             docker image prune -f
