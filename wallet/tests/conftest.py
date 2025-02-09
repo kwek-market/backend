@@ -102,8 +102,12 @@ def valid_token(user):
         "exp": int(time.time()) + 3600,  # Token valid for 1 hour
         "origIat": int(time.time()),
     }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    encoded_jwt = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
+    # Check if the encoded_jwt is a byte string and decode it if necessary
+    if isinstance(encoded_jwt, bytes):
+        return encoded_jwt.decode("utf-8")
+    return encoded_jwt
 
 
 @pytest.fixture

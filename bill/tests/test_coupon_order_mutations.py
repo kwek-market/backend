@@ -187,6 +187,7 @@ def test_delete_coupon_success(client, admin_token, coupon):
         "couponId": str(coupon.id),
     }
     response = client.execute(mutation, variables=variables)
+    print(response)
     
     assert response["data"]["deleteCoupon"]["status"] is True
     assert response["data"]["deleteCoupon"]["message"] == "Coupon deleted successfully"
