@@ -458,7 +458,6 @@ def get_delivery_fee_obj(state: str, city: str) -> StateDeliveryFee:
             .exclude(city__isnull=True)
             .exclude(city__exact="")
         )
-        print("STATE", state_fee)
         if state_fee.exists():
             return state_fee[0]
         else:

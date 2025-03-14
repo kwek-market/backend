@@ -33,3 +33,5 @@ LOGGING = {
         },
     },
 }
+
+GRAPHQL_ENDPOINT = "v1/kwekql"

@@ -1,21 +1,24 @@
 import time
+
 import jwt
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from graphene.test import Client
-from django.conf import settings
+
 from market.models import (
-    Newsletter,
-    ContactMessage,
-    Wishlist,
     Cart,
+    CartItem,
+    ContactMessage,
+    Newsletter,
     Product,
     ProductOption,
+    Wishlist,
+    StateDeliveryFee,
 )
 from users.schema import schema
 
 User = get_user_model()
-
 
 @pytest.fixture
 def client():
@@ -23,20 +26,62 @@ def client():
 
 
 @pytest.fixture
-def create_user():
-    """
-    Fixture to create a standard test user.
-    """
+def user():
+    user = User.objects.create_user(
+        email="testuser@example.com",
+        username="testuser@example.com",
+        password="password123",
+        is_admin=False,
+    )
+    return user
 
-    def _create_user(
-        email="testuser@example.com", password="password123", is_admin=False
-    ):
-        user = User.objects.create_user(
-            email=email, password=password, is_admin=is_admin, is_verified=True
-        )
-        return user
 
-    return _create_user
+@pytest.fixture
+def admin_user():
+    admin_user = User.objects.create_user(
+        email="admintestuser@example.com",
+        username="admintestuser@example.com",
+        password="password123",
+        is_admin=True,
+    )
+    return admin_user
+
+
+@pytest.fixture
+def cart(user):
+    cart = Cart.objects.create(user=user)
+    return cart
+
+
+@pytest.fixture
+def product(user):
+    return Product.objects.create(
+        product_title="Test Product",
+        user=user,
+        charge_five_percent_vat=False,  # Add this field
+        keyword=[],  # Add this field
+    )
+
+
+@pytest.fixture
+def product_option(product):
+    return ProductOption.objects.create(
+        product=product,
+        quantity=10,
+        price=100.0,
+    )
+
+
+@pytest.fixture
+def cart_item(cart, product_option):
+    return CartItem.objects.create(
+        cart=cart,
+        product=product_option.product,
+        product_option_id=str(product_option.id),
+        quantity=5,
+        price=product_option.price,
+        ordered=False,
+    )
 
 
 @pytest.fixture
@@ -59,11 +104,18 @@ def get_token():
 
 
 @pytest.fixture
-def valid_token(create_user, get_token):
+def valid_token(user, get_token):
     """
     Generates a valid admin token for testing.
     """
-    admin_user = create_user(email="admin@example.com", is_admin=True)
+    return get_token(user)
+
+
+@pytest.fixture
+def admin_token(admin_user, get_token):
+    """
+    Generates a valid admin token for testing.
+    """
     return get_token(admin_user)
 
 
@@ -89,33 +141,14 @@ def state_fee_id():
     """
     Returns a valid state fee ID for testing purposes.
     """
-    return "valid_state_fee_id"
+    return StateDeliveryFee.objects.create()
 
 
 @pytest.fixture
-def product():
-    """
-    Creates a test product.
-    """
-    return Product.objects.create(name="Test Product")
-
-
-@pytest.fixture
-def product_option(product):
-    """
-    Creates a test product option linked to a product.
-    """
-    option = ProductOption.objects.create(price=100, discounted_price=90)
-    product.options.add(option)
-    return option
-
-
-@pytest.fixture
-def wishlist(create_user, product):
+def wishlist(user, product):
     """
     Creates a wishlist and adds a product.
     """
-    user = create_user()
     wishlist = Wishlist.objects.create(user=user)
     return wishlist
 
@@ -138,3 +171,72 @@ def contact_message():
         name="Test User",
         message="I need help with my account.",
     )
+
+# Add these fixtures after your existing ones
+
+
+@pytest.fixture
+def cart_with_ip():
+    """
+    Creates a cart associated with an IP address instead of a user.
+    """
+    return Cart.objects.create(ip="127.0.0.1")
+
+
+@pytest.fixture
+def decrease_cart_item_quantity_mutation():
+    """
+    GraphQL mutation for decreasing cart item quantity.
+    """
+    return """
+    mutation($cartId: String!, $productOptionId: String!, $token: String) {
+        decreaseCartItemQuantity(cartId: $cartId, productOptionId: $productOptionId, token: $token) {
+            status
+            message
+            cartItem {
+                id
+                quantity
+                price
+            }
+        }
+    }
+    """
+
+
+@pytest.fixture
+def remove_item_from_cart_mutation():
+    """
+    GraphQL mutation for removing an item from cart.
+    """
+    return """
+    mutation($productOptionId: String!, $quantity: Int, $token: String) {
+        removeItemFromCartWithOptionId(productOptionId: $productOptionId, quantity: $quantity, token: $token) {
+            status
+            message
+        }
+    }
+    """
+
+
+@pytest.fixture
+def delete_cart_mutation():
+    return """
+    mutation($cartId: String!, $token: String) {
+        deleteCart(cartId: $cartId, token: $token) {
+            status
+            message
+        }
+    }
+    """
+
+
+@pytest.fixture
+def delete_cart_mutation_by_ip():
+    return """
+    mutation($cartId: String!, $ip: String) {
+        deleteCart(cartId: $cartId, ip: $ip) {
+            status
+            message
+        }
+    }
+    """

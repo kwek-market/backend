@@ -41,6 +41,7 @@ from .validate import (
     validate_user_passwords,
 )
 
+User = get_user_model()
 
 class CreateUser(graphene.Mutation):
     sender = settings.EMAIL_HOST_USER
@@ -75,13 +76,14 @@ class CreateUser(graphene.Mutation):
         )
 
         send_welcome_email(email, full_name)
-        sen_m = send_confirmation_email_deprecated(email, full_name)
+        sen_m = send_verification_email(
+            email, full_name, request=info.context
+        )
 
         if sen_m["status"] == True:
             user.set_password(password1)
             if "autoverify" in user.email:
                 user.is_verified = True
-                user.is_admin = True
                 user.save()
                 return SellerVerification(
                     status=True,
@@ -118,7 +120,7 @@ class ResendVerification(graphene.Mutation):
     def validate_email(email):
         """Validate email format using Django's built-in validator."""
         try:
-            validate_email(email)  # Use Django's built-in email validator
+            validate_email(email.lower().strip())  # Use Django's built-in email validator
             return True
         except ValidationError:
             return False
@@ -137,11 +139,11 @@ class ResendVerification(graphene.Mutation):
 
         try:
             # Get user and verify they need verification
-            user = ExtendUser.objects.get(email=email)
+            user = User.objects.get(email=email)
 
             # Send verification email
             verification_result = send_verification_email(
-                email=email, name=user.full_name
+                email=email, name=user.full_name, request=info.context
             )
 
             if verification_result["status"]:
@@ -161,7 +163,7 @@ class ResendVerification(graphene.Mutation):
                 or "Failed to send verification email",
             )
 
-        except ExtendUser.DoesNotExist:
+        except User.DoesNotExist:
             return ResendVerificationResponse(
                 status=False,
                 message="No user found with this email address. Please check and try again.",
@@ -189,7 +191,7 @@ class VerifyUser(graphene.Mutation):
             username = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])[
                 "user"
             ]
-            user = ExtendUser.objects.get(email=username)
+            user = User.objects.get(email=username)
             if user.is_verified:
                 return VerifyUser(status=False, message="User is already verified.")
 

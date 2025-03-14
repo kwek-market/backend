@@ -1,6 +1,10 @@
-# import pytest
+# import uuid
+
 # import graphene
+# import pytest
+# from django.conf import settings
 # from graphene_django.utils.testing import GraphQLTestCase
+
 # from market.models import Category
 
 
@@ -8,6 +12,7 @@
 # # Test Case for AddCategory Mutation
 # @pytest.mark.django_db
 # class TestAddCategoryMutation(GraphQLTestCase):
+#     GRAPHQL_URL = f"/{settings.GRAPHQL_ENDPOINT}"
 
 #     def test_add_category(self):
 #         query = """
@@ -22,7 +27,9 @@
 #                 }
 #             }
 #         """
-#         response = self.client.post("/graphql/", data={"query": query})
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert success response
@@ -46,7 +53,9 @@
 #                 }
 #             }
 #         """
-#         response = self.client.post("/graphql/", data={"query": query})
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert failure due to existing category name
@@ -58,6 +67,8 @@
 # # Test Case for UpdateCategory Mutation
 # @pytest.mark.django_db
 # class TestUpdateCategoryMutation(GraphQLTestCase):
+#     GRAPHQL_URL = f"/{settings.GRAPHQL_ENDPOINT}"
+#     ruuid = uuid.uuid4()
 
 #     def test_update_category(self):
 #         category = Category.objects.create(
@@ -82,7 +93,9 @@
 #             % category.id
 #         )
 
-#         response = self.client.post("/graphql/", data={"query": query})
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert successful update
@@ -99,15 +112,22 @@
 #         assert content["data"]["updateCategory"]["category"]["icon"] == "new_icon"
 
 #     def test_update_category_with_invalid_id(self):
-#         query = """
+#         query = (
+#             """
 #             mutation {
-#                 updateCategory(id: "invalid-id", name: "Non-existent Category", visibility: "hidden") {
+#                 updateCategory(id: "%s", name: "Non-existent Category", visibility: "hidden") {
 #                     status
 #                     message
 #                 }
 #             }
+            
 #         """
-#         response = self.client.post("/graphql/", data={"query": query})
+#             % self.ruuid
+#         )
+
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert failure due to invalid category ID
@@ -119,6 +139,8 @@
 # # Test Case for DeleteCategory Mutation
 # @pytest.mark.django_db
 # class TestDeleteCategoryMutation(GraphQLTestCase):
+#     GRAPHQL_URL = f"/{settings.GRAPHQL_ENDPOINT}"
+#     ruuid = uuid.uuid4()
 
 #     def test_delete_category(self):
 #         category = Category.objects.create(
@@ -137,7 +159,9 @@
 #             % category.id
 #         )
 
-#         response = self.client.post("/graphql/", data={"query": query})
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert successful deletion
@@ -146,15 +170,18 @@
 #         assert not Category.objects.filter(id=category.id).exists()
 
 #     def test_delete_category_with_invalid_id(self):
-#         query = """
+#         query = ("""
 #             mutation {
-#                 deleteCategory(id: "invalid-id") {
+#                 deleteCategory(id: "%s") {
 #                     status
 #                     message
 #                 }
 #             }
 #         """
-#         response = self.client.post("/graphql/", data={"query": query})
+#         % self.ruuid)
+#         response = self.client.post(
+#             self.GRAPHQL_URL, data={"query": query}, content_type="application/json"
+#         )
 #         content = response.json()
 
 #         # Assert failure due to invalid category ID

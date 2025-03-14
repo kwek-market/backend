@@ -72,13 +72,18 @@ def authenticate_user(token: str):
                 }
 
             user = ExtendUser.objects.get(email=email)
-            return {"status": True, "message": "authenticated", "user": user}
+           
+            return {
+                "status": True,
+                "message": "authenticated",
+                "user": user
+                }
         else:
             return {"status": False, "message": "token expired", "user": None}
 
     except ExpiredSignatureError:
         return {"status": False, "message": "token expired", "user": None}
-    
+
     except DecodeError:
         return {
             "status": False,
@@ -98,6 +103,9 @@ def authenticate_user(token: str):
 def authenticate_admin(token: str):
     auth = authenticate_user(token)
     user = auth["user"]
+    print(auth, "I am the auth value at this point")
+    print(user, "I am the user value at this point")
+    print(user.is_admin, "I am the user is admin value at this point")
     if user.is_admin:
         return {"status": True, "message": "authenticated", "user": user}
     else:

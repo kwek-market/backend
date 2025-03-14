@@ -89,6 +89,7 @@ class AddCategory(graphene.Mutation):
             except Exception as e:
                 return AddCategory(status=False,message=e)
 
+
 class UpdateCategory(graphene.Mutation):
     message = graphene.String()
     category = graphene.Field(CategoryType)
@@ -103,47 +104,50 @@ class UpdateCategory(graphene.Mutation):
         icon = graphene.String()
 
     @staticmethod
-    def mutate(self, info, name=None, parent=None, icon=None, id=None, visibility=None, publish_date=None):
+    def mutate(
+        self,
+        info,
+        name=None,
+        parent=None,
+        icon=None,
+        id=None,
+        visibility=None,
+        publish_date=None,
+    ):
         try:
             if Category.objects.filter(id=id).exists():
                 updated_fields = {}
-
                 if icon is not None:
-                    updated_fields['icon'] = icon
-
+                    updated_fields["icon"] = icon
                 if name is not None:
-                    updated_fields['name'] = name
-                    # category = Category.objects.filter(id=id).update(name=name)
-                    # UpdateCategory(category=category, status=True)
+                    updated_fields["name"] = name
                 if parent is not None:
-                    updated_fields['parent'] = parent
-                    # category = Category.objects.filter(id=id).update(parent=parent)
-                    # UpdateCategory(category=category, status=True)
+                    updated_fields["parent"] = parent
                 if visibility is not None:
-                    updated_fields['visibility'] = visibility
-                    # category = Category.objects.filter(id=id).update(visibility=visibility)
-                    # UpdateCategory(category=category, status=True)
+                    updated_fields["visibility"] = visibility
                 if publish_date is not None:
-                    updated_fields['publish_date'] = publish_date
-                    # category = Category.objects.filter(id=id).update(publish_date=publish_date)
-                    # UpdateCategory(category=category, status=True)
-                # else:
-                #     return UpdateCategory(status=False,message="Invalid name or parent or visibility")
-                    
+                    updated_fields["publish_date"] = publish_date
+
                 if updated_fields:
                     try:
-                        category = Category.objects.filter(id=id).update(**updated_fields)
-                        return UpdateCategory(status=True, message="Category updated successfully")
+                        # Update the object and then retrieve it
+                        Category.objects.filter(id=id).update(**updated_fields)
+                        category = Category.objects.get(id=id)  # Get the updated object
+                        return UpdateCategory(
+                            status=True,
+                            message="Category updated successfully",
+                            category=category,
+                        )
                     except Exception as e:
-                        return UpdateCategory(status=False, message=e)
+                        return UpdateCategory(status=False, message=str(e))
                 else:
-                    return UpdateCategory(status=False, message="No valid fields to update")
-                       
+                    return UpdateCategory(
+                        status=False, message="No valid fields to update"
+                    )
             else:
-                return UpdateCategory(status=False,message="Invalid id")
-            # return UpdateCategory(status=True, message="Successfully Updated")
+                return UpdateCategory(status=False, message="Invalid id")
         except Exception as e:
-            return UpdateCategory(status=False,message=e)
+            return UpdateCategory(status=False, message=str(e))
 
 
 class DeleteCategory(graphene.Mutation):
@@ -895,16 +899,22 @@ class DeleteCart(graphene.Mutation):
     def mutate(self, info, cart_id, token=None, ip=None):
         if token:
             auth = authenticate_user(token)
+
             if not auth["status"]:
                 return DeleteCart(status=auth["status"],message=auth["message"])
             user = auth["user"]
             try:
-                Cart.objects.filter(id=cart_id, user=user).delete()
+                cart = Cart.objects.get(id=cart_id, user=user)
+                if cart:
+                    cart.delete()
 
-                return DeleteCart(
-                    status = True,
-                    message = "Deleted successfully"
-                )
+                    return DeleteCart(
+                        status = True,
+                        message = "Deleted successfully"
+                    )
+
+            except Cart.DoesNotExist:
+                return DeleteCart(status=False, message="Cart Does Not Exist")
             except Exception as e:
                 return DeleteCart(status=False,message=e)
         elif ip:
@@ -1008,7 +1018,9 @@ class RemoveItemFromCartWithOptionId(graphene.Mutation):
         product_option_id = graphene.String(required=True)
         quantity = graphene.Int()
 
-    def mutate(self, info, product_option_id, quantity, token=None, ip=None):
+    def mutate(
+        self, info, product_option_id, quantity=1, token=None, ip=None
+    ):  # Default quantity to 1
         cart = None
         cart_item = None
 
@@ -1054,11 +1066,11 @@ class RemoveItemFromCartWithOptionId(graphene.Mutation):
             )
 
         try:
-            quantity = cart_item.quantity - 1
-            if quantity < 1:
+            new_quantity = cart_item.quantity - quantity  # Use the quantity argument
+            if new_quantity < 1:
                 cart_item.delete()
             else:
-                cart_item.quantity = quantity
+                cart_item.quantity = new_quantity
                 cart_item.save()
 
             return RemoveItemFromCartWithOptionId(
@@ -1097,6 +1109,7 @@ class DeleteCartItem(graphene.Mutation):
             except Exception as e:
                 return DeleteCartItem(status=False,message=e)
         elif ip:
+            print("Got the ip here")
             try:
                 Cart.objects.filter(id=cart_id, ip=ip).delete()
 
@@ -1104,6 +1117,8 @@ class DeleteCartItem(graphene.Mutation):
                     status = True,
                     message = "Deleted successfully"
                 )
+            except Cart.DoesNotExist:
+                return DeleteCartItem(status=False, message="Cart Not Found")
             except Exception as e:
                 return DeleteCartItem(status=False,message=e)
         else:
@@ -1438,11 +1453,9 @@ class DeleteDeliveryCharge(graphene.Mutation):
             state_fee = StateDeliveryFee.objects.get(id=id)
             if not state_fee:
                 return DeleteDeliveryCharge(status=False,message="state delivery doesn't exist")
-
-            
-
             state_fee.delete()
             return DeleteDeliveryCharge(status=True,message="successfully deleted!")
-        
+        except state_fee:
+                return DeleteDeliveryCharge(status=False,message="state delivery doesn't exist")
         except Exception as e:
             return DeleteDeliveryCharge(status=False,message=e) 

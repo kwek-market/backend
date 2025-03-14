@@ -322,8 +322,8 @@ class PaymentInitiate(graphene.Mutation):
         token,
         description,
         redirect_url,
-        currency="NGN",
-        gateway="gateway",
+        currency,
+        gateway,
     ):
         auth = authenticate_user(token)
         if not auth["status"]:
@@ -639,7 +639,7 @@ class UpdateDeliverystatus(graphene.Mutation):
     class Arguments:
         order_id = graphene.String(required=True)
         delivery_status = graphene.String(required=True)
-        token = graphene.String(required=True)
+        #token = graphene.String(required=True) "seems to not be used currently"
 
     @staticmethod
     @transaction.atomic
